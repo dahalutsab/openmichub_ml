@@ -29,8 +29,9 @@ spring:
 
 
 jwt:
-  rsa-private-key: classpath:certs/private_key.pem
-  rsa-public-key: classpath:certs/public_key.pem
+  # Overridable so a container can point at a mounted volume instead of the packaged classpath.
+  rsa-private-key: ${JWT_PRIVATE_KEY:classpath:certs/private_key.pem}
+  rsa-public-key: ${JWT_PUBLIC_KEY:classpath:certs/public_key.pem}
 
 app:
   # Single configurable upload root; defaults to ./uploads next to the app.
@@ -72,3 +73,13 @@ chatbot:
 admin:
   email: ${ADMIN_EMAIL:admin@openmichub.com}
   password: ${ADMIN_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health only. Nothing else is exposed.
+        include: health
+  endpoint:
+    health:
+      show-details: never

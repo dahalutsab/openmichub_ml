@@ -12,6 +12,8 @@ public enum WHITE_LIST_URLS {
     ARTIST_CALENDAR("/api/v1/artist/calendar/**", new HttpMethod[]{HttpMethod.GET}),
     PUBLIC_APIS("/api/v1/public/**", new HttpMethod[]{HttpMethod.GET}),
     FILES("/media/**", new HttpMethod[]{HttpMethod.GET}),
+    // Liveness probe for the container orchestrator. Details are never shown.
+    HEALTH("/actuator/health", new HttpMethod[]{HttpMethod.GET}),
     // Ratings drive artist discovery, so they are readable without an account.
     REVIEWS_BY_ARTIST("/api/v1/reviews/artist/**", new HttpMethod[]{HttpMethod.GET}),
     // Gateway callbacks. These verify the payment with Khalti before settling anything.

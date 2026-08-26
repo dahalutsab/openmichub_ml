@@ -1,21 +1,66 @@
+# One command brings up the whole backend:
+#
+#     docker compose up -d --build
+#
+# Postgres and the API start in order, the API waits for the database to be
+# accepting connections, and the signing keypair is generated on first run.
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: openmichub-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: open_mic_hub
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
+      POSTGRES_DB: ${POSTGRES_DB:-open_mic_hub}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
     ports:
-      - "5432:5432"
+      # Exposed for psql and GUI clients. Drop this line in production.
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - openmichub_pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d open_mic_hub"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${POSTGRES_DB:-open_mic_hub}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 10s
+
+  api:
+    build:
+      context: ./open_mic_hub_service
+      dockerfile: Dockerfile
+    image: openmichub/api:latest
+    container_name: openmichub-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Reaches Postgres by service name on the compose network, not localhost.
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-open_mic_hub}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@openmichub.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+
+      KHALTI_BASE_URL: ${KHALTI_BASE_URL:-https://dev.khalti.com/api/v2}
+      KHALTI_SECRET_KEY: ${KHALTI_SECRET_KEY:-}
+
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
+    ports:
+      - "${API_PORT:-8181}:8181"
+    volumes:
+      # Uploaded media and the signing keypair outlive the container.
+      - uploads:/app/uploads
+      - certs:/app/certs
 
 volumes:
-  openmichub_pgdata:
+  pgdata:
+  uploads:
+  certs:
