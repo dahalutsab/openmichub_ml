@@ -74,6 +74,17 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
+		<!-- Schema migrations. Postgres support ships as a separate module from
+		     Flyway 10 onward. -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 		<!-- Health endpoint, used by the container healthcheck -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

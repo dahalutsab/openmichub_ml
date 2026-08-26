@@ -37,8 +37,9 @@ def rebuild_embeddings(batch_size: int = 128) -> int:
             with conn.cursor() as cur:
                 for artist, document, vector in zip(batch, documents, vectors):
                     cur.execute(
-                        """
-                        INSERT INTO artist_embedding (artist_id, embedding, source_text, updated_at)
+                        f"""
+                        INSERT INTO {get_settings().db_schema}.artist_embedding
+                            (artist_id, embedding, source_text, updated_at)
                         VALUES (%s, %s, %s, NOW())
                         ON CONFLICT (artist_id) DO UPDATE
                         SET embedding = EXCLUDED.embedding,
@@ -79,7 +80,7 @@ def vector_candidates(query_text: str, limit: int | None = None,
     sql = f"""
         SELECT ae.artist_id,
                1 - (ae.embedding <=> %(query_vector)s) AS similarity
-        FROM artist_embedding ae
+        FROM {get_settings().db_schema}.artist_embedding ae
         JOIN artists a ON a.id = ae.artist_id
         LEFT JOIN users u ON u.id = a.user_id
         {where}
@@ -103,5 +104,5 @@ def vector_candidates(query_text: str, limit: int | None = None,
 
 def embedding_count() -> int:
     with connection() as conn, conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM artist_embedding")
+        cur.execute(f"SELECT COUNT(*) FROM {get_settings().db_schema}.artist_embedding")
         return int(cur.fetchone()[0])

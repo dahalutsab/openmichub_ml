@@ -106,4 +106,23 @@ becomes `SUPER_ADMIN` and `USER` becomes `ORGANIZER`, with all assignments prese
 - Token-signing keys live on the `certs` volume and are generated on first run, so each
   deployment has its own pair and restarts do not invalidate issued tokens.
 - The container runs as uid 1001, never root.
-- Schema is managed by Hibernate `ddl-auto: update`. Migrations are not yet in place.
+## Database schema
+
+Owned by Flyway, in `open_mic_hub_service/src/main/resources/db/migration`. Hibernate is set to
+`validate`, so it checks its entity mappings against what the migrations built and fails fast on
+drift rather than silently altering tables.
+
+```
+V1__baseline_schema.sql      the schema as ddl-auto had been generating it
+V2__integrity_and_indexes.sql unique constraints and query indexes
+```
+
+To change the schema, add a new `V{n}__description.sql`. Never edit an applied migration — Flyway
+checksums them and will refuse to start.
+
+A database created before Flyway is adopted automatically: `baseline-on-migrate` stamps it at V1
+without re-running the baseline over live tables, then applies everything after.
+
+The `ml` schema is separate and belongs to `ml_service`, which creates it idempotently. `public`
+is the API's and is Flyway's alone — a second writer there makes a fresh database look non-empty,
+at which point Flyway baselines it instead of building it.

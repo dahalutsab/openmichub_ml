@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     embedding_dim: int = 384
 
+    # This service keeps its objects in their own schema. `public` belongs to the
+    # API and is managed by Flyway there; creating a table in it from here would
+    # make the schema look non-empty and cause Flyway to baseline a fresh
+    # database instead of building it.
+    db_schema: str = "ml"
+
     model_dir: str = "/app/models"
     ranker_filename: str = "ranker.txt"
     ranker_meta_filename: str = "ranker_meta.json"
@@ -29,9 +35,13 @@ class Settings(BaseSettings):
 
     @property
     def dsn(self) -> str:
+        # search_path puts this service's schema first, so unqualified writes land
+        # there, while `public` stays visible for reading the API's tables.
+        search_path = f"{self.db_schema},public"
         return (
             f"host={self.db_host} port={self.db_port} dbname={self.db_name} "
-            f"user={self.db_user} password={self.db_password}"
+            f"user={self.db_user} password={self.db_password} "
+            f"options=-csearch_path={search_path}"
         )
 
 

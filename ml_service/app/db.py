@@ -66,18 +66,27 @@ def init_schema() -> None:
     Uses a direct connection rather than the pool: the pool registers pgvector
     types on every connection, which cannot succeed until the extension exists.
 
-    The table is owned by this service. The API has no notion of embeddings, and
-    its Hibernate ddl-auto never touches tables it does not map.
+    Everything is created in this service's own schema, never in `public`.
+    `public` belongs to the API and is under Flyway's control; putting a table
+    there from here makes a fresh database look non-empty, at which point Flyway
+    baselines it instead of running the migrations and the API starts against an
+    empty schema.
     """
     global _schema_ready
     settings = get_settings()
+    schema = settings.db_schema
 
     with psycopg.connect(settings.dsn, connect_timeout=5) as conn:
-        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+        conn.commit()
+        # Installed into this schema on a fresh database. If an earlier install
+        # put it in `public` it stays there, and the search_path finds it either
+        # way.
+        conn.execute(f"CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA {schema}")
         conn.commit()
         conn.execute(
             f"""
-            CREATE TABLE IF NOT EXISTS artist_embedding (
+            CREATE TABLE IF NOT EXISTS {schema}.artist_embedding (
                 artist_id   BIGINT PRIMARY KEY,
                 embedding   vector({settings.embedding_dim}) NOT NULL,
                 source_text TEXT NOT NULL,
