@@ -1,0 +1,87 @@
+package com.brogrammers.open_mic_hub_service.security;
+
+import com.brogrammers.open_mic_hub_service.config.RSAKeyRecord;
+import com.brogrammers.open_mic_hub_service.security.jwt_auth.CustomExceptionHandlingFilter;
+import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtAccessTokenFilter;
+import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtTokenUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static org.springframework.security.config.Customizer.withDefaults;
+
+/**
+ * Security configuration class for securing the application with JWT-based authentication.
+ * Configures WebSocket endpoints and integrates with existing JWT filters.
+ *
+ * @author Utsab Dahal
+ */
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final RSAKeyRecord rsaKeyRecord;
+    private final JwtTokenUtils jwtTokenUtils;
+    private final ObjectMapper objectMapper;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    auth.requestMatchers("/api/v1/payments/booking").permitAll();
+                    auth.requestMatchers("/api/v1/payments/callback").permitAll();
+                    auth.requestMatchers("/api/v1/artist/withdraw").permitAll();
+                    for (WHITE_LIST_URLS entry : WHITE_LIST_URLS.values()) {
+                        for (HttpMethod method : entry.getMethods()) {
+                            auth.requestMatchers(method, entry.getUrl()).permitAll();
+                        }
+                    }
+                    auth.requestMatchers("/ws/**").permitAll(); // Ensure WebSocket bypasses HTTP filters
+                    auth.anyRequest().authenticated();
+                })
+                // Move filters after permitAll evaluation
+                .addFilterBefore(new CustomExceptionHandlingFilter(objectMapper), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAccessTokenFilter(rsaKeyRecord, jwtTokenUtils), UsernamePasswordAuthenticationFilter.class)
+                .logout(logout -> logout
+                        .logoutUrl("/api/v1/auth/logout")
+                        .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())
+                )
+                .exceptionHandling(ex -> {
+                    ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
+                    ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
+                })
+                .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+}

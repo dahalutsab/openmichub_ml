@@ -1,0 +1,309 @@
+// transactions-list.component.scss
+
+.transactions-container {
+  padding: 1rem;
+
+  .page-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .stats-card {
+    .badge {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+  }
+}
+
+// Card Styling
+.card {
+  border: 1px solid #e9ecef;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 0.75rem 0.75rem 0 0;
+    padding: 1rem 1.5rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  .card-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 0.75rem 0.75rem;
+    padding: 1rem 1.5rem;
+  }
+}
+
+// Table Styling
+.table-responsive {
+  border-radius: 0.5rem;
+
+  .table {
+    margin-bottom: 0;
+
+    th {
+      border-top: none;
+      font-weight: 600;
+      color: #495057;
+      background-color: #f8f9fa;
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+
+      &:first-child {
+        border-radius: 0.5rem 0 0 0;
+      }
+
+      &:last-child {
+        border-radius: 0 0.5rem 0 0;
+      }
+    }
+
+    td {
+      padding: 1rem 0.75rem;
+      border-color: #f1f3f4;
+      vertical-align: middle;
+    }
+
+    tr {
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #f8f9fa;
+      }
+    }
+  }
+}
+
+// Artist Info Styling
+.artist-info {
+  .artist-name {
+    color: #2c3e50;
+    font-size: 0.9rem;
+    margin-bottom: 0.125rem;
+  }
+
+  small {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+}
+
+// Amount Styling
+.amount {
+  font-size: 1rem;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+  &.text-success {
+    color: #28a745 !important;
+  }
+
+  &.text-danger {
+    color: #dc3545 !important;
+  }
+}
+
+.balance-amount {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-weight: 500;
+  color: #495057;
+}
+
+// Badge Styling
+.badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+
+  &.bg-light {
+    color: #495057 !important;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6;
+  }
+
+  &.bg-success {
+    background-color: #28a745 !important;
+  }
+
+  &.bg-danger {
+    background-color: #dc3545 !important;
+  }
+
+  &.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+  }
+
+  &.bg-info {
+    background-color: #17a2b8 !important;
+  }
+
+  &.bg-primary {
+    background-color: #007bff !important;
+  }
+
+  &.bg-secondary {
+    background-color: #6c757d !important;
+  }
+}
+
+// Button Styling
+.btn-group-sm > .btn, .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
+.btn-outline-primary,
+.btn-outline-info {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Filters Section
+.form-select,
+.form-control {
+  border-radius: 0.5rem;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+
+  &:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+}
+
+.form-label {
+  font-size: 0.875rem;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+// Pagination
+.pagination {
+  .page-link {
+    border-radius: 0.375rem;
+    margin: 0 0.125rem;
+    padding: 0.375rem 0.75rem;
+    color: #007bff;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background-color: #e9ecef;
+      border-color: #adb5bd;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    i {
+      font-size: 0.875rem;
+    }
+
+    &.active {
+      background-color: #007bff;
+      border-color: #007bff;
+      color: white;
+    }
+
+    &.disabled {
+      color: #6c757d;
+      background-color: #fff;
+      border-color: #dee2e6;
+      cursor: not-allowed;
+    }
+  }
+
+  .page-item {
+    &.active .page-link {
+      background-color: #007bff;
+      border-color: #007bff;
+      color: white;
+    }
+
+    &.disabled .page-link {
+      color: #6c757d;
+      background-color: #fff;
+      border-color: #dee2e6;
+      cursor: not-allowed;
+    }
+  }
+
+  .pagination-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+
+    .page-size-select {
+      width: 100px;
+      margin-right: 1rem;
+    }
+  }
+
+  .page-size-select {
+    width: 100px;
+    margin-right: 1rem;
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+
+    .page-size-select {
+      width: 100px;
+      margin-right: 1rem;
+    }
+  }
+
+  .pagination-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+  }
+
+  .pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+
+    .page-size-select {
+      width: 100px;
+      margin-right: 1rem;
+    }
+  }
+
+  .pagination-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+  }
+}

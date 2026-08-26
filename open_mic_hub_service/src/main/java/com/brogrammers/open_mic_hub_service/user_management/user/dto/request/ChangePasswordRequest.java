@@ -1,0 +1,13 @@
+package com.brogrammers.open_mic_hub_service.user_management.user.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ChangePasswordRequest {
+    private String oldPassword;
+    private String newPassword;
+}

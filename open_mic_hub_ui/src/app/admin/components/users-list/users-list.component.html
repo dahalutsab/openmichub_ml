@@ -1,0 +1,167 @@
+<div class="users-container">
+  <!-- Header Section -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">Users Management</h2>
+    <div class="users-stats">
+      <span class="badge bg-primary">Total: {{ totalUsers }}</span>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="roleFilter" class="form-label fw-semibold">Filter by Role:</label>
+            <select
+              id="roleFilter"
+              class="form-select custom-select"
+              [(ngModel)]="selectedRole"
+              (change)="onRoleFilterChange()"
+            >
+              <option value="">All Roles</option>
+              <option value="ADMIN">Admin</option>
+              <option value="USER">User</option>
+              <option value="ARTIST">Artist</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="filter-summary">
+            <small class="text-muted">
+              Showing {{ filteredUsers.length }} of {{ totalUsers }} users
+              <span *ngIf="selectedRole"> with role: <strong>{{ selectedRole }}</strong></span>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Grid -->
+  <div class="row" *ngIf="paginatedUsers.length > 0; else noUsersTemplate">
+    <div class="col-lg-6 col-xl-4 mb-4" *ngFor="let user of paginatedUsers">
+      <div class="card user-card h-100">
+        <div class="card-body">
+          <!-- User Avatar and Status -->
+          <div class="d-flex align-items-center mb-3">
+            <div class="user-avatar me-3">
+              <img
+                *ngIf="user.profileImage; else defaultAvatar"
+                [src]="user.profileImage"
+                [alt]="user.fullName"
+                class="avatar-img"
+                (error)="onImageError($event)"
+              >
+              <ng-template #defaultAvatar>
+                <div class="avatar-placeholder">
+                  {{ getInitials(user.fullName) }}
+                </div>
+              </ng-template>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="card-title mb-1">{{ user.fullName }}</h5>
+              <span
+                class="badge status-badge"
+                [class.bg-success]="user.active"
+                [class.bg-secondary]="!user.active"
+              >
+                    {{ user.active ? 'Active' : 'Inactive' }}
+                  </span>
+            </div>
+          </div>
+
+          <!-- User Details -->
+          <div class="user-details">
+            <div class="detail-item mb-2">
+              <i class="bi bi-envelope me-2"></i>
+              <span class="text-muted">{{ user.email }}</span>
+            </div>
+
+
+            <!-- Roles -->
+            <div class="roles-section">
+              <div class="d-flex flex-wrap gap-1">
+                    <span
+                      *ngFor="let role of user.roles"
+                      class="badge role-badge"
+                      [class.bg-danger]="role.role === 'ADMIN'"
+                      [class.bg-primary]="role.role === 'USER'"
+                      [class.bg-warning]="role.role === 'ARTIST'"
+                      [title]="role.description"
+                    >
+                      {{ role.role }}
+                    </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Users Template -->
+  <ng-template #noUsersTemplate>
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-people fs-1 text-muted mb-3"></i>
+        <h4 class="text-muted">No users found</h4>
+        <p class="text-muted mb-0">
+              <span *ngIf="selectedRole; else noUsersAtAll">
+                No users found with role: <strong>{{ selectedRole }}</strong>
+              </span>
+          <ng-template #noUsersAtAll>
+            There are no users available at the moment.
+          </ng-template>
+        </p>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Pagination -->
+  <nav aria-label="Users pagination" *ngIf="totalPages > 1">
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <div class="pagination-info">
+        <small class="text-muted">
+          Page {{ currentPage + 1 }} of {{ totalPages }}
+          ({{ startIndex }} - {{ endIndex }} of {{ filteredUsers.length }} users)
+        </small>
+      </div>
+
+      <ul class="pagination mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 0">
+          <button class="page-link" (click)="goToPage(0)" [disabled]="currentPage === 0">
+            <i class="bi bi-chevron-double-left"></i>
+          </button>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === 0">
+          <button class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+        </li>
+
+        <li
+          *ngFor="let page of getVisiblePages()"
+          class="page-item"
+          [class.active]="page === currentPage"
+        >
+          <button class="page-link" (click)="goToPage(page)">
+            {{ page + 1 }}
+          </button>
+        </li>
+
+        <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+          <button class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
+          <button class="page-link" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">
+            <i class="bi bi-chevron-double-right"></i>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </nav>
+</div>

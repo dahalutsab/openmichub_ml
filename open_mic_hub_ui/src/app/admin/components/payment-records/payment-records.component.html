@@ -1,0 +1,65 @@
+<!-- src/app/admin/components/payment-records/payment-records.component.html -->
+<div class="container py-3">
+  <h4>Payment Records</h4>
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <select class="form-select" [(ngModel)]="status" (change)="onFilterChange()">
+        <option value="">All Statuses</option>
+        <option *ngFor="let s of paymentStatuses" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" [(ngModel)]="method" (change)="onFilterChange()">
+        <option value="">All Methods</option>
+        <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary"></div>
+    <p>Loading payments...</p>
+  </div>
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+  <div *ngIf="!loading && payments.length > 0">
+    <table class="table table-bordered">
+      <thead>
+      <tr>
+        <th>Time</th>
+        <th>Amount</th>
+        <th>Method</th>
+        <th>Status</th>
+        <th>Product Code</th>
+        <th>Booking ID</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let p of payments">
+        <td>{{ p.paymentTime }}</td>
+        <td>{{ p.receivedAmount | currency }}</td>
+        <td>{{ p.paymentMethod }}</td>
+        <td>{{ p.paymentStatus }}</td>
+        <td>{{ p.productCode }}</td>
+        <td>{{ p.booking?.id }}</td>
+      </tr>
+      </tbody>
+    </table>
+    <nav *ngIf="totalPages > 1">
+      <ul class="pagination">
+        <li class="page-item" [class.disabled]="page === 0">
+          <button class="page-link" (click)="goToPage(page - 1)" [disabled]="page === 0">&laquo;</button>
+        </li>
+        <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index" [class.active]="i === page">
+          <button class="page-link" (click)="goToPage(i)">{{ i + 1 }}</button>
+        </li>
+        <li class="page-item" [class.disabled]="page === totalPages - 1">
+          <button class="page-link" (click)="goToPage(page + 1)" [disabled]="page === totalPages - 1">&raquo;</button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  <div *ngIf="!loading && payments.length === 0" class="text-center text-muted py-5">
+    No payments found.
+  </div>
+</div>

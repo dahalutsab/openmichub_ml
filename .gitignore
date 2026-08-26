@@ -1,0 +1,34 @@
+# ---- secrets: never commit ----
+*.pem
+.env
+.env.*
+!.env.example
+
+# ---- build output ----
+target/
+build/
+dist/
+*.jar
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# ---- node / angular ----
+node_modules/
+.angular/
+npm-debug.log*
+
+# ---- uploads ----
+uploads/
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+
+# ---- os ----
+.DS_Store
+Thumbs.db

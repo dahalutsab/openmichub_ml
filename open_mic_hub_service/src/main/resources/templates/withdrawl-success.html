@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Withdrawal Successful - Open Mic Hub</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 0;">
+<div style="background-color: #ffffff; padding: 30px; margin: 50px auto; max-width: 600px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+    <h2 style="text-align: center; color: #4caf50;">💸 Withdrawal Confirmation - Open Mic Hub</h2>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Hello <strong><span th:text="${artistName}">[Artist Name]</span></strong>,
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        We are pleased to inform you that your withdrawal request of <strong>Rs <span th:text="${amount}">[Amount]</span></strong>
+        has been successfully processed. The amount will be transferred to your registered payment method shortly.
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Your transaction reference number is <strong><span th:text="${transactionId}">[Transaction ID]</span></strong>.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="http://localhost:4200/artist/transactions"
+           style="display: inline-block; padding: 12px 25px; font-size: 16px; background-color: #4caf50; color: #ffffff; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease;">
+            View Transaction History
+        </a>
+    </div>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        If you have any questions regarding your withdrawal, feel free to reach out to our support team.
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Thank you for being a valued part of <strong>Open Mic Hub</strong>. Keep entertaining!
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Best regards,<br>
+        The Open Mic Hub Team
+    </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<div class="container mt-4">
+  <h3 class="mb-3">Booking Details</h3>
+
+  <div *ngIf="isLoading" class="text-center">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-danger">
+    {{ error }}
+  </div>
+
+  <table *ngIf="!isLoading && bookings.length > 0" class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>Artist Name</th>
+        <th>Venue</th>
+        <th>Date</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let booking of bookings">
+        <td>
+          <strong>{{ booking.artistResponse?.artistName }}</strong><br />
+          <small class="text-muted">{{ booking.artistResponse?.stageName }}</small>
+        </td>
+        <td>{{ booking.venue }}</td>
+        <td>{{ booking.bookingDate }}</td>
+        <td>{{ formatTime(booking.startTime) }}</td>
+        <td>{{ formatTime(booking.endTime) }}</td>
+        <td>
+          <span
+            class="badge"
+            [ngClass]="{
+              'bg-warning': booking.bookingStatus === 'PENDING',
+              'bg-success': booking.bookingStatus === 'CONFIRMED',
+              'bg-danger': booking.bookingStatus === 'REJECTED'
+            }"
+          >
+            {{ booking.bookingStatus }}
+          </span>
+        </td>
+        <td>
+          <button
+            *ngIf="booking.bookingStatus === 'CONFIRMED'"
+            class="btn btn-sm btn-primary mb-2"
+            (click)="togglePaymentOptions(booking.bookingId)"
+          >
+            Pay Khalti
+          </button>
+
+          <div *ngIf="selectedBookingId === booking.bookingId" class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" (click)="processPayment(booking.bookingId, 'partial')">
+              Partial
+            </button>
+            <button class="btn btn-outline-success btn-sm" (click)="processPayment(booking.bookingId, 'full')">
+              Full
+            </button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!isLoading && bookings.length === 0" class="text-center text-muted mt-3">
+    No bookings found.
+  </div>
+</div>

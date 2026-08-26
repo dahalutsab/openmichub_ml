@@ -1,0 +1,46 @@
+<table *ngIf="!isLoading && bookings.length > 0" class="table table-bordered table-hover align-middle">
+  <thead class="table-dark">
+    <tr>
+      <th>Artist Name</th>
+      <th>Venue</th>
+      <th>Date</th>
+      <th>Start Time</th>
+      <th>End Time</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let booking of bookings">
+      <td>
+        <strong>{{ booking.artistResponse?.artistName }}</strong><br />
+        <small class="text-muted">{{ booking.artistResponse?.stageName }}</small>
+      </td>
+      <td>{{ booking.venue }}</td>
+      <td>{{ booking.bookingDate }}</td>
+      <td>{{ formatTime(booking.startTime) }}</td>
+      <td>{{ formatTime(booking.endTime) }}</td>
+      <td>
+        <span class="badge" [ngClass]="{
+          'bg-warning': booking.bookingStatus === 'PENDING',
+          'bg-success': booking.bookingStatus === 'APPROVED',
+          'bg-danger': booking.bookingStatus === 'REJECTED'
+        }">
+          {{ booking.bookingStatus }}
+        </span>
+      </td>
+      <td>
+  <ng-container *ngIf="booking.bookingStatus === 'PENDING'">
+    <button class="btn btn-sm btn-success me-1" (click)="approveBooking(booking.bookingId)">
+      Approve
+    </button>
+    <button class="btn btn-sm btn-danger" (click)="rejectBooking(booking.bookingId)">
+      Reject
+    </button>
+  </ng-container>
+  <span *ngIf="booking.bookingStatus !== 'PENDING'" class="text-muted">No action</span>
+</td>
+
+    </tr>
+  </tbody>
+</table>

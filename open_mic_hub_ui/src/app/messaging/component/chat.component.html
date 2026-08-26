@@ -1,0 +1,127 @@
+<div class="chat-container">
+  <!-- Left Sidebar -->
+  <div class="sidebar">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'chats'"
+        (click)="switchTab('chats')">
+        Chats
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'users'"
+        (click)="switchTab('users')">
+        All Users
+      </button>
+    </div>
+
+    <!-- User List -->
+    <div class="user-list">
+      <div class="loading" *ngIf="loading">
+        <div class="spinner"></div>
+        <span>Loading users...</span>
+      </div>
+
+      <div
+        *ngFor="let user of getCurrentUsersList()"
+        class="user-item"
+        [class.selected]="selectedUser?.email === user.email"
+        (click)="selectUser(user)">
+
+        <div class="user-avatar">
+          <img
+            [src]="selectedUser?.profile || getDefaultAvatar(selectedUser?.fullName)"
+            [alt]="selectedUser?.fullName"
+            (error)="onImageError($event, selectedUser?.fullName)">
+        <div class="user-info">
+          <div class="user-name">{{ user.fullName }}</div>
+          <div class="user-email">{{ user.email }}</div>
+          <div class="last-message" *ngIf="user.lastMessage">
+            {{ user.lastMessage }}
+          </div>
+        </div>
+
+        <div class="user-time" *ngIf="user.lastMessageTime">
+          {{ formatTime(user.lastMessageTime) }}
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && getCurrentUsersList().length === 0">
+        <p>No users found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Chat Area -->
+  <div class="chat-main">
+    <div class="chat-header" *ngIf="selectedUser">
+      <div class="selected-user-info">
+        <div class="selected-user-avatar">
+          <img
+            [src]="selectedUser.profile || getDefaultAvatar(selectedUser.fullName)"
+            [alt]="selectedUser.fullName"
+            (error)="onImageError($event, selectedUser.fullName)">
+        </div>
+        <div>
+          <div class="selected-user-name">{{ selectedUser.fullName }}</div>
+          <div class="selected-user-email">{{ selectedUser.email }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-content">
+      <div class="welcome-message" *ngIf="!selectedUser">
+        <h3>Welcome to Chat</h3>
+        <p>Select a user from the {{ activeTab === 'chats' ? 'chats' : 'users' }} list to start messaging</p>
+      </div>
+
+      <div class="messages-container" *ngIf="selectedUser">
+        <div class="loading-messages" *ngIf="loadingMessages">
+          <div class="spinner"></div>
+          <span>Loading messages...</span>
+        </div>
+
+        <div class="messages" *ngIf="!loadingMessages">
+          <div
+            *ngFor="let message of messages"
+            class="message"
+            [class.own-message]="isMessageFromCurrentUser(message)"
+            [class.other-message]="!isMessageFromCurrentUser(message)">
+
+            <div class="message-content">
+              <div class="message-text">{{ message.content }}</div>
+              <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+            </div>
+          </div>
+
+          <div class="empty-messages" *ngIf="messages.length === 0">
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input" *ngIf="selectedUser">
+      <div class="input-container">
+        <textarea
+          [(ngModel)]="newMessage"
+          (keypress)="onKeyPress($event)"
+          placeholder="Type your message..."
+          rows="1"
+          class="message-input"></textarea>
+        <button
+          (click)="sendMessage()"
+          [disabled]="!newMessage.trim()"
+          class="send-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>

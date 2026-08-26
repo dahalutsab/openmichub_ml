@@ -1,0 +1,188 @@
+<div class="virtual-money-container">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3">Loading your wallet...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading && virtualCoinData" class="wallet-card">
+    <!-- Header -->
+    <div class="wallet-header">
+      <div class="artist-info">
+        <div class="profile-section">
+          <img
+            [src]="getProfileImageUrl()"
+            [alt]="virtualCoinData.data.artist.fullName"
+            class="profile-image"
+            (error)="onImageError($event)"
+          >
+          <div class="artist-details">
+            <h2 class="artist-name">{{ virtualCoinData.data.artist.fullName }}</h2>
+            <p class="stage-name">&#64;{{ virtualCoinData.data.artist.stageName }}</p>
+            <div class="badges">
+                  <span class="badge bg-success" *ngIf="virtualCoinData.data.artist.verified">
+                    <i class="fas fa-check-circle"></i> Verified
+                  </span>
+              <span class="badge bg-primary" *ngIf="virtualCoinData.data.artist.active">
+                    <i class="fas fa-circle"></i> Active
+                  </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="balance-card">
+      <div class="balance-icon">
+        <i class="fas fa-coins"></i>
+      </div>
+      <div class="balance-info">
+        <h3 class="balance-label">Virtual Coins Balance</h3>
+        <div class="balance-amount">
+          <span class="currency-symbol">₹</span>
+          <span class="amount">{{ virtualCoinData.data.balance | number:'1.2-2' }}</span>
+        </div>
+        <p class="wallet-id">Wallet ID: #{{ virtualCoinData.data.virtualCoinId }}</p>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button
+        class="btn btn-withdraw"
+        [disabled]="virtualCoinData.data.balance <= 0"
+        (click)="showWithdrawModal()"
+      >
+        <i class="fas fa-money-bill-wave"></i>
+        Withdraw Funds
+      </button>
+      <button class="btn btn-refresh" (click)="loadWalletData()">
+        <i class="fas fa-sync-alt"></i>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Recent Activity Info -->
+    <div class="info-section">
+      <div class="info-card">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          <h5>How it works</h5>
+          <p>Earn virtual coins by performing at open mic events. Withdraw your earnings anytime with admin approval.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdraw Modal -->
+  <div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="withdrawModalLabel">
+            <i class="fas fa-money-bill-wave me-2"></i>
+            Withdraw Funds
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form [formGroup]="withdrawForm" (ngSubmit)="submitWithdraw()">
+          <div class="modal-body">
+            <div class="current-balance-info">
+              <div class="balance-display">
+                <span class="label">Available Balance:</span>
+                <span class="amount">₹{{ virtualCoinData?.data?.balance | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="withdrawAmount" class="form-label">Withdrawal Amount</label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="withdrawAmount"
+                  formControlName="amount"
+                  [class.is-invalid]="withdrawForm.get('amount')?.invalid && withdrawForm.get('amount')?.touched"
+                  placeholder="Enter amount"
+                  min="1"
+                  [max]="virtualCoinData?.data?.balance || 0"
+                  [step]="0.01"
+                >
+              </div>
+              <div class="invalid-feedback" *ngIf="withdrawForm.get('amount')?.invalid && withdrawForm.get('amount')?.touched">
+                <div *ngIf="withdrawForm.get('amount')?.errors?.['required']">Amount is required</div>
+                <div *ngIf="withdrawForm.get('amount')?.errors?.['min']">Minimum withdrawal amount is ₹1</div>
+                <div *ngIf="withdrawForm.get('amount')?.errors?.['max']">Amount cannot exceed available balance</div>
+              </div>
+            </div>
+
+            <div class="withdrawal-info">
+              <div class="alert alert-info">
+                <i class="fas fa-clock me-2"></i>
+                <strong>Processing Time:</strong> Withdrawal requests are typically processed within 24 hours.
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="withdrawForm.invalid || withdrawProcessing"
+            >
+              <span *ngIf="withdrawProcessing" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              {{ withdrawProcessing ? 'Processing...' : 'Submit Withdrawal' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="successModalLabel">
+            <i class="fas fa-check-circle me-2"></i>
+            Withdrawal Request Submitted
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center" *ngIf="withdrawResponse">
+          <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h4>Request Submitted Successfully!</h4>
+          <div class="transaction-details">
+            <p><strong>Transaction ID:</strong> #{{ withdrawResponse.data.transactionId }}</p>
+            <p><strong>Amount:</strong> ₹{{ withdrawResponse.data.amount | number:'1.2-2' }}</p>
+            <p><strong>Status:</strong> {{ withdrawResponse.data.transactionStatus }}</p>
+          </div>
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Your withdrawal request has been sent to the admin and will be processed within 24 hours.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" data-bs-dismiss="modal" (click)="loadWalletData()">
+            Okay, Got it!
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ errorMessage }}
+    <button type="button" class="btn-close" aria-label="Close" (click)="errorMessage = ''"></button>
+  </div>
+</div>

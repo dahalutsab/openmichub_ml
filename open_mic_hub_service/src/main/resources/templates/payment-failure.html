@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Failed - Open Mic Hub</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 0;">
+<div style="background-color: #ffffff; padding: 30px; margin: 50px auto; max-width: 600px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+    <h2 style="text-align: center; color: #e74c3c;">❌ Payment Failed</h2>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Dear <strong><span th:text="${fullName}">[Full Name]</span></strong>,
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        We regret to inform you that your payment of <strong>Rs <span th:text="${amount}">[Amount]</span></strong> using
+        <strong><span th:text="${paymentMethod}">[Payment Method]</span></strong> for booking
+        <strong><span th:text="${artistName}">[Artist Name]</span></strong> on
+        <strong><span th:text="${eventDateTime}">[Event Date & Time]</span></strong> was not successful.
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Your booking reference number is <strong><span th:text="${bookingId}">[Booking ID]</span></strong>. Please try again to complete your booking and confirm your event.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="http://localhost:4200/retry-payment"
+           style="display: inline-block; padding: 12px 25px; font-size: 16px; background-color: #e74c3c; color: #ffffff; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease;">
+            Retry Payment
+        </a>
+    </div>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        If you believe this was a mistake or need help, please contact our support team for assistance.
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Thank you for choosing <strong>Open Mic Hub</strong>. We hope to help you complete your booking soon!
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Best regards,<br>
+        The Open Mic Hub Team
+    </p>
+</div>
+</body>
+</html>

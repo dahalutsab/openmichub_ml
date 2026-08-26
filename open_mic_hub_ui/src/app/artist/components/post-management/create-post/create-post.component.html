@@ -1,0 +1,91 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="mb-0">Create New Post</h3>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="postForm" (ngSubmit)="onSubmit()">
+            <!-- Title Field -->
+            <div class="mb-3">
+              <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                id="title"
+                formControlName="title"
+                [class.is-invalid]="title?.invalid && title?.touched"
+                placeholder="Enter post title">
+              <div *ngIf="title?.invalid && title?.touched" class="invalid-feedback">
+                <div *ngIf="title?.errors?.['required']">Title is required</div>
+                <div *ngIf="title?.errors?.['minlength']">Title must be at least 3 characters long</div>
+              </div>
+            </div>
+
+            <!-- Content Field -->
+            <div class="mb-3">
+              <label for="content" class="form-label">Content <span class="text-danger">*</span></label>
+              <textarea
+                class="form-control"
+                id="content"
+                rows="5"
+                formControlName="content"
+                [class.is-invalid]="content?.invalid && content?.touched"
+                placeholder="Enter post content"></textarea>
+              <div *ngIf="content?.invalid && content?.touched" class="invalid-feedback">
+                <div *ngIf="content?.errors?.['required']">Content is required</div>
+                <div *ngIf="content?.errors?.['minlength']">Content must be at least 10 characters long</div>
+              </div>
+            </div>
+
+            <!-- Images Field -->
+            <div class="mb-3">
+              <label for="images" class="form-label">Images</label>
+              <input
+                type="file"
+                class="form-control"
+                id="images"
+                multiple
+                accept="image/*"
+                (change)="onFileSelect($event)">
+              <div class="form-text">Select one or more images to upload</div>
+            </div>
+
+            <!-- Image Previews -->
+            <div *ngIf="imagePreviews.length > 0" class="mb-3">
+              <label class="form-label">Image Previews:</label>
+              <div class="row">
+                <div *ngFor="let preview of imagePreviews; let i = index" class="col-md-3 mb-2">
+                  <div class="position-relative">
+                    <img [src]="preview" class="img-thumbnail" style="width: 100%; height: 150px; object-fit: cover;">
+                    <button
+                      type="button"
+                      class="btn btn-danger btn-sm position-absolute top-0 end-0"
+                      (click)="removeImage(i)"
+                      style="transform: translate(25%, -25%);">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="loading">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </span>
+                Create Post
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

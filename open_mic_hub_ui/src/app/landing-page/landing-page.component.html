@@ -1,0 +1,284 @@
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <h2 class="brand-text">🎤 OpenMicHubNepal</h2>
+      </div>
+      <div class="nav-menu">
+
+        <a href="#features" class="nav-link" (click)="scrollToSection('features')">Features</a>
+        <a href="#artists" class="nav-link" (click)="scrollToSection('artists')">Artists</a>
+        <a href="#how-it-works" class="nav-link" (click)="scrollToSection('how-it-works')">How It Works</a>
+        <a href="#testimonials" class="nav-link" (click)="scrollToSection('testimonials')">Reviews</a>
+        <button class="btn-login" (click)="navigateTo('auth/')">Login</button>
+        <button class="btn-signup" (click)="navigateTo('auth/register')">Sign Up</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-background"></div>
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title">
+          Discover Nepal’s Best Talent with
+          <span class="gradient-text">OpenMicHubNepal</span>
+        </h1>
+        <p class="hero-subtitle">
+          Nepal’s leading platform connecting artists, event organizers, and venues.
+          Book live performances, manage schedules, and pay securely with virtual coins.
+        </p>
+        <div class="hero-buttons">
+          <button class="btn-primary" (click)="navigateTo('auth/register')">
+            Request a Demo
+          </button>
+          <button class="btn-secondary" (click)="scrollToSection('features')">
+            Explore Features
+          </button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-number">{{ counts.artists | number }}</span>
+            <span class="stat-label">Artists</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">{{ counts.users | number }}</span>
+            <span class="stat-label">Users</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number">{{ counts.bookings | number }}</span>
+            <span class="stat-label">Bookings</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+  <div
+    class="floating-card artist-card"
+    *ngFor="let artist of artists.slice(0, 3)"
+  >
+    <div class="card-header">
+      <div
+        class="avatar"
+        [style.backgroundImage]="'url(' + (artist.profilePictureUrl || 'assets/placeholder.jpg') + ')'"
+      ></div>
+      <div>
+        <h4>{{ artist.stageName }}</h4>
+        <p>{{ artist.genre?.[0]?.name || 'Artist' }}</p>
+      </div>
+    </div>
+    <div class="availability">Hire Now</div>
+  </div>
+  <div class="hero-visual">
+  <div
+    class="floating-card artist-card"
+    *ngFor="let artist of artists.slice(0, 2)"
+  >
+    <div class="card-header">
+      <div
+        class="avatar"
+        [style.backgroundImage]="'url(' + (artist.profilePictureUrl || 'assets/placeholder.jpg') + ')'"
+      ></div>
+      <div>
+        <h4>{{ artist.stageName }}</h4>
+        <p>{{ artist.genre?.[0]?.name || 'Artist' }}</p>
+      </div>
+    </div>
+    <div class="availability">Hire Now</div>
+  </div>
+</div>
+
+</div>
+
+
+
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="section-container">
+      <h2 class="section-title">Why Choose OpenMicHub?</h2>
+      <p class="section-subtitle">Powerful features to streamline your performance bookings</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎤</div>
+          <h3>Artist Profiles</h3>
+          <p>Showcase your talent with detailed profiles, ratings, and video performances.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>Smart Scheduling</h3>
+          <p>Manage availability with real-time updates and avoid double bookings.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💸</div>
+          <h3>Coin-Based Booking</h3>
+          <p>Secure partial payments with our virtual coin system for hassle-free transactions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⭐</div>
+          <h3>Post-Event Reviews</h3>
+          <p>Build trust with verified reviews from organizers and venues.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Secure Admin Panel</h3>
+          <p>Manage bookings, payments, and profiles with our robust admin tools.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Artists Section -->
+  <section class="artists" id="artists">
+  <div class="section-container">
+    <h2 class="section-title mt-5">Meet Our Talented Artists</h2>
+    <p class="section-subtitle">Discover singers, comedians, and performers ready to bring your event to life</p>
+
+    <!-- Add this before the artists-grid div -->
+    <div class="search-filter-container">
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search artists..."
+          (input)="onSearch($event)"
+          class="search-input"
+        >
+      </div>
+      <div class="filter-box">
+        <select
+          (change)="onGenreChange($event)"
+          class="genre-select"
+        >
+          <option value="">All Genres</option>
+          <option *ngFor="let genre of genres" [value]="genre.name">
+            {{genre.name}}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Existing artists-grid div -->
+
+    <div class="artists-grid">
+      <div class="artist-card" *ngFor="let artist of featuredArtists">
+        <div class="avatar-container">
+          <img class="avatar-img" [src]="artist.profilePictureUrl || 'assets/placeholder.jpg'" alt="{{ artist.stageName }}">
+        </div>
+        <div class="artist-details">
+          <h3 class="artist-name">{{ artist.stageName }}</h3>
+          <p class="artist-genre">{{ artist.genre[0]?.name || 'Artist' }}</p>
+          <p class="artist-bio">{{ artist.bio | slice:0:100 }}{{ artist.bio.length > 100 ? '...' : '' }}</p>
+          <button class="btn-view-profile" (click)="navigateTo('artists/' + artist.stageName)">View Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button class="btn-secondary" (click)="prevPage()" [disabled]="currentPage === 0">Previous</button>
+      <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+      <button class="btn-secondary" (click)="nextPage()" [disabled]="currentPage === totalPages - 1">Next</button>
+    </div>
+  </div>
+</section>
+
+
+  <!-- How It Works Section -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-container">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get started in just a few simple steps</p>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Create Your Profile</h3>
+          <p>Artists and venues set up profiles with portfolios, availability, and rates.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Book or Be Booked</h3>
+          <p>Browse artists, check availability, and secure bookings with virtual coins.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Perform & Review</h3>
+          <p>Host amazing events and leave reviews to build your reputation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonials" id="testimonials">
+    <div class="section-container">
+      <h2 class="section-title">What Our Users Say</h2>
+      <p class="section-subtitle">Hear from artists and organizers who love OpenMicHub</p>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-avatar"></div>
+          <p class="testimonial-text">"OpenMicHub made booking performers for our venue so easy! The coin system is a game-changer."</p>
+          <h4 class="testimonial-name">Sita R., Venue Owner</h4>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-avatar"></div>
+          <p class="testimonial-text">"As a comedian, I love how I can showcase my videos and manage my gigs all in one place."</p>
+          <h4 class="testimonial-name">Ram K., Comedian</h4>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-avatar"></div>
+          <p class="testimonial-text">"The scheduling tools helped me avoid conflicts and focus on performing."</p>
+          <h4 class="testimonial-name">Lila M., Singer</h4>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta" id="cta">
+    <div class="section-container">
+      <h2 class="section-title">Join OpenMicHub Today</h2>
+      <p class="section-subtitle">Whether you're an artist or an organizer, start connecting now!</p>
+      <div class="cta-buttons">
+        <button class="btn-primary" (click)="navigateTo('auth/register/artist')">Join as an Artist</button>
+        <button class="btn-secondary" (click)="navigateTo('auth/register/organizer')">Join as an Organizer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="section-container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <h2 class="brand-text">🎤 OpenMicHubNepal</h2>
+          <p>Connecting Nepal’s talent with the world.</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4>Platform</h4>
+            <a href="#features" (click)="scrollToSection('features')">Features</a>
+            <a href="#artists" (click)="scrollToSection('artists')">Artists</a>
+            <a href="#how-it-works" (click)="scrollToSection('how-it-works')">How It Works</a>
+            <a href="#pricing" (click)="scrollToSection('pricing')">Pricing</a>
+          </div>
+          <div class="footer-column">
+            <h4>Company</h4>
+            <a href="/about">About Us</a>
+            <a href="/contact">Contact</a>
+            <a href="/terms">Terms of Service</a>
+          </div>
+          <div class="footer-column">
+            <h4>Follow Us</h4>
+            <a href="https://facebook.com">Facebook</a>
+            <a href="https://twitter.com">Twitter</a>
+            <a href="https://instagram.com">Instagram</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 OpenMicHubNepal. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>

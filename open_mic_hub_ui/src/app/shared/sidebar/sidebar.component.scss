@@ -1,0 +1,31 @@
+.hover-highlight:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: background-color 0.2s;
+  }
+  
+  .transition-icon {
+    transition: transform 0.3s ease;
+  }
+  
+  .submenu-transition {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease-out;
+  }
+  
+  .submenu-expanded {
+    max-height: 500px;
+    transition: max-height 0.5s ease-in;
+  }
+  
+  .smaller-text {
+    font-size: 0.9rem;
+  }
+  
+  .text-light-emphasis {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.2);
+  }

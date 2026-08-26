@@ -1,0 +1,237 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  TransactionService,
+  TransactionResponse,
+  TransactionApiResponse,
+  ArtistResponse
+} from './transaction.service';
+
+@Component({
+  selector: 'app-transactions-list',
+  standalone: false,
+  templateUrl: './transactions-list.component.html',
+  styleUrls: ['./transactions-list.component.scss']
+})
+export class TransactionsListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private artistSearchSubject = new Subject<string>();
+
+  // Data properties
+  transactions: TransactionResponse[] = [];
+  filteredTransactions: TransactionResponse[] = [];
+  paginatedTransactions: TransactionResponse[] = [];
+
+  // Filter properties
+  selectedType: string = '';
+  selectedPurpose: string = '';
+  artistSearchTerm: string = '';
+  selectedAmountRange: string = '';
+
+  // Pagination properties
+  currentPage: number = 0;
+  pageSize: number = 20;
+  totalPages: number = 0;
+  totalTransactions: number = 0;
+
+  // State properties
+  loading: boolean = false;
+  error: string = '';
+
+  constructor(private transactionService: TransactionService) {
+    // Setup artist search with debounce
+    this.artistSearchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.onFilterChange();
+    });
+  }
+
+  ngOnInit() {
+    this.loadTransactions();
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadTransactions() {
+    this.loading = true;
+    this.error = '';
+
+    this.transactionService.getAllTransactions(0, 1000) // Load more for client-side filtering
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: TransactionApiResponse) => {
+          this.transactions = response.data.content;
+          this.totalTransactions = response.data.totalElements;
+          this.applyFilters();
+          this.loading = false;
+        },
+        error: (error) => {
+          this.error = 'Failed to load transactions. Please try again.';
+          this.loading = false;
+          console.error('Error loading transactions:', error);
+        }
+      });
+  }
+
+  refreshTransactions() {
+    this.loadTransactions();
+  }
+
+  onFilterChange() {
+    this.currentPage = 0;
+    this.applyFilters();
+  }
+
+  onArtistSearch(event: any) {
+    this.artistSearchTerm = event.target.value;
+    this.artistSearchSubject.next(this.artistSearchTerm);
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 0;
+    this.updatePagination();
+  }
+
+  applyFilters() {
+    let filtered = [...this.transactions];
+
+    // Filter by transaction type
+    if (this.selectedType) {
+      filtered = filtered.filter(t => t.transactionType === this.selectedType);
+    }
+
+    // Filter by purpose
+    if (this.selectedPurpose) {
+      filtered = filtered.filter(t => t.transactionPurpose === this.selectedPurpose);
+    }
+
+    // Filter by artist name
+    if (this.artistSearchTerm) {
+      const searchTerm = this.artistSearchTerm.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.artist.artistStageName.toLowerCase().includes(searchTerm) ||
+        t.artist.email.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Filter by amount range
+    if (this.selectedAmountRange) {
+      filtered = filtered.filter(t => this.isInAmountRange(t.amount, this.selectedAmountRange));
+    }
+
+    this.filteredTransactions = filtered;
+    this.updatePagination();
+  }
+
+  isInAmountRange(amount: number, range: string): boolean {
+    switch (range) {
+      case '0-100': return amount >= 0 && amount <= 100;
+      case '100-500': return amount > 100 && amount <= 500;
+      case '500-1000': return amount > 500 && amount <= 1000;
+      case '1000+': return amount > 1000;
+      default: return true;
+    }
+  }
+
+  updatePagination() {
+    this.totalPages = Math.ceil(this.filteredTransactions.length / this.pageSize);
+    const startIndex = this.currentPage * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedTransactions = this.filteredTransactions.slice(startIndex, endIndex);
+  }
+
+  goToPage(page: number) {
+    if (page >= 0 && page < this.totalPages) {
+      this.currentPage = page;
+      this.updatePagination();
+    }
+  }
+
+  getVisiblePages(): number[] {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages - 1, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(0, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  get startIndex(): number {
+    return this.currentPage * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.filteredTransactions.length);
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.selectedType || this.selectedPurpose || this.artistSearchTerm || this.selectedAmountRange);
+  }
+
+  clearFilters() {
+    this.selectedType = '';
+    this.selectedPurpose = '';
+    this.artistSearchTerm = '';
+    this.selectedAmountRange = '';
+    this.onFilterChange();
+  }
+
+  isPositiveTransaction(type: string): boolean {
+    return type === 'CREDIT' || type === 'REFUND';
+  }
+
+  formatPurpose(purpose: string): string {
+    return purpose.replace(/_/g, ' ').toLowerCase()
+      .replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  viewTransactionDetails(transaction: TransactionResponse) {
+    // Implement transaction details modal or navigation
+    console.log('View transaction details:', transaction);
+  }
+
+  viewArtistProfile(artist: ArtistResponse) {
+    // Implement artist profile navigation
+    console.log('View artist profile:', artist);
+  }
+
+  trackByTransactionId(index: number, transaction: TransactionResponse): number {
+    return transaction.transactionId;
+  }
+
+  processWithdrawal(transaction: TransactionResponse) {
+    if (confirm(`Process withdrawal of ${transaction.amount} for ${transaction.artist.artistStageName}?`)) {
+      this.loading = true;
+      this.error = '';
+      this.transactionService.processWithdrawal(transaction.transactionId)
+        .subscribe(
+          (url: string) => {
+            console.log('Withdrawal processed successfully:', url);
+            // Safely trigger navigation
+            setTimeout(() => window.location.href = url, 0);
+          },
+          (error) => {
+            this.error = 'Failed to process withdrawal. Please try again.';
+            console.error('Error processing withdrawal:', error);
+          }
+        );
+    }
+
+  }
+}

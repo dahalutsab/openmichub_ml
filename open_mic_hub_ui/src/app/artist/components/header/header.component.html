@@ -1,0 +1,104 @@
+<!-- header.component.html -->
+<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+  <!-- Sidebar Toggle (Topbar) -->
+  <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" (click)="toggleSidebar()">
+    <i class="fa fa-bars"></i>
+  </button>
+
+  <!-- Topbar Navbar -->
+  <ul class="navbar-nav ms-auto">
+    <div class="topbar-divider d-none d-sm-block"></div>
+
+    <!-- Nav Item - User Information -->
+    <li class="nav-item dropdown no-arrow">
+      <a class="nav-link dropdown-toggle profile-toggle" href="#" id="userDropdown" role="button"
+         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <div class="d-flex align-items-center">
+          <div class="balance-info mr-3 d-none d-lg-block">
+            <div class="balance-label">Balance</div>
+            <div class="balance-amount">NPR. {{userBalance}}</div>
+          </div>
+          <div class="profile-image-container">
+            <img class="img-profile rounded-circle" [src]="userProfile.avatar" alt="Profile">
+            <div class="online-indicator"></div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Enhanced Dropdown - User Information -->
+      <div class="dropdown-menu dropdown-menu-right shadow-lg profile-dropdown animated--grow-in"
+           aria-labelledby="userDropdown">
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+          <div class="profile-cover"></div>
+          <div class="profile-info">
+            <div class="profile-avatar">
+              <img [src]="userProfile.avatar" alt="Profile" class="rounded-circle">
+              <div class="status-dot bg-success"></div>
+            </div>
+            <div class="profile-details">
+              <h6 class="profile-name">{{userProfile.name}}</h6>
+              <span class="profile-status">
+                  <i class="fas fa-circle text-success mr-1"></i>Active
+                </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+          <div class="balance-header">
+            <span class="balance-title">Wallet Balance</span>
+            <button class="btn btn-sm btn-outline-success add-money-btn">
+              <i class="bi bi-plus-circle"></i>
+            </button>
+          </div>
+          <div class="balance-amount-large">NPR. {{userBalance}}</div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <div class="action-item" (click)="viewProfile()">
+            <i class="bi bi-person-circle action-icon"></i>
+            <span>View profile</span>
+          </div>
+        </div>
+
+<!--        &lt;!&ndash; Menu Items &ndash;&gt;-->
+<!--        <div class="profile-menu">-->
+<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('statement')">-->
+<!--            <i class="fas fa-file-alt menu-icon"></i>-->
+<!--            <span>Statement</span>-->
+<!--          </a>-->
+
+<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('limits')">-->
+<!--            <i class="fas fa-chart-line menu-icon"></i>-->
+<!--            <span>My Limit</span>-->
+<!--          </a>-->
+
+<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('activities')">-->
+<!--            <i class="fas fa-history menu-icon"></i>-->
+<!--            <span>User Activities</span>-->
+<!--          </a>-->
+
+<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('bank-account')">-->
+<!--            <i class="fas fa-university menu-icon"></i>-->
+<!--            <span>Bank account</span>-->
+<!--          </a>-->
+
+<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('linked-bank')">-->
+<!--            <i class="fas fa-link menu-icon"></i>-->
+<!--            <span>Linked Bank account</span>-->
+<!--          </a>-->
+
+          <a class="dropdown-item profile-menu-item logout-item" (click)="logout()" style="cursor: pointer;">
+            <i class="fas fa-sign-out-alt menu-icon text-danger"></i>
+            <span class="text-danger"> 
+              <i class="bi bi-box-arrow-right"></i> Logout</span>
+          </a>
+        </div>
+<!--      </div>-->
+    </li>
+  </ul>
+</nav>

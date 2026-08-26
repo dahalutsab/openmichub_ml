@@ -1,0 +1,98 @@
+<div class="login-container">
+  <div class="login-image-container">
+    <img src="https://cdni.iconscout.com/illustration/premium/thumb/user-login-4268415-3551762.png" alt="Login Illustration" class="login-image">
+    <div class="image-overlay">
+      <h1>Welcome Back</h1>
+      <p>Enter your credentials to access your account</p>
+    </div>
+  </div>
+  
+
+  <div class="login-form-container">
+    <div class="logo-container">
+      <h2>Sign In</h2>
+    </div>
+    
+    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+
+      <div *ngIf="loginError" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        Invalid email or password. Please try again.
+      </div>
+      
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <div class="input-group">
+          <i class="fas fa-envelope"></i>
+          <input 
+            type="email" 
+            formControlName="email" 
+            class="form-control" 
+            id="email" 
+            placeholder="Enter your email"
+            [ngClass]="{'is-invalid': loginForm.get('email').invalid && loginForm.get('email').touched}"
+          >
+        </div>
+        <div *ngIf="loginForm.get('email').invalid && loginForm.get('email').touched" class="validation-error">
+          <small *ngIf="loginForm.get('email').errors?.required">Email is required</small>
+          <small *ngIf="loginForm.get('email').errors?.email">Please enter a valid email</small>
+        </div>
+      </div>
+      
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-group">
+          <i class="fas fa-lock"></i>
+          <input 
+            [type]="showPassword ? 'text' : 'password'" 
+            formControlName="password" 
+            class="form-control" 
+            id="password" 
+            placeholder="Enter your password"
+            [ngClass]="{'is-invalid': loginForm.get('password').invalid && loginForm.get('password').touched}"
+          >
+          <i (click)="togglePasswordVisibility()" [class]="showPassword ? 'fas fa-eye-slash password-toggle' : 'fas fa-eye password-toggle'"></i>
+        </div>
+        <div *ngIf="loginForm.get('password').invalid && loginForm.get('password').touched" class="validation-error">
+          <small *ngIf="loginForm.get('password').errors?.required">Password is required</small>
+          <small *ngIf="loginForm.get('password').errors?.minlength">Password must be at least 6 characters</small>
+        </div>
+      </div>
+      
+      <div class="options">
+        <div class="remember">
+          <input type="checkbox" id="remember">
+          <label for="remember">Remember me</label>
+        </div>
+        <div class="forgot-password">
+          <a routerLink="/auth/forgot-password">Forgot Password?</a>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn" [disabled]="loginForm.invalid">
+        <span *ngIf="!isLoading">Login</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+      
+      <div class="divider">or</div>
+      
+      <!-- <div class="social-login">
+        <button type="button" class="social-btn google">
+          <i class="fab fa-google"></i>
+          <span>Google</span>
+        </button>
+        <button type="button" class="social-btn facebook">
+          <i class="fab fa-facebook-f"></i>
+          <span>Facebook</span>
+        </button>
+      </div> -->
+      
+      
+      <div class="signup">
+        Don't have an account? <a routerLink="/auth/register">Sign up</a>
+      </div>
+    </form>
+  </div>
+</div>

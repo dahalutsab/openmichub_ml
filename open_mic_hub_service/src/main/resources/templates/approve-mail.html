@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Approved - Open Mic Hub</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 0;">
+<div style="background-color: #ffffff; padding: 30px; margin: 50px auto; max-width: 600px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+    <h2 style="text-align: center; color: #4caf50;">✅ Booking Approved - Open Mic Hub</h2>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Hello <strong><span th:text="${userName}">[User Name]</span></strong>,
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Good news! Your booking request has been <strong>approved</strong> by <strong><span th:text="${artistName}">[Artist Name]</span></strong>.
+    </p>
+
+    <p style="color: #333333; font-size: 16px;">
+        Here are the confirmed details:
+    </p>
+
+    <ul style="color: #333333; font-size: 16px; line-height: 1.6; padding-left: 20px;">
+        <li><strong>Event Date:</strong> <span th:text="${eventDate}">[Event Date]</span></li>
+        <li><strong>Start Time:</strong> <span th:text="${startTime}">[Start Time]</span></li>
+        <li><strong>End Time:</strong> <span th:text="${endTime}">[End Time]</span></li>
+        <li><strong>Venue:</strong> <span th:text="${venue}">[Venue]</span></li>
+        <li><strong>Event Type:</strong> <span th:text="${eventType}">[Event Type]</span></li>
+    </ul>
+
+    <p style="color: #333333; font-size: 16px;">
+        Please ensure you're ready and present at the venue on time. We’re excited to help make your event unforgettable!
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="http://localhost:4200/user/bookings"
+           style="display: inline-block; padding: 12px 25px; font-size: 16px; background-color: #4caf50; color: #ffffff; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease;">
+            View Booking Details
+        </a>
+    </div>
+
+    <p style="color: #555555; font-size: 14px; line-height: 1.6;">
+        If you have any questions, feel free to reply to this email or contact our support team.
+    </p>
+
+    <p style="color: #555555; font-size: 14px; line-height: 1.6;">
+        Thank you for using <strong>Open Mic Hub</strong>. We're thrilled to be part of your event journey!
+    </p>
+
+    <p style="color: #555555; font-size: 14px; line-height: 1.6;">
+        Best regards,<br>
+        The Open Mic Hub Team
+    </p>
+</div>
+</body>
+</html>

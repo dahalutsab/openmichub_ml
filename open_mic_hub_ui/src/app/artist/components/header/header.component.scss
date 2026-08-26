@@ -1,0 +1,307 @@
+@use '../../../../app/shared/css/admin.scss' as admin;
+
+// Profile Toggle Styles
+.profile-toggle {
+  padding: 0.5rem 1rem !important;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+  }
+}
+
+.balance-info {
+  text-align: right;
+
+  .balance-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 2px;
+  }
+
+  .balance-amount {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #28a745;
+  }
+}
+
+.profile-image-container {
+  position: relative;
+
+  .img-profile {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background-color: #28a745;
+    border: 2px solid #fff;
+    border-radius: 50%;
+  }
+}
+
+// Enhanced Profile Dropdown
+.profile-dropdown {
+  width: 320px;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  margin-top: 10px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 20px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    transform: rotate(45deg);
+    box-shadow: -2px -2px 5px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Profile Header
+.profile-header {
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  color: white;
+
+  .profile-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0.9;
+  }
+
+  .profile-info {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .profile-avatar {
+      position: relative;
+      margin-right: 15px;
+
+      img {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .status-dot {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 14px;
+        height: 14px;
+        border: 2px solid white;
+        border-radius: 50%;
+      }
+    }
+
+    .profile-details {
+      .profile-name {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .profile-status {
+        font-size: 0.85rem;
+        opacity: 0.9;
+
+        i {
+          font-size: 0.7rem;
+        }
+      }
+    }
+  }
+}
+
+// Balance Card
+.balance-card {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f5e8 100%);
+  border-bottom: 1px solid #e9ecef;
+
+  .balance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .balance-title {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    .add-money-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i {
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  .balance-amount-large {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 15px;
+  }
+
+  .balance-points {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .point-item {
+      display: flex;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #6c757d;
+
+      i {
+        margin-right: 8px;
+        width: 16px;
+        text-align: center;
+      }
+    }
+  }
+}
+
+// Quick Actions
+.quick-actions {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+
+  .action-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: #007bff;
+    }
+
+    i {
+      margin-right: 12px;
+      width: 20px;
+      text-align: center;
+      color: #6c757d;
+    }
+
+    span {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// Profile Menu
+.profile-menu {
+  padding: 10px 0;
+
+  .profile-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    border: none;
+    background: none;
+
+    &:hover {
+      background-color: #f8f9fa;
+      color: #007bff;
+
+      .menu-icon {
+        color: #007bff;
+      }
+    }
+
+    .menu-icon {
+      margin-right: 15px;
+      width: 20px;
+      text-align: center;
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+
+    span {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    &.logout-item {
+      &:hover {
+        background-color: #fff5f5;
+
+        .menu-icon {
+          color: #dc3545 !important;
+        }
+      }
+    }
+  }
+}
+
+// Animation
+.animated--grow-in {
+  animation: growIn 0.3s ease-out;
+}
+
+@keyframes growIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .profile-dropdown {
+    width: 280px;
+
+    .balance-card {
+      padding: 15px;
+
+      .balance-amount-large {
+        font-size: 1.3rem;
+      }
+    }
+
+    .profile-header {
+      padding: 15px;
+    }
+  }
+}

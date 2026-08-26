@@ -1,0 +1,25 @@
+<!-- payment-callback.component.html -->
+<div class="callback-wrapper" *ngIf="queryParams">
+  <mat-card class="callback-card" [ngClass]="queryParams['status']?.toLowerCase()">
+    <mat-card-header>
+      <div mat-card-avatar class="status-avatar">
+        <mat-icon>{{ queryParams['status']?.toLowerCase() === 'completed' ? 'check_circle' : 'error' }}</mat-icon>
+      </div>
+      <mat-card-title>
+        Payment {{ queryParams['status'] }}
+      </mat-card-title>
+      <mat-card-subtitle>
+        {{ queryParams['status']?.toLowerCase() === 'completed' ? 'Your payment was successful.' : 'Payment failed or was cancelled.' }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p><strong>Transaction ID:</strong> {{ queryParams['txnId'] }}</p>
+      <p><strong>Amount:</strong> NPR {{ queryParams['amount'] /100 }}</p>
+    </mat-card-content>
+
+    <mat-card-actions *ngIf="queryParams['status']?.toLowerCase() === 'completed'">
+      <button mat-raised-button color="primary" (click)="goToBookings()">View My Bookings</button>
+    </mat-card-actions>
+  </mat-card>
+</div>

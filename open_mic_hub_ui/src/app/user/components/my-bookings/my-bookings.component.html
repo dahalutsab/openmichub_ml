@@ -1,0 +1,43 @@
+<table class="table table-hover align-middle">
+  <thead class="table-dark">
+    <tr>
+   
+      <th>Artist</th>
+      <th>Type</th>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Venue</th>
+      <th>Status</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let booking of bookings">
+      <td class="d-flex align-items-center gap-2">
+        <div>
+          <strong>{{ booking.artistResponse.artistName }}</strong><br />
+          <small class="text-muted">{{ booking.artistResponse.stageName }}</small>
+        </div>
+      </td>
+      <td>{{ booking.bookingType }}</td>
+      <td>{{ booking.bookingDate }}</td>
+      <td>{{ booking.startTime }} - {{ booking.endTime }}</td>
+      <td>{{ booking.venue }}</td>
+      <td>
+        <span class="badge"
+              [ngClass]="{
+                'bg-success': booking.bookingStatus === 'CONFIRMED',
+                'bg-warning text-dark': booking.bookingStatus === 'PENDING',
+                'bg-danger': booking.bookingStatus === 'CANCELLED'
+              }">
+          {{ booking.bookingStatus }}
+        </span>
+      </td>
+      <td>
+        Rs. {{ booking.receivedAmount }} / {{ booking.totalAmount }}
+        <br />
+        <small class="text-muted">Remaining: Rs. {{ booking.remainingAmount }}</small>
+      </td>
+    </tr>
+  </tbody>
+</table>

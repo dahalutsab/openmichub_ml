@@ -1,0 +1,277 @@
+<div class="registration-wrapper">
+  <div class="bg-animation"></div>
+  <div class="bg-particles"></div>
+
+  <div class="register-container">
+    <div class="header-section">
+      <h2 class="main-title">Create Your Account</h2>
+      <p class="subtitle">Join our community of music lovers and artists</p>
+    </div>
+
+    <div class="tabs-container" [class.artist-active]="activeRole === 'artist'">
+      <div class="tabs-background"></div>
+      <button 
+        type="button"
+        class="tab-button"
+        [class.active]="activeRole === 'user'"
+        (click)="setRole('user')">
+        <span class="tab-icon">👤</span>
+        <span>User</span>
+      </button>
+      <button 
+        type="button"
+        class="tab-button"
+        [class.active]="activeRole === 'artist'"
+        (click)="setRole('artist')">
+        <span class="tab-icon">🎵</span>
+        <span>Artist</span>
+      </button>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fullName" class="form-label">
+            <span class="label-text">Full Name</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="fullName" 
+              formControlName="fullName" 
+              type="text" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('fullName')?.invalid"
+              placeholder="Enter your full name">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('fullName')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Full name is required (minimum 3 characters)
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="userEmail" class="form-label">
+            <span class="label-text">Email Address</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="userEmail" 
+              formControlName="userEmail" 
+              type="email" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('userEmail')?.invalid"
+              placeholder="Enter your email address">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('userEmail')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Please enter a valid email address
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="password" class="form-label">
+            <span class="label-text">Password</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="password" 
+              formControlName="password" 
+              type="password" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('password')?.invalid"
+              placeholder="Create a strong password">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('password')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Password is required (minimum 6 characters)
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber" class="form-label">
+            <span class="label-text">Phone Number</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="phoneNumber" 
+              formControlName="phoneNumber" 
+              type="tel" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('phoneNumber')?.invalid"
+              placeholder="Enter your phone number">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('phoneNumber')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Please enter a valid phone number (7-15 digits)
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="location" class="form-label">
+            <span class="label-text">Location</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="location" 
+              formControlName="location" 
+              type="text" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('location')?.invalid"
+              placeholder="Enter your city or region">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('location')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Location is required
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="activeRole === 'artist'">
+          <label for="stageName" class="form-label">
+            <span class="label-text">Stage Name</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="input-container">
+            <input 
+              id="stageName" 
+              formControlName="stageName" 
+              type="text" 
+              class="form-input"
+              [class.error]="submitted && registerForm.get('stageName')?.invalid"
+              placeholder="Enter your stage name">
+            <div class="input-focus-border"></div>
+          </div>
+          <div *ngIf="submitted && registerForm.get('stageName')?.invalid" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Stage name is required (minimum 3 characters)
+          </div>
+        </div>
+      </div>
+
+      <div class="artist-fields" [class.show]="activeRole === 'artist'">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="genres" class="form-label">
+              <span class="label-text">Genres</span>
+              <span class="required-indicator">*</span>
+            </label>
+            
+            <div class="genre-selection-display">
+              <div class="selected-genres-summary">
+                {{ getSelectedGenresText() }}
+              </div>
+            </div>
+
+            <div class="genre-checkboxes-container">
+              <div *ngFor="let genre of genres" class="genre-group">
+                <h4 class="genre-title">{{ genre.name }}</h4>
+                <div class="subgenre-list">
+                  <label *ngFor="let subGenre of genre.categories" class="checkbox-label">
+                    <input 
+                      type="checkbox"
+                      [checked]="isSubGenreSelected(genre.id, subGenre.id)"
+                      (change)="onGenreCheckboxChange(genre.id, subGenre.id, $event)"
+                      class="checkbox-input">
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">{{ subGenre.name }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div *ngIf="submitted && selectedGenres.length === 0 && activeRole === 'artist'" class="error-message">
+              <span class="error-icon">⚠️</span>
+              At least one genre is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="bio" class="form-label">
+              <span class="label-text">Bio</span>
+              <span class="required-indicator">*</span>
+            </label>
+            <div class="input-container">
+              <textarea 
+                id="bio" 
+                formControlName="bio" 
+                class="form-textarea"
+                [class.error]="submitted && registerForm.get('bio')?.invalid"
+                placeholder="Tell us about yourself and your musical journey..."
+                rows="4"></textarea>
+              <div class="input-focus-border"></div>
+            </div>
+            <div *ngIf="submitted && registerForm.get('bio')?.invalid" class="error-message">
+              <span class="error-icon">⚠️</span>
+              Bio is required (minimum 10 characters)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="profileImage" class="form-label">
+            <span class="label-text">Profile Picture</span>
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="file-upload-container">
+            <input 
+              id="profileImage" 
+              (change)="onFileChange($event)" 
+              type="file" 
+              accept="image/*" 
+              class="file-input"
+              #fileInput>
+            <div class="file-upload-area" (click)="fileInput.click()">
+              <div class="file-upload-icon">📸</div>
+              <div class="file-upload-text">
+                <span class="primary-text">Click to upload</span>
+                <span class="secondary-text">or drag and drop your image here</span>
+              </div>
+            </div>
+          </div>
+          
+          <div *ngIf="profileImage" class="image-preview">
+            <img [src]="profileImage" class="preview-image" alt="Profile Preview">
+            <button type="button" class="remove-image" (click)="removeImage()">×</button>
+          </div>
+          
+          <div *ngIf="submitted && !profileImage" class="error-message">
+            <span class="error-icon">⚠️</span>
+            Please upload a profile picture
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="global-error-message">
+        <span class="error-icon">❌</span>
+        {{ errorMessage }}
+      </div>
+
+      <button 
+        type="submit" 
+        [disabled]="isSubmitting" 
+        class="submit-button"
+        [class.loading]="isSubmitting">
+        <span class="button-content">
+          <span *ngIf="isSubmitting" class="loading-spinner"></span>
+          <span class="button-text">{{ isSubmitting ? 'Creating Account...' : 'Create Account' }}</span>
+        </span>
+        <div class="button-shine"></div>
+      </button>
+    </form>
+  </div>
+</div>

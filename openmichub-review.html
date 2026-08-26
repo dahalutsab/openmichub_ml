@@ -1,0 +1,1093 @@
+<title>OpenMicHub Teardown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #F4F3F7;
+    --surface:     #FFFFFF;
+    --surface-2:   #EDEBF2;
+    --ink:         #191622;
+    --ink-soft:    #47415A;
+    --muted:       #6E6880;
+    --rule:        #DCD8E4;
+    --accent:      #56479B;
+    --accent-soft: #EDE9FA;
+
+    --sev-crit:    #B32D25;
+    --sev-crit-bg: #FBEAE8;
+    --sev-high:    #9A6208;
+    --sev-high-bg: #FBF0DC;
+    --sev-med:     #35648C;
+    --sev-med-bg:  #E6EFF7;
+    --sev-ok:      #1F6B4C;
+    --sev-ok-bg:   #E2F1E9;
+
+    --display: "Bricolage Grotesque", "Helvetica Neue", sans-serif;
+    --body:    "Source Serif 4", Georgia, serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #131019;
+      --surface:     #1B1725;
+      --surface-2:   #241F31;
+      --ink:         #EFECF5;
+      --ink-soft:    #C3BCD4;
+      --muted:       #948CA8;
+      --rule:        #322B42;
+      --accent:      #B3A4F0;
+      --accent-soft: #2A2340;
+
+      --sev-crit:    #F2897E;
+      --sev-crit-bg: #3A1C1A;
+      --sev-high:    #E3AC55;
+      --sev-high-bg: #362713;
+      --sev-med:     #7FB3DC;
+      --sev-med-bg:  #182837;
+      --sev-ok:      #6DC49C;
+      --sev-ok-bg:   #12301F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #131019;
+    --surface:     #1B1725;
+    --surface-2:   #241F31;
+    --ink:         #EFECF5;
+    --ink-soft:    #C3BCD4;
+    --muted:       #948CA8;
+    --rule:        #322B42;
+    --accent:      #B3A4F0;
+    --accent-soft: #2A2340;
+
+    --sev-crit:    #F2897E;
+    --sev-crit-bg: #3A1C1A;
+    --sev-high:    #E3AC55;
+    --sev-high-bg: #362713;
+    --sev-med:     #7FB3DC;
+    --sev-med-bg:  #182837;
+    --sev-ok:      #6DC49C;
+    --sev-ok-bg:   #12301F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 72px 0 40px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 20px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.6rem, 7vw, 4.1rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    margin: 0 0 24px;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: 1.2rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  .runmeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 32px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .runmeta b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- severity board ---------- */
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 48px 0 0;
+  }
+
+  .tile {
+    background: var(--surface);
+    padding: 20px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tile .n {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 2.6rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tile.crit .n { color: var(--sev-crit); }
+  .tile.high .n { color: var(--sev-high); }
+  .tile.med  .n { color: var(--sev-med); }
+  .tile.ok   .n { color: var(--sev-ok); }
+
+  /* ---------- sections ---------- */
+
+  section { margin-top: 76px; }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.9rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+
+  .sec-note {
+    color: var(--muted);
+    font-size: 1rem;
+    margin: 0 0 32px;
+    max-width: var(--measure);
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    margin: 40px 0 12px;
+  }
+
+  p { max-width: var(--measure); }
+
+  a { color: var(--accent); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.845em;
+    background: var(--surface-2);
+    padding: 0.12em 0.38em;
+    border-radius: 3px;
+    word-break: break-word;
+  }
+
+  /* ---------- finding cards ---------- */
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule);
+    padding: 24px 26px;
+    margin-bottom: 18px;
+  }
+  .finding.crit { border-left-color: var(--sev-crit); }
+  .finding.high { border-left-color: var(--sev-high); }
+  .finding.med  { border-left-color: var(--sev-med); }
+  .finding.ok   { border-left-color: var(--sev-ok); }
+
+  .f-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 14px;
+    margin-bottom: 12px;
+  }
+
+  .fid {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .chip.crit   { color: var(--sev-crit); background: var(--sev-crit-bg); }
+  .chip.high   { color: var(--sev-high); background: var(--sev-high-bg); }
+  .chip.med    { color: var(--sev-med);  background: var(--sev-med-bg); }
+  .chip.proven { color: var(--sev-ok);   background: var(--sev-ok-bg); }
+
+  .f-title {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.24rem;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    margin: 0;
+    flex-basis: 100%;
+  }
+
+  .finding p { margin: 0 0 12px; max-width: 66ch; }
+  .finding p:last-child { margin-bottom: 0; }
+
+  .loc {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 0 0 14px !important;
+    line-height: 1.7;
+  }
+
+  .fix {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--rule);
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+  }
+  .fix b {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  /* ---------- evidence ---------- */
+
+  .evidence {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .evidence .cap {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .evidence pre {
+    margin: 0;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+    white-space: pre;
+  }
+  .evidence .hl { color: var(--sev-crit); font-weight: 600; }
+  .evidence .dim { color: var(--muted); }
+  .evidence .good { color: var(--sev-ok); font-weight: 600; }
+
+  /* ---------- callout ---------- */
+
+  .callout {
+    background: var(--sev-ok-bg);
+    border: 1px solid var(--sev-ok);
+    padding: 26px 28px;
+    margin: 40px 0 0;
+  }
+  .callout h3 {
+    margin: 0 0 10px;
+    font-size: 1.2rem;
+    color: var(--ink);
+  }
+  .callout p { margin: 0 0 10px; }
+  .callout p:last-child { margin: 0; }
+
+  /* ---------- list ---------- */
+
+  ul.gaps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  ul.gaps li {
+    background: var(--surface);
+    padding: 15px 20px;
+    display: grid;
+    grid-template-columns: 118px 1fr;
+    gap: 18px;
+    align-items: baseline;
+    font-size: 0.97rem;
+  }
+  ul.gaps .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  @media (max-width: 620px) {
+    ul.gaps li { grid-template-columns: 1fr; gap: 5px; }
+  }
+
+  /* ---------- run steps ---------- */
+
+  .step {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+    align-items: start;
+  }
+  .step .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    margin-top: 3px;
+  }
+  .step p { margin: 0 0 8px; }
+
+  pre.cmd {
+    background: var(--ink);
+    color: #EFECF5;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 15px 17px;
+    margin: 0;
+    overflow-x: auto;
+    white-space: pre;
+    border-radius: 3px;
+  }
+  :root[data-theme="dark"] pre.cmd,
+  :root:not([data-theme="light"]) pre.cmd { background: #0C0A11; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) pre.cmd { background: var(--ink); }
+  }
+  pre.cmd .c { color: #948CA8; }
+
+  footer {
+    margin-top: 90px;
+    padding-top: 26px;
+    border-top: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Code review · Spring Boot + Angular</p>
+    <h1>OpenMicHub Teardown</h1>
+    <p class="standfirst">
+      The architecture is sound and the feature surface is genuinely ambitious — bookings, payments,
+      an earnings wallet, chat, a social feed, an LLM assistant. But <strong>the app does not start on
+      Linux or macOS</strong>, and the money layer can be drained by anyone with <code>curl</code> and no
+      account. Everything marked <em>proven</em> below I reproduced on a live instance.
+    </p>
+    <div class="runmeta">
+      <span><b>Backend</b> Spring Boot 3.3.4 · Java 21 · 196 files</span>
+      <span><b>Frontend</b> Angular 19 · 115 TS files</span>
+      <span><b>DB</b> Postgres 16 (Docker)</span>
+    </div>
+  </header>
+
+  <div class="board">
+    <div class="tile crit"><span class="n">6</span><span class="l">Critical</span></div>
+    <div class="tile high"><span class="n">9</span><span class="l">High</span></div>
+    <div class="tile med"><span class="n">12</span><span class="l">Medium</span></div>
+    <div class="tile ok"><span class="n">5</span><span class="l">Proven live</span></div>
+  </div>
+
+  <div class="callout">
+    <h3>The blocker — fixed, one character</h3>
+    <p>
+      <code>application-local.yml</code> pointed at <code>certs/public_Key.pem</code>. The file on disk is
+      <code>public_key.pem</code>. Windows didn't care; Linux and macOS refuse to boot the context at all —
+      <code>RSAKeyRecord</code> fails to bind and the whole app dies at startup.
+    </p>
+    <p>
+      I changed the capital <code>K</code> to lowercase in <code>src/main/resources/application-local.yml:33</code>.
+      That is the only source edit I made. The app now starts clean and Hibernate builds the full schema.
+    </p>
+  </div>
+
+  <!-- ============ MONEY ============ -->
+  <section>
+    <h2>The money layer</h2>
+    <p class="sec-note">
+      This is where the serious problems are. The payment callback is the front door and it is
+      unlocked, and the wallet arithmetic behind it is wrong in a way that destroys data.
+    </p>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="chip proven">Proven live</span>
+        <span class="fid">PAY-01</span>
+        <h4 class="f-title">Anyone can mark any payment "Completed" without paying</h4>
+      </div>
+      <p class="loc">SecurityConfig.java:54 · PaymentServiceImpl.java:200–209</p>
+      <p>
+        <code>/api/v1/payments/callback</code> is <code>permitAll()</code>, and it trusts the
+        <code>status</code> and <code>amount</code> query parameters it is handed. Khalti is never called back
+        to verify the transaction — there is no lookup request anywhere in the codebase. The Angular
+        <code>PaymentCallbackComponent</code> simply forwards whatever query string lands in the browser,
+        which means the "proof of payment" is attacker-controlled by design.
+      </p>
+      <div class="evidence">
+        <div class="cap">Unauthenticated request against a running instance</div>
+<pre>$ curl -X POST "localhost:8181/api/v1/payments/callback\
+?pidx=FORGEDPIDX123&amp;status=Completed&amp;amount=1&amp;totalAmount=1"
+
+<span class="hl">Payment processed successfully</span>   <span class="dim">HTTP 200</span>
+
+payment  → FORGEDPIDX123 | <span class="hl">COMPLETED</span> | received_amount 0.01
+wallet   → balance <span class="hl">3800.00</span>   <span class="dim">(paid: one paisa)</span></pre>
+      </div>
+      <div class="fix">
+        <b>Fix</b>
+        Call Khalti's <code>epayment/lookup/</code> with the <code>pidx</code> and trust only that response.
+        Compare the returned amount against the stored <code>Payment</code> before crediting anything. Keep the
+        endpoint public (gateways need it) but treat every parameter on it as hostile.
+      </div>
+    </div>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="chip proven">Proven live</span>
+        <span class="fid">PAY-02</span>
+        <h4 class="f-title">Every completed payment erases the artist's entire balance</h4>
+      </div>
+      <p class="loc">VirtualCoinServiceImpl.java:40 · PaymentServiceImpl.java:227–246</p>
+      <p>
+        <code>createOrUpdateVirtualCoin()</code> does <code>setBalance(request.getBalance())</code> — it
+        <em>assigns</em> rather than adds. <code>handleCallback</code> calls it with the amount for this one
+        booking, so the artist's accumulated earnings are overwritten by a single booking's value. Then
+        <code>createTransaction()</code> runs and adds the same amount <em>again</em>, so the number that lands
+        is double one booking and bears no relation to what the artist actually earned.
+      </p>
+      <div class="evidence">
+        <div class="cap">Artist with existing earnings receives one new 2,000 booking</div>
+<pre>balance before   <span class="good">50000.00</span>
+                 <span class="dim">↓ one payment callback for a 2,000 booking</span>
+balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 in earnings destroyed</span>
+
+<span class="dim">   assign 1900 (overwrite)  +  add 1900 (transaction)  =  3800</span></pre>
+      </div>
+      <div class="fix">
+        <b>Fix</b>
+        Delete the balance write from <code>createOrUpdateVirtualCoin</code> entirely. Let
+        <code>createTransaction</code> be the single place that moves the balance, and derive the balance from
+        the transaction ledger rather than storing it as an independently mutable column.
+      </div>
+    </div>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="chip proven">Proven live</span>
+        <span class="fid">PAY-03</span>
+        <h4 class="f-title">Callbacks are replayable — no idempotency key</h4>
+      </div>
+      <p class="loc">PaymentServiceImpl.java:200</p>
+      <p>
+        Nothing checks whether a <code>pidx</code> has already been processed. Firing the identical callback
+        twice produced two <code>APPROVED</code> credit transactions of 1,900 each against one booking. The
+        ledger and the balance column drift apart immediately, and there is no reconciliation job to catch it.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Return early when <code>payment.getPaymentStatus()</code> is already <code>COMPLETED</code>. Add a
+        unique constraint on <code>payment.pidx</code>, and a unique constraint on
+        <code>(booking_id, transaction_purpose)</code> for booking credits.
+      </div>
+    </div>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="fid">PAY-04</span>
+        <h4 class="f-title">The payout endpoint is public and doesn't check who owns the transaction</h4>
+      </div>
+      <p class="loc">SecurityConfig.java:55 · BookingController.java:103 · BookingServiceImpl (withdraw)</p>
+      <p>
+        <code>/api/v1/artist/withdraw</code> is <code>permitAll()</code>. It takes a <code>transactionId</code>
+        from the request body, looks it up, and initiates a real Khalti payout — without checking that the
+        caller is the artist who owns it, that the caller is authenticated at all, or that the transaction is
+        still <code>PENDING</code>. Transaction IDs are sequential. <code>/api/v1/artist/withdraw/callback</code>
+        is whitelisted and unverified on the same pattern.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Require authentication, resolve the artist from the security context (never from the request), and
+        assert <code>transaction.virtualCoin.artist == loggedInArtist</code> plus
+        <code>status == PENDING</code> before initiating anything.
+      </div>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">PAY-05</span>
+        <h4 class="f-title">Withdrawal requests never reserve the balance</h4>
+      </div>
+      <p class="loc">TransactionServiceImpl.java (withDraw)</p>
+      <p>
+        <code>withDraw()</code> checks the balance, then writes a <code>PENDING</code> debit — but never
+        deducts or reserves anything. An artist with 1,000 can submit fifty separate 1,000 withdrawal
+        requests and every one passes the check. The balance is only reduced later, in the withdraw callback,
+        once per approval.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Deduct into a held/pending balance at request time and release it if the payout is declined, or
+        compute available balance as <code>balance − sum(pending debits)</code> in the check.
+      </div>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">PAY-06</span>
+        <h4 class="f-title">Bookings are never confirmed after successful payment</h4>
+      </div>
+      <p class="loc">PaymentServiceImpl.java:209–250</p>
+      <p>
+        The success branch updates the payment, the wallet and the ledger, but never touches
+        <code>booking.status</code> — it stays <code>PENDING</code> forever. The code that would have set
+        <code>CONFIRMED</code> / <code>CANCELLED</code> is sitting commented out in the failure branch. Users
+        pay and the booking still looks unconfirmed.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">PAY-07</span>
+        <h4 class="f-title">Sub-hour and partial-hour bookings are billed wrong or crash</h4>
+      </div>
+      <p class="loc">BookingServiceImpl / PaymentServiceImpl — <code>Duration.between(...).toHours()</code></p>
+      <p>
+        <code>toHours()</code> truncates. A 90-minute booking bills one hour. A 45-minute booking computes a
+        total of zero, which then throws <code>"Received amount must be greater than zero"</code> and the user
+        cannot pay at all.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Use <code>Duration.toMinutes() / 60.0</code>, and move all currency off <code>double</code> onto
+        <code>BigDecimal</code> — every amount in the system is currently a float.
+      </div>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">PAY-08</span>
+        <h4 class="f-title">@Transactional on a method returning Mono does nothing</h4>
+      </div>
+      <p class="loc">PaymentServiceImpl.bookArtist · BookingServiceImpl.withdraw</p>
+      <p>
+        Both methods are annotated <code>@Transactional</code> but return a <code>Mono</code>. The transaction
+        commits when the method returns the publisher — before <code>doOnNext</code> ever runs. The
+        <code>paymentRepository.save()</code> inside <code>doOnNext</code> executes on a Reactor scheduler
+        thread outside any transaction and outside the request's persistence context. If Khalti is slow or the
+        subscriber goes away, the payment row is silently never written.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ AUTH ============ -->
+  <section>
+    <h2>Authentication &amp; access control</h2>
+    <p class="sec-note">
+      There is a role model in the database — ADMIN, USER, ARTIST — and nothing in the application
+      consults it.
+    </p>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="chip proven">Proven live</span>
+        <span class="fid">AUTH-01</span>
+        <h4 class="f-title">No authorization exists anywhere in the codebase</h4>
+      </div>
+      <p class="loc">Whole service — <code>grep -r "PreAuthorize|hasRole|hasAuthority"</code> returns nothing</p>
+      <p>
+        <code>@EnableMethodSecurity</code> is switched on in <code>SecurityConfig</code>, but there is not a
+        single <code>@PreAuthorize</code>, <code>@Secured</code> or <code>hasRole()</code> in the project. Every
+        authenticated account — including a freshly registered end user — has identical access to every
+        endpoint, including the admin surface.
+      </p>
+      <div class="evidence">
+        <div class="cap">Requests made with a plain USER token</div>
+<pre>GET /api/v1/user/all        → <span class="hl">200</span>  full user directory, emails, roles
+GET /api/v1/payments        → <span class="hl">200</span>  every payment on the platform
+GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earnings ledger
+
+<span class="dim">(anonymous requests correctly return 401 — the gap is role separation)</span></pre>
+      </div>
+      <div class="fix">
+        <b>Fix</b>
+        Annotate the admin surface with <code>@PreAuthorize("hasRole('ADMIN')")</code> and the artist surface
+        with <code>hasRole('ARTIST')</code>. Also fix <code>JwtTokenGenerator.getPermissionsFromRoles()</code>,
+        which checks for <code>ROLE_SCHOOL_ADMIN</code> — copy-paste from a different project, so the
+        <code>scope</code> claim it builds is meaningless for every real role.
+      </div>
+    </div>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="fid">AUTH-02</span>
+        <h4 class="f-title">Access tokens are encrypted but never signed</h4>
+      </div>
+      <p class="loc">JwtTokenGenerator.java · JwtAccessTokenFilter.java</p>
+      <p>
+        Tokens are JWE objects built with <code>RSA_OAEP_256</code> using the <strong>public</strong> key, and
+        the filter decrypts them with the private key and accepts the claims. There is no signature step at
+        any point. Encryption proves confidentiality, not authorship — anyone holding the public key can
+        encrypt a payload of their choosing, and the server will decrypt it and trust the
+        <code>sub</code> claim. The public key is committed to the repository.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Sign first, then encrypt: build a <code>SignedJWT</code> (RS256, private key), wrap it in the JWE, and
+        have the filter verify the signature after decrypting. Or drop the JWE and use plain signed JWTs,
+        which is what the <code>oauth2-resource-server</code> dependency already on the classpath expects.
+      </div>
+    </div>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="fid">AUTH-03</span>
+        <h4 class="f-title">Password reset OTPs aren't bound to a user and can be brute-forced</h4>
+      </div>
+      <p class="loc">OTPServiceImplementation.java:49 · AuthServiceImpl.resetPassword</p>
+      <p>
+        <code>getOTP()</code> looks up by <code>findByOtpValueAndPurpose(otp, purpose)</code> — value and
+        purpose only, no user. <code>resetPassword</code> takes whatever user that row happens to belong to and
+        changes their password. The OTP is six digits, there is no rate limiting, no attempt counter, and no
+        lockout. An attacker walks the keyspace and resets a stranger's password — they don't get to choose
+        whose, but with any real user base that hardly matters.
+      </p>
+      <p>
+        Separately, <code>isUsed</code> is written on the entity but never checked, so a reset token stays
+        valid for its full five-minute window no matter how many times it has been redeemed.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Use a long random token (not a 6-digit code) for password reset links, scope the lookup to the user,
+        check <code>isUsed</code>, and add per-IP and per-account rate limiting on
+        <code>/forgot-password</code> and <code>/reset-password</code>.
+      </div>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">AUTH-04</span>
+        <h4 class="f-title">Email verification is never enforced at login</h4>
+      </div>
+      <p class="loc">AuthServiceImpl.getJwtTokensAfterAuthentication</p>
+      <p>
+        <code>UserEntity.verified</code> is set to <code>false</code> at registration and checked nowhere in
+        the login path. Unverified accounts log in and receive a full token, which makes the entire OTP
+        registration flow decorative.
+      </p>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">AUTH-05</span>
+        <h4 class="f-title">Insecure direct object references across four domains</h4>
+      </div>
+      <p class="loc">BookingServiceImpl · PostServiceImpl · ReviewServiceImpl</p>
+      <p>
+        None of these check that the caller owns the object they are mutating. Any authenticated user can
+        approve or decline <em>anyone's</em> booking by ID (<code>approveBooking</code>,
+        <code>declineBooking</code>), edit or delete <em>anyone's</em> post
+        (<code>updatePost</code>, <code>deletePost</code>) and edit or delete <em>anyone's</em> review
+        (<code>updateReview</code>, <code>deleteReview</code>).
+      </p>
+      <p>
+        <code>createReview</code> additionally never verifies that the reviewer booked that artist, that the
+        booking is complete, or that they haven't already reviewed it — so artist ratings can be set by
+        anyone, repeatedly.
+      </p>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">AUTH-06</span>
+        <h4 class="f-title">Artist earnings ledger leaks to other artists on an empty result</h4>
+      </div>
+      <p class="loc">TransactionServiceImpl.getAllLoggedInArtistTransaction</p>
+      <p>
+        The query falls back with <code>.orElseGet(() -&gt; transactionRepository.findAll(pageable))</code> —
+        when an artist has no matching transactions, the response is <em>every transaction on the
+        platform</em>. Related: the <code>ALL</code> enum member is passed straight into a
+        <code>findAllBy…TransactionType…</code> query, so filtering by "ALL" matches literal
+        <code>ALL</code> rows and returns nothing instead of everything.
+      </p>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">AUTH-07</span>
+        <h4 class="f-title">Uploaded file extensions are taken raw from the client</h4>
+      </div>
+      <p class="loc">FileHandlerUtil.saveFile / getFileExtension</p>
+      <p>
+        The base name is sanitized, the extension is not — it is sliced off the client-supplied filename and
+        concatenated straight into the path. A crafted filename traverses out of the upload directory, and
+        because <code>/media/**</code> is a public static resource handler, anything that lands there is
+        served back. Content type is never validated against magic bytes, only the extension string.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">AUTH-08</span>
+        <h4 class="f-title">CORS reflects any origin with credentials enabled</h4>
+      </div>
+      <p class="loc">CorsConfig.java</p>
+      <p>
+        <code>addAllowedOriginPattern("*")</code> together with <code>setAllowCredentials(true)</code> means
+        every origin on the internet is echoed back as allowed. Pin this to the actual frontend origins per
+        environment.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">AUTH-09</span>
+        <h4 class="f-title">Token lifetime is advertised as 15 minutes and is actually 150</h4>
+      </div>
+      <p class="loc">JwtTokenGenerator (150 min) vs AuthResponse <code>accessTokenExpiry(15 * 60)</code></p>
+      <p>
+        The frontend is told 900 seconds; the token lives two and a half hours. There is also no refresh
+        token despite the Swagger description promising one, no revocation list, and logout only clears the
+        Angular <code>localStorage</code> entry — a stolen token stays valid for its full life.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ SECRETS ============ -->
+  <section>
+    <h2>Committed secrets</h2>
+    <p class="sec-note">
+      Four live credentials are in the working tree. Treat all of them as burned and rotate them —
+      redacted here, but they are in plaintext in the repo.
+    </p>
+
+    <div class="finding crit">
+      <div class="f-head">
+        <span class="chip crit">Critical</span>
+        <span class="fid">SEC-01</span>
+        <h4 class="f-title">Live payment key, RSA private key, mail password and a GitHub token</h4>
+      </div>
+      <div class="evidence">
+        <div class="cap">Location · value redacted</div>
+<pre><span class="hl">Khalti LIVE secret</span>   PaymentServiceImpl.java:74   live_secret_key_6879…
+                     BookingServiceImpl.java      <span class="dim">(duplicated verbatim)</span>
+<span class="hl">GitHub token</span>       ChatBotServiceImplementation.java:30   ghp_AErV6…
+<span class="hl">Gmail app password</span> application-local.yml        qbma …
+<span class="hl">RSA private key</span>    src/main/resources/certs/private_key.pem</pre>
+      </div>
+      <p>
+        Note the live Khalti key is being sent to the <code>dev.khalti.com</code> sandbox host, so payments
+        are presumably failing upstream anyway — but the key is real and public.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Rotate all four now. Move them to environment variables via <code>${KHALTI_SECRET}</code>-style
+        placeholders, add <code>*.pem</code> and <code>application-local.yml</code> to
+        <code>.gitignore</code>, and commit an <code>application-local.yml.example</code> instead. If this has
+        ever been pushed, purge the history — rotation alone is not enough.
+      </div>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">SEC-02</span>
+        <h4 class="f-title">Seeded admin uses a published default password</h4>
+      </div>
+      <p class="loc">InsertInitialUserInfo.java</p>
+      <p>
+        <code>admin@openmichub.com</code> / <code>Admin@123</code> is created on every boot and hardcoded in
+        source. I logged in with it on the instance I ran. Seed from an environment variable and force a
+        password change on first login.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ BROKEN ============ -->
+  <section>
+    <h2>Features that don't work</h2>
+    <p class="sec-note">Built, wired to the UI, and non-functional at runtime.</p>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="chip proven">Proven live</span>
+        <span class="fid">FN-01</span>
+        <h4 class="f-title">Chat messages are never saved — history is permanently empty</h4>
+      </div>
+      <p class="loc">WSMessageController.sendPrivateMessage</p>
+      <p>
+        The handler looks up sender and recipient, builds a <code>ChatResponse</code>, broadcasts it over
+        STOMP — and never persists it. The comment says <em>"Save message to database (assuming this is
+        handled elsewhere)"</em>; it isn't. <code>chatRepository.save()</code> does not appear anywhere in the
+        codebase. Messages exist only for connected sockets. <code>getAllChats()</code> and
+        <code>getMyChats()</code> read from a table nothing writes to, so every conversation reloads blank.
+      </p>
+      <div class="fix">
+        <b>Fix</b>
+        Persist a <code>Chat</code> entity in the handler before broadcasting. While you're there:
+        <code>getMyChats</code> returns one row per <em>message</em> rather than per conversation, so the chat
+        list shows the same person repeatedly.
+      </div>
+    </div>
+
+    <div class="finding high">
+      <div class="f-head">
+        <span class="chip high">High</span>
+        <span class="fid">FN-02</span>
+        <h4 class="f-title">Nothing prevents double-booking an artist</h4>
+      </div>
+      <p class="loc">BookingServiceImpl.bookArtist</p>
+      <p>
+        The booking path checks the artist's weekly availability window and stops there. It never queries
+        existing bookings for that date and time, so the same artist can be booked by ten different
+        organizers for the same Saturday evening. <code>BookingRepository</code> has no method to support such
+        a check.
+      </p>
+      <p>
+        <code>ArtistUnavailability</code> — the blackout-dates feature — is fully built with an entity,
+        repository, controller and CRUD service, and <code>bookArtist</code> never reads it. Artists can mark
+        themselves unavailable and still be booked.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">FN-03</span>
+        <h4 class="f-title">Withdrawal approvals have no admin workflow</h4>
+      </div>
+      <p>
+        <code>withDraw()</code> writes a <code>PENDING</code> transaction and logs <em>"Withdrawal request sent
+        to super admin for approval"</em> — but no notification is sent, and no endpoint exists for an admin
+        to list or approve pending withdrawals. The status is set and never read.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">FN-04</span>
+        <h4 class="f-title">Contacts list is filtered after pagination</h4>
+      </div>
+      <p class="loc">ChatServiceImplementation.getAllContacts</p>
+      <p>
+        Inactive and unverified users are filtered out of the page <em>after</em> the database has already
+        paginated, then re-wrapped with the original <code>totalElements</code>. Pages come back
+        inconsistently sized and the total is wrong. Push the predicate into the query.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">FN-05</span>
+        <h4 class="f-title">Upload directory is hardcoded to a path that won't exist</h4>
+      </div>
+      <p class="loc">FileConfig.java · application-local.yml</p>
+      <p>
+        On Linux the file root is <code>/home/ubuntu/open_mic_hub/</code>. On your machine — and any dev
+        machine whose user isn't <code>ubuntu</code> — every upload fails on directory creation. Make it one
+        configurable property with a sensible relative default.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">FN-06</span>
+        <h4 class="f-title">Spring Security's AccessDeniedException is never handled</h4>
+      </div>
+      <p class="loc">GlobalExceptionHandler.java</p>
+      <p>
+        The handler imports <code>java.nio.file.AccessDeniedException</code> instead of
+        <code>org.springframework.security.access.AccessDeniedException</code>, so authorization failures fall
+        through to the catch-all and return 500 instead of 403. The catch-all also returns raw
+        <code>e.getMessage()</code> to the client, leaking internals.
+      </p>
+    </div>
+
+    <div class="finding med">
+      <div class="f-head">
+        <span class="chip med">Medium</span>
+        <span class="fid">FN-07</span>
+        <h4 class="f-title">assert is used for a null check</h4>
+      </div>
+      <p class="loc">TransactionServiceImpl.createTransaction</p>
+      <p>
+        <code>bookingRepository.findById(...).orElse(null)</code> followed by <code>assert booking != null</code>.
+        Assertions are disabled by default in the JVM, so this is a plain <code>NullPointerException</code> in
+        production. Withdrawal and service-fee transactions also require a booking ID they conceptually
+        shouldn't need.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ GAPS ============ -->
+  <section>
+    <h2>What's missing</h2>
+    <p class="sec-note">
+      Not bugs — capabilities a booking marketplace needs that aren't there yet, roughly in the order
+      I'd add them.
+    </p>
+
+    <ul class="gaps">
+      <li><span class="tag">Schema</span><span><b>Database migrations.</b> <code>ddl-auto: update</code> is the only schema management. It cannot drop or alter columns safely and will diverge across environments. Adopt Flyway before there is production data.</span></li>
+      <li><span class="tag">Money</span><span><b>Refunds and cancellation.</b> <code>BookingStatus.CANCELLED</code> exists as an enum value with no path to it. There is no refund flow, no cancellation policy, and no way to reverse a credited wallet balance.</span></li>
+      <li><span class="tag">Money</span><span><b>Reconciliation.</b> Wallet balance is a mutable column that can silently disagree with the transaction ledger. A scheduled job that recomputes and alerts on drift would have caught PAY-02 immediately.</span></li>
+      <li><span class="tag">Security</span><span><b>Rate limiting.</b> Nothing throttles login, OTP verification, password reset, or the LLM chat endpoint — which is public and spends your API quota.</span></li>
+      <li><span class="tag">Security</span><span><b>Refresh tokens and revocation.</b> A single long-lived access token with no server-side invalidation. Logout is client-side only.</span></li>
+      <li><span class="tag">Product</span><span><b>Notifications.</b> Everything is email. No in-app notification entity, no unread state, no delivery for booking status changes or new messages while offline.</span></li>
+      <li><span class="tag">Product</span><span><b>Artist discovery.</b> No search, genre filter, location filter, price range, or sort by rating on the public artist listing — the core browsing experience of the product.</span></li>
+      <li><span class="tag">Product</span><span><b>Booking lifecycle.</b> No <code>COMPLETED</code> state after the event, which is what should gate reviews and release held funds to the artist.</span></li>
+      <li><span class="tag">Quality</span><span><b>Tests.</b> One file, <code>contextLoads()</code>, and it currently fails on any machine without the key-casing fix. The payment and wallet arithmetic in particular needs unit tests.</span></li>
+      <li><span class="tag">Ops</span><span><b>No Dockerfile, no CI, no health checks.</b> Add a multi-stage build for the service, wire the compose file below into it, and run the build on every push.</span></li>
+      <li><span class="tag">Build</span><span><b>Lombok version conflict.</b> <code>pom.xml</code> declares the dependency at 1.18.38 but pins the annotation processor path to <code>${lombok.version}</code> = 1.18.34. Also <code>mvnw</code> is not executable and <code>maven-wrapper.jar</code> is gitignored, so the wrapper doesn't work on clone.</span></li>
+      <li><span class="tag">Frontend</span><span><b>401 sends users to the register page.</b> <code>AuthInterceptor</code> navigates to <code>/auth/register</code> on any 401 instead of login, and no expiry check happens before requests fire. Tokens live in <code>localStorage</code>, so any XSS is a full account takeover.</span></li>
+    </ul>
+  </section>
+
+  <!-- ============ RUN ============ -->
+  <section>
+    <h2>Running it locally</h2>
+    <p class="sec-note">
+      You have no local Postgres and your only JDK is 25, which Lombok can't process. Both are solved
+      with Docker — this is exactly how I ran the instance used for the evidence above.
+    </p>
+
+    <div class="step">
+      <span class="num">1</span>
+      <div>
+        <p>Start Postgres. <code>docker-compose.yml</code> is already written at the repo root, matching the
+        credentials in <code>application-local.yml</code>.</p>
+        <pre class="cmd">cd /devdata/projects/brogrammers/openmichub
+docker compose up -d          <span class="c"># postgres 16 on :5432</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="num">2</span>
+      <div>
+        <p>Run the service through a JDK 21 container. The named volume caches <code>~/.m2</code> so
+        subsequent starts are fast.</p>
+        <pre class="cmd">docker run --rm --network host \
+  -v "$PWD/open_mic_hub_service":/app \
+  -v openmichub_m2:/root/.m2 -w /app \
+  maven:3.9-eclipse-temurin-21 mvn spring-boot:run</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="num">3</span>
+      <div>
+        <p>Frontend as usual — it already points at <code>localhost:8181</code>.</p>
+        <pre class="cmd">cd open_mic_hub_ui &amp;&amp; npm install &amp;&amp; npm start</pre>
+      </div>
+    </div>
+
+    <p style="margin-top:26px">
+      Swagger comes up at <code>localhost:8181/v1/swagger</code>. If you'd rather build natively, installing
+      <code>jdk21-openjdk</code> and selecting it with <code>archlinux-java set java-21-openjdk</code> also
+      works — Lombok 1.18.38 supports up to Java 23.
+    </p>
+  </section>
+
+  <footer>
+    Reviewed 26 Aug 2026 · open_mic_hub_service (Spring Boot 3.3.4) + open_mic_hub_ui (Angular 19)<br>
+    Findings marked "proven live" were reproduced against a running instance backed by Postgres 16 in Docker.<br>
+    One source edit made: <code>application-local.yml:33</code>, key filename casing. Test data removed; the database is clean.
+  </footer>
+
+</div>

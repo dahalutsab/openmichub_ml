@@ -1,0 +1,144 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <!-- Loading Spinner -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading post...</span>
+        </div>
+      </div>
+
+      <!-- Post Content -->
+      <div *ngIf="!loading && post" class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">{{ post.title }}</h2>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary" (click)="likePost()">
+              <i class="fas fa-heart"></i> Like ({{ post.likesCount }})
+            </button>
+            <button type="button" class="btn btn-outline-warning" (click)="editPost()">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button type="button" class="btn btn-outline-danger" (click)="deletePost()">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <!-- Post Metadata -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <small class="text-muted">
+                <i class="fas fa-calendar-alt"></i> Created: {{ post.createdAt | date:'full' }}
+              </small>
+            </div>
+            <div class="col-md-6">
+              <small class="text-muted">
+                <i class="fas fa-clock"></i> Updated: {{ post.updatedAt | date:'full' }}
+              </small>
+            </div>
+          </div>
+
+          <!-- Post Stats -->
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body text-center">
+                  <h5 class="card-title">
+                    <i class="fas fa-heart text-danger"></i> {{ post.likesCount }}
+                  </h5>
+                  <p class="card-text small">Likes</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body text-center">
+                  <h5 class="card-title">
+                    <i class="fas fa-user text-success"></i> {{ post.createdBy }}
+                  </h5>
+                  <p class="card-text small">Created By</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-light">
+                <div class="card-body text-center">
+                  <h5 class="card-title">
+                    <i class="fas fa-images text-primary"></i> {{ post.images?.length || 0 }}
+                  </h5>
+                  <p class="card-text small">Images</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Content -->
+          <div class="mb-4">
+            <h5>Content:</h5>
+            <div class="card bg-light">
+              <div class="card-body">
+                <p class="card-text" style="white-space: pre-wrap;">{{ post.content }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Images -->
+          <div *ngIf="post.images && post.images.length > 0" class="mb-4">
+            <h5>Images ({{ post.images.length }}):</h5>
+            <div class="row">
+              <div *ngFor="let image of post.images; let i = index" class="col-lg-4 col-md-6 mb-3">
+                <div class="card">
+                  <img [src]="image" class="card-img-top" style="height: 250px; object-fit: cover; cursor: pointer;" 
+                       [alt]="'Image ' + (i + 1)" data-bs-toggle="modal" [attr.data-bs-target]="'#imageModal' + i">
+                  <div class="card-body p-2">
+                    <small class="text-muted">Image {{ i + 1 }}</small>
+                  </div>
+                </div>
+
+                <!-- Image Modal -->
+                <div class="modal fade" [id]="'imageModal' + i" tabindex="-1">
+                  <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Image {{ i + 1 }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body text-center">
+                        <img [src]="image" class="img-fluid" [alt]="'Image ' + (i + 1)">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Images Message -->
+          <div *ngIf="!post.images || post.images.length === 0" class="mb-4">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle"></i> No images attached to this post.
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button type="button" class="btn btn-secondary" (click)="goBack()">
+            <i class="fas fa-arrow-left"></i> Back to Posts
+          </button>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="!loading && !post" class="alert alert-danger">
+        <h4 class="alert-heading">Post Not Found</h4>
+        <p>The requested post could not be found.</p>
+        <hr>
+        <button type="button" class="btn btn-outline-danger" (click)="goBack()">
+          <i class="fas fa-arrow-left"></i> Back to Posts
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

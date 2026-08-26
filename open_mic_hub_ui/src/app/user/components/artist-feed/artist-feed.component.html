@@ -1,0 +1,320 @@
+<!-- artist-feeds.component.html -->
+<div class="artist-feeds-container">
+  <!-- Header -->
+  <div class="feeds-header sticky-top">
+    <div class="container-fluid px-3 px-lg-4">
+      <div class="row align-items-center">
+        <div class="col">
+          <h1 class="feeds-title mb-1">
+            <i class="bi bi-house me-2"></i>
+            Artist Feeds
+          </h1>
+          <p class="feeds-subtitle text-muted mb-0">
+            Discover incredible artwork from our creative community
+          </p>
+        </div>
+        <div class="col-auto">
+          <div class="d-flex gap-2">
+            <button 
+              class="btn btn-outline-primary btn-sm rounded-pill" 
+              (click)="refresh()" 
+              [disabled]="loading"
+              data-bs-toggle="tooltip"
+              data-bs-placement="bottom"
+              title="Refresh feed">
+              <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+              <span class="ms-1 d-none d-sm-inline">Refresh</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="container-fluid px-3 px-lg-4">
+    <!-- Error State -->
+    <div *ngIf="error" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+        <div class="flex-grow-1">
+          <strong>Oops!</strong> {{ error }}
+        </div>
+        <button class="btn btn-sm btn-outline-danger ms-3" (click)="refresh()">
+          <i class="fas fa-redo me-1"></i>
+          Try Again
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    </div>
+
+    <!-- Posts Masonry Grid -->
+    <div class="row g-3 g-lg-4" id="posts-masonry">
+      <div 
+        *ngFor="let post of posts; trackBy: trackByPostId; let i = index" 
+        class="col-12 col-sm-6 col-lg-4 col-xl-3"
+        [attr.data-aos]="'fade-up'"
+        [attr.data-aos-delay]="(i % 8) * 100">
+        
+        <div class="post-card h-100 shadow-sm">
+          <!-- Post Header -->
+          <div class="post-header p-3 border-bottom">
+            <div class="d-flex align-items-center">
+              <div class="author-avatar me-3 position-relative">
+                <div *ngIf="!post.authorProfileImage" class="avatar-placeholder">
+                  <i class="bi bi-person-circle"></i>
+                </div>
+                <img 
+                  *ngIf="post.authorProfileImage"
+                  [src]="post.authorProfileImage" 
+                  [alt]="post.author + ' profile picture'" 
+                  class="img-fluid rounded-circle"
+                  loading="lazy">
+              </div>
+              <div class="author-details flex-grow-1">
+                <h6 class="author-name mb-0 fw-semibold">{{ post.author }}</h6>
+                <small class="post-date text-muted d-flex align-items-center">
+                  <i class="bi bi-clock me-1"></i>
+                  {{ formatDate(post.createdAt) }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Content -->
+          <div class="post-content p-3">
+            <h5 class="post-title mb-2 lh-sm">{{ post.title }}</h5>
+            <p class="post-description text-muted mb-3" 
+               [class.text-truncate]="post.content.length > 100">
+              {{ post.content }}
+            </p>
+            
+            <!-- Responsive Images Grid -->
+            <div *ngIf="post.images && post.images.length > 0" class="images-gallery mb-3">
+              <!-- Single Image Layout -->
+              <div *ngIf="post.images.length === 1" class="single-image-container">
+                <img 
+                  [src]="post.images[0]" 
+                  alt="Post image"
+                  class="img-fluid rounded post-image w-100"
+                  (error)="onImageError($event)"
+                  loading="lazy"
+                  data-bs-toggle="modal"
+                  [attr.data-bs-target]="'#imageModal' + post.id"
+                  style="cursor: pointer; max-height: 300px; object-fit: cover;">
+              </div>
+              
+              <!-- Two Images Layout -->
+              <div *ngIf="post.images.length === 2" class="row g-2 two-images-container">
+                <div class="col-6" *ngFor="let image of post.images; let i = index">
+                  <img 
+                    [src]="image" 
+                    [alt]="'Post image ' + (i + 1)"
+                    class="img-fluid rounded post-image w-100"
+                    (error)="onImageError($event)"
+                    loading="lazy"
+                    data-bs-toggle="modal"
+                    [attr.data-bs-target]="'#imageModal' + post.id"
+                    style="cursor: pointer; height: 150px; object-fit: cover;">
+                </div>
+              </div>
+              
+              <!-- Multiple Images Layout (3+ images) -->
+              <div *ngIf="post.images.length > 2" class="row g-2 multiple-images-container">
+                <div class="col-6">
+                  <img 
+                    [src]="post.images[0]" 
+                    alt="Post image 1"
+                    class="img-fluid rounded post-image w-100"
+                    (error)="onImageError($event)"
+                    loading="lazy"
+                    data-bs-toggle="modal"
+                    [attr.data-bs-target]="'#imageModal' + post.id"
+                    style="cursor: pointer; height: 200px; object-fit: cover;">
+                </div>
+                <div class="col-6">
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <img 
+                        [src]="post.images[1]" 
+                        alt="Post image 2"
+                        class="img-fluid rounded post-image w-100"
+                        (error)="onImageError($event)"
+                        loading="lazy"
+                        data-bs-toggle="modal"
+                        [attr.data-bs-target]="'#imageModal' + post.id"
+                        style="cursor: pointer; height: 95px; object-fit: cover;">
+                    </div>
+                    <div class="col-12 position-relative">
+                      <img 
+                        [src]="post.images[2]" 
+                        alt="Post image 3"
+                        class="img-fluid rounded post-image w-100"
+                        (error)="onImageError($event)"
+                        loading="lazy"
+                        data-bs-toggle="modal"
+                        [attr.data-bs-target]="'#imageModal' + post.id"
+                        style="cursor: pointer; height: 95px; object-fit: cover;">
+                      <div *ngIf="post.images.length > 3" 
+                           class="image-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded"
+                           data-bs-toggle="modal"
+                           [attr.data-bs-target]="'#imageModal' + post.id"
+                           style="background: rgba(0,0,0,0.6); cursor: pointer;">
+                        <span class="text-white fw-bold fs-5">+{{ post.images.length - 3 }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Actions -->
+          <div class="post-actions border-top p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex gap-3">
+                <button 
+                  class="btn btn-sm btn-outline-danger rounded-pill d-flex align-items-center gap-2" 
+                  (click)="toggleLike(post)"
+                  [class.btn-danger]="post.likesCount > 0"
+                  [class.text-white]="post.likesCount > 0">
+                  <i class="bi" [class.bi-heart]="post.likesCount === 0" [class.bi-heart-fill]="post.likesCount > 0"></i>
+                  <span class="fw-semibold">{{ post.likesCount || 0 }}</span>
+                </button>
+                
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Modal for each post -->
+        <div class="modal fade" [id]="'imageModal' + post.id" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center">
+                  <img *ngIf="post.authorProfileImage" 
+                       [src]="post.authorProfileImage" 
+                       class="rounded-circle me-2" 
+                       style="width: 32px; height: 32px;">
+                  <div *ngIf="!post.authorProfileImage" 
+                       class="bg-primary rounded-circle me-2 d-flex align-items-center justify-content-center text-white"
+                       style="width: 32px; height: 32px; font-size: 14px;">
+                    <i class="bi bi-person"></i>
+                  </div>
+                  <small class="fw-semibold">{{ post.author }}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body p-0">
+                <div id="imageCarousel{{ post.id }}" class="carousel slide" data-bs-ride="carousel">
+                  <div class="carousel-inner">
+                    <div *ngFor="let image of post.images; let i = index" 
+                         class="carousel-item" 
+                         [class.active]="i === 0">
+                      <img [src]="image" 
+                           class="d-block w-100" 
+                           style="max-height: 70vh; object-fit: contain;"
+                           [alt]="'Post image ' + (i + 1)">
+                    </div>
+                  </div>
+                  <button *ngIf="post.images.length > 1" 
+                          class="carousel-control-prev" 
+                          type="button" 
+                          [attr.data-bs-target]="'#imageCarousel' + post.id" 
+                          data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                  </button>
+                  <button *ngIf="post.images.length > 1" 
+                          class="carousel-control-next" 
+                          type="button" 
+                          [attr.data-bs-target]="'#imageCarousel' + post.id" 
+                          data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                  </button>
+                </div>
+              </div>
+              <div class="modal-footer border-0 pt-0">
+                <small class="text-muted w-100">{{ post.title }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Spinner for Initial Load -->
+    <div *ngIf="loading && posts.length === 0" class="loading-container text-center py-5">
+      <div class="d-flex flex-column align-items-center">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-white mb-2">Loading Amazing Artwork...</h5>
+        <p class="text-white-50">Please wait while we fetch the latest posts</p>
+      </div>
+    </div>
+
+    <!-- Load More Section -->
+    <div class="text-center py-4">
+      <!-- Load More Button -->
+      <div *ngIf="hasMore && posts.length > 0" class="mb-3">
+        <button 
+          class="btn btn-primary btn-lg rounded-pill px-4 py-2 shadow-sm" 
+          (click)="loadMore()" 
+          [disabled]="loading">
+          <span *ngIf="!loading" class="d-flex align-items-center">
+            <i class="fas fa-plus me-2"></i>
+            Load More Artwork
+          </span>
+          <span *ngIf="loading" class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Loading More...
+          </span>
+        </button>
+      </div>
+
+      <!-- No More Posts -->
+      <div *ngIf="!hasMore && posts.length > 0" class="alert alert-info d-inline-flex align-items-center">
+        <i class="fas fa-check-circle me-2"></i>
+        You've explored all the amazing artwork! Check back later for more.
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && posts.length === 0 && !error" class="empty-state text-center py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="card border-0 bg-transparent">
+            <div class="card-body text-white">
+              <div class="empty-icon mb-4">
+                <i class="fas fa-palette fs-1 opacity-75"></i>
+              </div>
+              <h3 class="empty-title mb-3">No Artwork Yet</h3>
+              <p class="empty-description mb-4 opacity-75">
+                The gallery is waiting for incredible artwork from our creative community. 
+                Be the first to discover amazing pieces!
+              </p>
+              <button class="btn btn-outline-light rounded-pill px-4" (click)="refresh()">
+                <i class="fas fa-sync-alt me-2"></i>
+                Check Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Action Button (for mobile) -->
+  <div class="floating-actions d-block d-lg-none">
+    <button class="btn btn-primary rounded-circle shadow-lg" 
+            style="width: 56px; height: 56px; position: fixed; bottom: 20px; right: 20px; z-index: 1050;"
+            (click)="refresh()"
+            data-bs-toggle="tooltip"
+            data-bs-placement="left"
+            title="Refresh feed">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+  </div>
+</div>

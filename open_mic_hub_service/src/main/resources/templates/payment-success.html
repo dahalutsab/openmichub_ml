@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Successful - Open Mic Hub</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 0;">
+<div style="background-color: #ffffff; padding: 30px; margin: 50px auto; max-width: 600px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+    <h2 style="text-align: center; color: #4a90e2;">🎉 Payment Confirmation - Open Mic Hub</h2>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">Hello <strong><span th:text="${fullName}">[Full Name]</span></strong>,</p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        We are thrilled to confirm that your payment of <strong>Rs <span th:text="${amountPaid}">[Amount]</span></strong> via <strong><span th:text="${paymentMethod}">[Payment Method]</span></strong>
+        has been successfully processed.
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        You've successfully booked <strong><span th:text="${artistName}">[Artist Name]</span></strong> for your event on <strong><span th:text="${eventDateTime}">[Event Date & Time]</span></strong>.
+    </p>
+
+    <p style="color: #333333; line-height: 1.6; font-size: 16px;">
+        Your booking reference number is <strong><span th:text="${bookingId}">[Booking ID]</span></strong>.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="http://localhost:4200/"
+           style="display: inline-block; padding: 12px 25px; font-size: 16px; background-color: #4a90e2; color: #ffffff; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease;">
+            View Your Booking
+        </a>
+    </div>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        If you have any questions or need assistance, feel free to reply to this email or contact our support team.
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Thank you for choosing <strong>Open Mic Hub</strong>. We look forward to making your event amazing!
+    </p>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 14px;">
+        Best regards,<br>
+        The Open Mic Hub Team
+    </p>
+</div>
+</body>
+</html>
