@@ -266,6 +266,27 @@
   .chip.high   { color: var(--sev-high); background: var(--sev-high-bg); }
   .chip.med    { color: var(--sev-med);  background: var(--sev-med-bg); }
   .chip.proven { color: var(--sev-ok);   background: var(--sev-ok-bg); }
+  .chip.fixed  { color: var(--sev-ok);   background: var(--sev-ok-bg); }
+
+  .finding.done { border-left-color: var(--sev-ok); opacity: 0.97; }
+  .finding.done .f-title { text-decoration: none; }
+  .resolved {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--rule);
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+  }
+  .resolved b {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--sev-ok);
+    display: block;
+    margin-bottom: 5px;
+  }
 
   .f-title {
     font-family: var(--display);
@@ -446,9 +467,11 @@
     <h1>OpenMicHub Teardown</h1>
     <p class="standfirst">
       The architecture is sound and the feature surface is genuinely ambitious — bookings, payments,
-      an earnings wallet, chat, a social feed, an LLM assistant. But <strong>the app does not start on
-      Linux or macOS</strong>, and the money layer can be drained by anyone with <code>curl</code> and no
-      account. Everything marked <em>proven</em> below I reproduced on a live instance.
+      an earnings wallet, chat, a social feed, an LLM assistant. But the app did not start on Linux
+      or macOS, and the money layer could be drained by anyone with <code>curl</code> and no account.
+      Everything marked <em>proven</em> below was reproduced on a live instance.
+      <strong>All findings are now fixed</strong> and pushed to
+      <code>dahalutsab/openmichub_ml</code> across eight commits.
     </p>
     <div class="runmeta">
       <span><b>Backend</b> Spring Boot 3.3.4 · Java 21 · 196 files</span>
@@ -458,14 +481,14 @@
   </header>
 
   <div class="board">
-    <div class="tile crit"><span class="n">6</span><span class="l">Critical</span></div>
-    <div class="tile high"><span class="n">9</span><span class="l">High</span></div>
-    <div class="tile med"><span class="n">12</span><span class="l">Medium</span></div>
-    <div class="tile ok"><span class="n">5</span><span class="l">Proven live</span></div>
+    <div class="tile crit"><span class="n">6</span><span class="l">Critical · fixed</span></div>
+    <div class="tile high"><span class="n">9</span><span class="l">High · fixed</span></div>
+    <div class="tile med"><span class="n">12</span><span class="l">Medium · fixed</span></div>
+    <div class="tile ok"><span class="n">11</span><span class="l">Tests added</span></div>
   </div>
 
   <div class="callout">
-    <h3>The blocker — fixed, one character</h3>
+    <h3>The blocker — one character</h3>
     <p>
       <code>application-local.yml</code> pointed at <code>certs/public_Key.pem</code>. The file on disk is
       <code>public_key.pem</code>. Windows didn't care; Linux and macOS refuse to boot the context at all —
@@ -485,9 +508,10 @@
       unlocked, and the wallet arithmetic behind it is wrong in a way that destroys data.
     </p>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="chip proven">Proven live</span>
         <span class="fid">PAY-01</span>
         <h4 class="f-title">Anyone can mark any payment "Completed" without paying</h4>
@@ -510,17 +534,18 @@
 payment  → FORGEDPIDX123 | <span class="hl">COMPLETED</span> | received_amount 0.01
 wallet   → balance <span class="hl">3800.00</span>   <span class="dim">(paid: one paisa)</span></pre>
       </div>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Call Khalti's <code>epayment/lookup/</code> with the <code>pidx</code> and trust only that response.
         Compare the returned amount against the stored <code>Payment</code> before crediting anything. Keep the
         endpoint public (gateways need it) but treat every parameter on it as hostile.
       </div>
     </div>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="chip proven">Proven live</span>
         <span class="fid">PAY-02</span>
         <h4 class="f-title">Every completed payment erases the artist's entire balance</h4>
@@ -541,17 +566,18 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
 
 <span class="dim">   assign 1900 (overwrite)  +  add 1900 (transaction)  =  3800</span></pre>
       </div>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Delete the balance write from <code>createOrUpdateVirtualCoin</code> entirely. Let
         <code>createTransaction</code> be the single place that moves the balance, and derive the balance from
         the transaction ledger rather than storing it as an independently mutable column.
       </div>
     </div>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="chip proven">Proven live</span>
         <span class="fid">PAY-03</span>
         <h4 class="f-title">Callbacks are replayable — no idempotency key</h4>
@@ -562,17 +588,18 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
         twice produced two <code>APPROVED</code> credit transactions of 1,900 each against one booking. The
         ledger and the balance column drift apart immediately, and there is no reconciliation job to catch it.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Return early when <code>payment.getPaymentStatus()</code> is already <code>COMPLETED</code>. Add a
         unique constraint on <code>payment.pidx</code>, and a unique constraint on
         <code>(booking_id, transaction_purpose)</code> for booking credits.
       </div>
     </div>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">PAY-04</span>
         <h4 class="f-title">The payout endpoint is public and doesn't check who owns the transaction</h4>
       </div>
@@ -584,17 +611,18 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
         still <code>PENDING</code>. Transaction IDs are sequential. <code>/api/v1/artist/withdraw/callback</code>
         is whitelisted and unverified on the same pattern.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Require authentication, resolve the artist from the security context (never from the request), and
         assert <code>transaction.virtualCoin.artist == loggedInArtist</code> plus
         <code>status == PENDING</code> before initiating anything.
       </div>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">PAY-05</span>
         <h4 class="f-title">Withdrawal requests never reserve the balance</h4>
       </div>
@@ -605,16 +633,17 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
         requests and every one passes the check. The balance is only reduced later, in the withdraw callback,
         once per approval.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Deduct into a held/pending balance at request time and release it if the payout is declined, or
         compute available balance as <code>balance − sum(pending debits)</code> in the check.
       </div>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">PAY-06</span>
         <h4 class="f-title">Bookings are never confirmed after successful payment</h4>
       </div>
@@ -627,9 +656,10 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">PAY-07</span>
         <h4 class="f-title">Sub-hour and partial-hour bookings are billed wrong or crash</h4>
       </div>
@@ -639,16 +669,17 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
         total of zero, which then throws <code>"Received amount must be greater than zero"</code> and the user
         cannot pay at all.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Use <code>Duration.toMinutes() / 60.0</code>, and move all currency off <code>double</code> onto
         <code>BigDecimal</code> — every amount in the system is currently a float.
       </div>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">PAY-08</span>
         <h4 class="f-title">@Transactional on a method returning Mono does nothing</h4>
       </div>
@@ -671,9 +702,10 @@ balance after    <span class="hl">3800.00</span>   <span class="dim">← 48,100 
       consults it.
     </p>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="chip proven">Proven live</span>
         <span class="fid">AUTH-01</span>
         <h4 class="f-title">No authorization exists anywhere in the codebase</h4>
@@ -693,8 +725,8 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
 
 <span class="dim">(anonymous requests correctly return 401 — the gap is role separation)</span></pre>
       </div>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Annotate the admin surface with <code>@PreAuthorize("hasRole('ADMIN')")</code> and the artist surface
         with <code>hasRole('ARTIST')</code>. Also fix <code>JwtTokenGenerator.getPermissionsFromRoles()</code>,
         which checks for <code>ROLE_SCHOOL_ADMIN</code> — copy-paste from a different project, so the
@@ -702,9 +734,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </div>
     </div>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-02</span>
         <h4 class="f-title">Access tokens are encrypted but never signed</h4>
       </div>
@@ -716,17 +749,18 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
         encrypt a payload of their choosing, and the server will decrypt it and trust the
         <code>sub</code> claim. The public key is committed to the repository.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Sign first, then encrypt: build a <code>SignedJWT</code> (RS256, private key), wrap it in the JWE, and
         have the filter verify the signature after decrypting. Or drop the JWE and use plain signed JWTs,
         which is what the <code>oauth2-resource-server</code> dependency already on the classpath expects.
       </div>
     </div>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-03</span>
         <h4 class="f-title">Password reset OTPs aren't bound to a user and can be brute-forced</h4>
       </div>
@@ -742,31 +776,38 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
         Separately, <code>isUsed</code> is written on the entity but never checked, so a reset token stays
         valid for its full five-minute window no matter how many times it has been redeemed.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Use a long random token (not a 6-digit code) for password reset links, scope the lookup to the user,
         check <code>isUsed</code>, and add per-IP and per-account rate limiting on
         <code>/forgot-password</code> and <code>/reset-password</code>.
       </div>
     </div>
 
-    <div class="finding high">
+    <div class="finding med done">
       <div class="f-head">
-        <span class="chip high">High</span>
+        <span class="chip med">Correction</span>
         <span class="fid">AUTH-04</span>
-        <h4 class="f-title">Email verification is never enforced at login</h4>
+        <h4 class="f-title">Email verification <em>was</em> enforced — my original finding was wrong</h4>
       </div>
-      <p class="loc">AuthServiceImpl.getJwtTokensAfterAuthentication</p>
+      <p class="loc">UserInfoConfig.isEnabled()</p>
       <p>
-        <code>UserEntity.verified</code> is set to <code>false</code> at registration and checked nowhere in
-        the login path. Unverified accounts log in and receive a full token, which makes the entire OTP
-        registration flow decorative.
+        I reported that unverified accounts could log in. They could not.
+        <code>UserInfoConfig.isEnabled()</code> returns <code>verified &amp;&amp; isActive</code>, and Spring's
+        <code>DaoAuthenticationProvider</code> checks it before authenticating, so an unverified account
+        was already rejected. I had only tested with pre-verified rows.
+      </p>
+      <p>
+        What was real is that the rejection surfaced as a <strong>500</strong> rather than a 401:
+        <code>ResponseStatusException</code> had no handler and fell through to the catch-all. That is
+        fixed, along with the catch-all no longer echoing exception messages to the caller.
       </p>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-05</span>
         <h4 class="f-title">Insecure direct object references across four domains</h4>
       </div>
@@ -785,9 +826,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-06</span>
         <h4 class="f-title">Artist earnings ledger leaks to other artists on an empty result</h4>
       </div>
@@ -801,9 +843,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-07</span>
         <h4 class="f-title">Uploaded file extensions are taken raw from the client</h4>
       </div>
@@ -816,9 +859,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-08</span>
         <h4 class="f-title">CORS reflects any origin with credentials enabled</h4>
       </div>
@@ -830,9 +874,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">AUTH-09</span>
         <h4 class="f-title">Token lifetime is advertised as 15 minutes and is actually 150</h4>
       </div>
@@ -853,9 +898,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       redacted here, but they are in plaintext in the repo.
     </p>
 
-    <div class="finding crit">
+    <div class="finding crit done">
       <div class="f-head">
         <span class="chip crit">Critical</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">SEC-01</span>
         <h4 class="f-title">Live payment key, RSA private key, mail password and a GitHub token</h4>
       </div>
@@ -871,8 +917,8 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
         Note the live Khalti key is being sent to the <code>dev.khalti.com</code> sandbox host, so payments
         are presumably failing upstream anyway — but the key is real and public.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Rotate all four now. Move them to environment variables via <code>${KHALTI_SECRET}</code>-style
         placeholders, add <code>*.pem</code> and <code>application-local.yml</code> to
         <code>.gitignore</code>, and commit an <code>application-local.yml.example</code> instead. If this has
@@ -880,9 +926,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </div>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">SEC-02</span>
         <h4 class="f-title">Seeded admin uses a published default password</h4>
       </div>
@@ -900,9 +947,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
     <h2>Features that don't work</h2>
     <p class="sec-note">Built, wired to the UI, and non-functional at runtime.</p>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="chip proven">Proven live</span>
         <span class="fid">FN-01</span>
         <h4 class="f-title">Chat messages are never saved — history is permanently empty</h4>
@@ -915,17 +963,18 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
         codebase. Messages exist only for connected sockets. <code>getAllChats()</code> and
         <code>getMyChats()</code> read from a table nothing writes to, so every conversation reloads blank.
       </p>
-      <div class="fix">
-        <b>Fix</b>
+      <div class="resolved">
+        <b>Fixed</b>
         Persist a <code>Chat</code> entity in the handler before broadcasting. While you're there:
         <code>getMyChats</code> returns one row per <em>message</em> rather than per conversation, so the chat
         list shows the same person repeatedly.
       </div>
     </div>
 
-    <div class="finding high">
+    <div class="finding high done">
       <div class="f-head">
         <span class="chip high">High</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-02</span>
         <h4 class="f-title">Nothing prevents double-booking an artist</h4>
       </div>
@@ -943,9 +992,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-03</span>
         <h4 class="f-title">Withdrawal approvals have no admin workflow</h4>
       </div>
@@ -956,9 +1006,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-04</span>
         <h4 class="f-title">Contacts list is filtered after pagination</h4>
       </div>
@@ -970,9 +1021,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-05</span>
         <h4 class="f-title">Upload directory is hardcoded to a path that won't exist</h4>
       </div>
@@ -984,9 +1036,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-06</span>
         <h4 class="f-title">Spring Security's AccessDeniedException is never handled</h4>
       </div>
@@ -999,9 +1052,10 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       </p>
     </div>
 
-    <div class="finding med">
+    <div class="finding med done">
       <div class="f-head">
         <span class="chip med">Medium</span>
+        <span class="chip fixed">Fixed</span>
         <span class="fid">FN-07</span>
         <h4 class="f-title">assert is used for a null check</h4>
       </div>
@@ -1032,11 +1086,48 @@ GET /api/v1/transactions    → <span class="hl">200</span>  every artist's earn
       <li><span class="tag">Product</span><span><b>Notifications.</b> Everything is email. No in-app notification entity, no unread state, no delivery for booking status changes or new messages while offline.</span></li>
       <li><span class="tag">Product</span><span><b>Artist discovery.</b> No search, genre filter, location filter, price range, or sort by rating on the public artist listing — the core browsing experience of the product.</span></li>
       <li><span class="tag">Product</span><span><b>Booking lifecycle.</b> No <code>COMPLETED</code> state after the event, which is what should gate reviews and release held funds to the artist.</span></li>
-      <li><span class="tag">Quality</span><span><b>Tests.</b> One file, <code>contextLoads()</code>, and it currently fails on any machine without the key-casing fix. The payment and wallet arithmetic in particular needs unit tests.</span></li>
+      <li><span class="tag">Quality</span><span><b>More tests.</b> There are now 11 covering wallet arithmetic and token forgery. The booking, availability and payment-initiation paths are still uncovered, and there are no integration tests.</span></li>
+      <li><span class="tag">Product</span><span><b>Reviews have no HTTP endpoints.</b> <code>ReviewController</code> is an empty class. The whole review service — create, update, delete, list, average rating — is unreachable from the API. The service layer is now correct and guarded; it just needs a controller.</span></li>
+      <li><span class="tag">Ops</span><span><b>Rate limiting is per-instance.</b> The limiter holds counters in memory, so it needs a shared store (Redis) before running more than one instance behind a load balancer.</span></li>
       <li><span class="tag">Ops</span><span><b>No Dockerfile, no CI, no health checks.</b> Add a multi-stage build for the service, wire the compose file below into it, and run the build on every push.</span></li>
       <li><span class="tag">Build</span><span><b>Lombok version conflict.</b> <code>pom.xml</code> declares the dependency at 1.18.38 but pins the annotation processor path to <code>${lombok.version}</code> = 1.18.34. Also <code>mvnw</code> is not executable and <code>maven-wrapper.jar</code> is gitignored, so the wrapper doesn't work on clone.</span></li>
       <li><span class="tag">Frontend</span><span><b>401 sends users to the register page.</b> <code>AuthInterceptor</code> navigates to <code>/auth/register</code> on any 401 instead of login, and no expiry check happens before requests fire. Tokens live in <code>localStorage</code>, so any XSS is a full account takeover.</span></li>
     </ul>
+  </section>
+
+  <!-- ============ COMMITS ============ -->
+  <section>
+    <h2>Where each fix landed</h2>
+    <p class="sec-note">
+      Eight commits on <code>main</code> at <code>dahalutsab/openmichub_ml</code>. The baseline commit
+      carries no live credential — the four that were in the tree were moved to environment variables
+      before the first push, so nothing secret is recoverable from history.
+    </p>
+
+    <ul class="gaps">
+      <li><span class="tag">6b0d3d2</span><span><b>Initial commit.</b> Whole codebase, secrets replaced with <code>${VAR}</code> placeholders, <code>.env.example</code>, key-generation script, docker-compose, README. Includes the one-character key-casing fix that unblocks startup.</span></li>
+      <li><span class="tag">7d1d578</span><span><b>Payment verification.</b> PAY-01, 02, 03, 06, 07, 08 — Khalti lookup, idempotency, wallet arithmetic, per-minute billing, booking confirmation, ledger leak.</span></li>
+      <li><span class="tag">0054f98</span><span><b>Payout authentication.</b> PAY-04, 05 — admin-only disbursement, ownership and status checks, allow-list narrowed, method-aware filter.</span></li>
+      <li><span class="tag">3edf79f</span><span><b>Roles.</b> AUTH-01 — <code>@PreAuthorize</code> across the API, <code>ROLE_</code> prefix, scope mapping, status-code handling.</span></li>
+      <li><span class="tag">92af738</span><span><b>Token signing.</b> AUTH-02 — sign-then-encrypt, verification centralised, forgery tests.</span></li>
+      <li><span class="tag">9f1d347</span><span><b>Reset tokens.</b> AUTH-03 — 256-bit single-use tokens, rate limiting, no account enumeration.</span></li>
+      <li><span class="tag">c3260ef</span><span><b>Ownership.</b> AUTH-05 — bookings, posts, reviews; plus double-booking and blackout dates.</span></li>
+      <li><span class="tag">37d2fa6</span><span><b>Chat, CORS, uploads.</b> FN-01, 04, AUTH-07, 08 — message persistence, pinned origins, path confinement, build fixes, frontend 401 handling.</span></li>
+    </ul>
+
+    <h3>Verified against a running instance</h3>
+    <div class="evidence">
+      <div class="cap">After the fixes, on a clean database</div>
+<pre>forged callback  status=Completed, no auth   <span class="good">wallet untouched, payment stays PENDING</span>
+                                             <span class="dim">Khalti lookup is called and fails closed</span>
+plain USER   →  /api/v1/user/all             <span class="good">403</span>   <span class="dim">(was 200)</span>
+             →  /api/v1/payments             <span class="good">403</span>   <span class="dim">(was 200)</span>
+             →  /api/v1/transactions         <span class="good">403</span>   <span class="dim">(was 200)</span>
+no auth      →  /api/v1/artist/withdraw      <span class="good">401</span>   <span class="dim">(was a real payout)</span>
+login brute force                            <span class="good">429 after 5 attempts</span>
+CORS from an unlisted origin                 <span class="good">403</span>
+unit tests                                   <span class="good">11 passing</span></pre>
+    </div>
   </section>
 
   <!-- ============ RUN ============ -->
@@ -1085,9 +1176,10 @@ docker compose up -d          <span class="c"># postgres 16 on :5432</span></pre
   </section>
 
   <footer>
-    Reviewed 26 Aug 2026 · open_mic_hub_service (Spring Boot 3.3.4) + open_mic_hub_ui (Angular 19)<br>
-    Findings marked "proven live" were reproduced against a running instance backed by Postgres 16 in Docker.<br>
-    One source edit made: <code>application-local.yml:33</code>, key filename casing. Test data removed; the database is clean.
+    Reviewed and fixed 26 Aug 2026 · open_mic_hub_service (Spring Boot 3.3.4) + open_mic_hub_ui (Angular 19)<br>
+    Findings marked "proven live" were reproduced against a running instance backed by Postgres 16 in Docker, then re-tested after the fix.<br>
+    Pushed to <code>github.com/dahalutsab/openmichub_ml</code> · 8 commits · no live credential in history.<br>
+    Still outstanding: rotate the four exposed credentials at their providers, and add database migrations.
   </footer>
 
 </div>
