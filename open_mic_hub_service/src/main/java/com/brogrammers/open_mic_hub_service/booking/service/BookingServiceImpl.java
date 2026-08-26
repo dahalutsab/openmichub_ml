@@ -12,6 +12,8 @@ import com.brogrammers.open_mic_hub_service.mail.MailService;
 import com.brogrammers.open_mic_hub_service.payment.entity.PaymentStatus;
 import com.brogrammers.open_mic_hub_service.payment.repository.PaymentRepository;
 import com.brogrammers.open_mic_hub_service.payment.entity.Payment;
+import com.brogrammers.open_mic_hub_service.payment.gateway.KhaltiClient;
+import com.brogrammers.open_mic_hub_service.payment.gateway.KhaltiLookupResponse;
 import com.brogrammers.open_mic_hub_service.payment.entity.PaymentStatus;
 import com.brogrammers.open_mic_hub_service.payment.repository.PaymentRepository;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.entity.Artist;
@@ -47,6 +49,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -64,7 +67,10 @@ public class BookingServiceImpl implements BookingService {
     private final ArtistRepository artistRepository;
     private final ArtistAvailabilityRepository artistAvailabilityRepository;
     private final MailService mailService;
-    private final WebClient.Builder webClientBuilder;
+    private final KhaltiClient khaltiClient;
+
+    @Value("${frontend.domain}")
+    private String frontendDomain;
     private final PaymentRepository paymentRepository;
     private final TransactionRepository transactionRepository;
     private final VirtualCoinService virtualCoinService;
@@ -224,12 +230,6 @@ public class BookingServiceImpl implements BookingService {
     }
 
 
-    @Value("${khalti.secret-key}")
-    private String khaltiSecretKey;
-
-    @Value("${khalti.base-url}")
-    private String khaltiBaseUrl;
-
     //
 //    @Transactional
 //    @Override
@@ -295,316 +295,107 @@ public class BookingServiceImpl implements BookingService {
 //        });
 //    }
 //
-    private Mono<String> initiateKhaltiPayment(Long purchaseOrderId, String purchaseOrderName, double amount, String returnUrl, String websiteUrl) {
-        log.info("Initiating Khalti payment for purchaseOrderId={}, purchaseOrderName={}, amount={}", purchaseOrderId, purchaseOrderName, amount);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("return_url", returnUrl);
-        requestBody.put("website_url", websiteUrl);
-        requestBody.put("amount", (int) (amount * 100)); // in paisa
-        requestBody.put("purchase_order_id", purchaseOrderId);
-        requestBody.put("purchase_order_name", purchaseOrderName);
-
-        log.info("Request body for Khalti payment: {}", requestBody);
-
-        return webClientBuilder.build()
-                .post()
-                .uri(khaltiBaseUrl + "/epayment/initiate/")
-                .header(HttpHeaders.AUTHORIZATION, "Key " + khaltiSecretKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(KhaltiInitiateResponse.class)
-                .doOnNext(response -> log.info("Khalti API response: {}", response))
-                .flatMap(khaltiResponse ->
-                        Mono.fromCallable(() -> {
-                            String paymentUrl = khaltiResponse.getPaymentUrl();
-                            log.info("Payment URL received: {}", paymentUrl);
-
-                            String pidx = extractPidxFromUrl(paymentUrl);
-                            log.info("Extracted pidx: {}", pidx);
-
-                            // Save payment with pidx here if needed
-
-                            return paymentUrl; // ✅ Return the actual payment URL
-                        }).subscribeOn(Schedulers.boundedElastic())
-                )
-                .doOnError(error -> log.error("Error in Khalti API call: ", error));
-    }
-
-    //
-//
-    private String extractPidxFromUrl(String url) {
-        try {
-            URI uri = new URI(url);
-            String query = uri.getQuery(); // Extract query parameters
-            if (query == null) {
-                throw new IllegalArgumentException("Query string is null in the URL");
-            }
-            String[] params = query.split("&"); // Split by '&'
-            for (String param : params) {
-                if (param.startsWith("pidx=")) {
-                    return param.split("=")[1]; // Return the value of pidx
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error extracting pidx from URL: {}", e.getMessage());
-        }
-        throw new IllegalArgumentException("pidx not found in the URL");
-    }
-
-
-
-//    @Transactional
-//    @Override
-//    public ResponseEntity<String> handleCallback(String pidx, String status, double amount, double totalAmount) {
-//        try {
-//            log.info("Processing callback with pidx={}, status={}, amount={}, totalAmount={}", pidx, status, amount, totalAmount);
-//
-//            Payment payment = paymentRepository.findByPidx(pidx).orElseThrow(
-//                    () -> new EntityNotFoundException("Payment not found for pidx=" + pidx)
-//            );
-//
-//            Booking booking = payment.getBookingId();
-//
-//            if ("Completed".equalsIgnoreCase(status)) {
-//                log.info("Payment verified successfully for pidx={}", pidx);
-//                payment.setPaymentStatus(PaymentStatus.COMPLETED);
-//                payment.setReceivedAmount(amount);
-//                paymentRepository.save(payment);
-//
-//                booking.setStatus(BookingStatus.CONFIRMED);
-//                bookingRepository.save(booking);
-//
-//
-//                VirtualCoinRequest virtualCoinRequest = new VirtualCoinRequest();
-//                virtualCoinRequest.setArtistId(booking.getArtistId().getId());
-//                if (booking.getPaymentType() == PaymentType.FULL) {
-//                    virtualCoinRequest.setBalance(booking.getTotalAmount() - booking.getSystemCharges());
-//                } else {
-//                    virtualCoinRequest.setBalance(booking.getTotalAmount() / 2 - booking.getSystemCharges());
-//                }
-//
-//                // Creating or Updating virtual coin
-//                virtualCoinService.createOrUpdateVirtualCoin(virtualCoinRequest);
-//
-//                TransactionRequest transactionRequest = new TransactionRequest();
-//                transactionRequest.setBookingId(booking.getId());
-//                transactionRequest.setArtistId(booking.getArtistId().getId());
-//                if (booking.getPaymentType() == PaymentType.FULL) {
-//                    transactionRequest.setAmount(booking.getTotalAmount() - booking.getSystemCharges());
-//                } else {
-//                    transactionRequest.setAmount(booking.getTotalAmount() / 2 - booking.getSystemCharges());
-//                }
-//                transactionRequest.setTransactionPurpose(TransactionPurpose.BOOKING_PAYMENT);
-//                transactionRequest.setTransactionType(TransactionType.CREDIT);
-//                transactionRequest.setStatus(Status.APPROVED);
-//                log.info("TransactionRequest before saving: {}", transactionRequest);
-//                transactionService.createTransaction(transactionRequest);
-//
-//                // Send confirmation email
-//                UserEntity user = booking.getUserId();
-//                mailService.sendPaymentConfirmationEmail(user, booking, payment);
-//
-//                log.info("Payment and booking status updated successfully.");
-//                return ResponseEntity.ok("Payment processed successfully");
-//            } else {
-//                log.info("Payment verification failed for pidx={}", pidx);
-//                payment.setPaymentStatus(PaymentStatus.FAILED);
-//                paymentRepository.save(payment);
-//
-//                booking.setStatus(BookingStatus.CANCELLED);
-//                bookingRepository.save(booking);
-//
-//                // Send failure email
-//                UserEntity user = booking.getUserId();
-//                mailService.sendPaymentFailureEmail(user, booking, payment);
-//
-//                log.info("Payment failed and booking status updated to CANCELLED.");
-//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Payment verification failed");
-//            }
-//        } catch (Exception e) {
-//            log.error("Error occurred while processing callback: {}", e.getMessage(), e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error occurred");
-//        }
-//    }
-
-//    @Override
-//    public Page<BookingResponse> getAllBookingsOfUsers(Pageable pageable) {
-//        log.info("Fetching all bookings for the logged-in user");
-//
-//        UserEntity loggedInUser = loggedInUserUtil.getLoggedInUser();
-//
-//        return bookingRepository.findAllByUserId(loggedInUser, pageable)
-//                .map(this::toBookingResponse); // Clean map
-//    }
-//
-//    private BookingResponse toBookingResponse(Booking booking) {
-//        Artist artist = booking.getArtistId();
-//
-//        ArtistResponses artistResponse = new ArtistResponses(
-//                artist,
-//                artist.getUser().getFullName(),
-//                artist.getBio(),
-//                FileUrlUtil.getFileUri(artist.getUser().getProfileImage()),
-//                artist.getStageName()
-//        );
-//
-//        double receivedAmount = booking.getPayments() != null
-//                ? booking.getPayments().stream()
-//                .mapToDouble(Payment::getReceivedAmount)
-//                .sum()
-//                : 0.0;
-//
-//        return new BookingResponse(
-//                booking.getId(),
-//                booking.getTotalAmount(),
-//                receivedAmount,
-//                booking.getRemainingAmount(),
-//                booking.getStatus().name(),
-//                booking.getEventType(),
-//                booking.getEventDate(),
-//                booking.getStartTime(),
-//                booking.getEndTime(),
-//                booking.getVenue(),
-//                artistResponse
-//        );
-//    }
-//
-//
-//    @Override
-//    public Page<ArtistBookingResponse> getAllBookingsOfArtists(Pageable pageable) {
-//        log.info("Fetching confirmed bookings for the logged-in artist");
-//
-//        Artist artist = artistRepository.findById(loggedInUserUtil.getLoggedInArtist().getId())
-//                .orElseThrow(() -> new EntityNotFoundException("Artist not found for the logged-in user"));
-//
-//        Page<Booking> bookings = bookingRepository.findAllByArtistId(artist, pageable);
-//
-//        // Filter only confirmed bookings first, then collect and manually paginate
-//        List<ArtistBookingResponse> confirmedBookings = bookings.getContent().stream()
-//                .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
-//                .map(booking -> {
-//                    UserEntity user = booking.getUserId();
-//                    return new ArtistBookingResponse(
-//                            booking.getId(),
-//                            booking.getTotalAmount(),
-//                            booking.getPayments().stream()
-//                                    .mapToDouble(Payment::getReceivedAmount)
-//                                    .sum(),
-//                            booking.getRemainingAmount(),
-//                            booking.getSystemCharges(),
-//                            booking.getStatus().name(),
-//                            booking.getVenue(),
-//                            booking.getEventDate(),
-//                            new UserResponse(
-//                                    user.getId(),
-//                                    user.getFullName(),
-//                                    user.getEmailId(),
-//                                    user.getPhoneNumber(),
-//                                    FileUrlUtil.getFileUri(user.getProfileImage())
-//                            )
-//                    );
-//                })
-//                .toList();
-//
-//        return new PageImpl<>(confirmedBookings, pageable, confirmedBookings.size());
-//    }
-//
-    @Transactional
+    /**
+     * Disburses an artist's pending withdrawal request through Khalti.
+     *
+     * <p>Restricted to admins: this moves real money out. The endpoint was previously public and
+     * accepted any transaction id, so anyone could trigger a payout against a sequential id without
+     * authenticating. The funds are already reserved by
+     * {@code TransactionServiceImpl.withDraw}, so this only performs the disbursement.
+     */
     @Override
     public Mono<String> withdraw(WithDrawRequest withDrawRequest) {
-        log.info("Processing withdrawal request: {}", withDrawRequest);
-
-        // Fetch the transaction by ID
         Transaction transaction = transactionRepository.findById(withDrawRequest.getTransactionId())
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found with ID: " + withDrawRequest.getTransactionId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Transaction not found with ID: " + withDrawRequest.getTransactionId()));
 
-        // Validate transaction details
-        if (!transaction.getTransactionPurpose().equals(TransactionPurpose.WITHDRAWAL_REQUEST) ||
-                !transaction.getTransactionType().equals(TransactionType.DEBIT)) {
-            throw new IllegalArgumentException("Invalid transaction type or purpose for withdrawal.");
+        if (transaction.getTransactionPurpose() != TransactionPurpose.WITHDRAWAL_REQUEST
+                || transaction.getTransactionType() != TransactionType.DEBIT) {
+            throw new IllegalArgumentException("That transaction is not a withdrawal request.");
+        }
+        if (transaction.getStatus() != Status.PENDING) {
+            throw new IllegalArgumentException(
+                    "This withdrawal is already " + transaction.getStatus() + " and cannot be paid out again.");
         }
 
-        // Extract required details
-        Long artistId = transaction.getVirtualCoin().getArtist().getId();
+        Artist artist = transaction.getVirtualCoin().getArtist();
         double amount = transaction.getAmount();
-        Long virtualCoinId = transaction.getVirtualCoin().getVirtualCoinId();
+        log.info("Disbursing withdrawal {} of {} to artist {}",
+                transaction.getTransactionId(), amount, artist.getId());
 
-        log.info("Artist ID: {}, Amount: {}, Virtual Coin ID: {}", artistId, amount, virtualCoinId);
-
-        // Create a new Payment entity
         Payment payment = new Payment();
         payment.setReceivedAmount(amount);
+        payment.setTotalAmount(amount);
         payment.setPaymentStatus(PaymentStatus.PENDING);
+        payment.setPaymentMethod("KHALTI");
+        payment.setProductCode("artist_withdrawal");
         payment.setTransactionCode(transaction.getTransactionId().toString());
-        payment.setUserInfoEntity(transaction.getVirtualCoin().getArtist().getUser());
+        payment.setUserInfoEntity(artist.getUser());
+        Payment saved = paymentRepository.save(payment);
 
-        // Call Khalti payment initiation method
-        return initiateKhaltiPayment(
-                artistId, // Use artist ID as purchaseOrderId
+        return khaltiClient.initiate(
+                artist.getId(),
                 "Withdrawal Request",
-                amount,
-                "http://localhost:4200/admin/withdraw/callback",
-                "http://localhost:4200/"
-        ).doOnNext(paymentUrl -> {
-            String pidx = extractPidxFromUrl(paymentUrl); // Extract pidx from the URL
-            payment.setPidx(pidx); // Save the extracted pidx
-            paymentRepository.save(payment);
-            log.info("Updated payment with pidx: {}", payment.getPidx());
+                BigDecimal.valueOf(amount),
+                frontendDomain + "/admin/withdraw/callback",
+                frontendDomain + "/"
+        ).map(response -> {
+            saved.setPidx(response.getPidx());
+            paymentRepository.save(saved);
+            return response.getPaymentUrl();
         });
     }
 
+    /**
+     * Settles a withdrawal after Khalti reports back.
+     *
+     * <p>As with booking payments, the reported status is verified server-to-server rather than
+     * trusted from the redirect. The balance is not touched on success — it was already reserved
+     * when the artist raised the request. A failed payout returns the reserved funds.
+     */
     @Transactional
     @Override
-    public ResponseEntity<String> handleWithdrawCallBack(String pidx, String status, double amount) {
-        try {
-            log.info("Processing withdrawal callback with pidx={}, status={}, amount={}", pidx, status, amount);
+    public ResponseEntity<String> handleWithdrawCallBack(String pidx) {
+        log.info("Processing withdrawal callback for pidx={}", pidx);
 
-            // Fetch the payment by pidx
-            Payment payment = paymentRepository.findByPidx(pidx).orElseThrow(
-                    () -> new EntityNotFoundException("Payment not found for pidx=" + pidx)
-            );
+        Payment payment = paymentRepository.findByPidx(pidx).orElseThrow(
+                () -> new EntityNotFoundException("Payment not found for pidx=" + pidx));
 
-            // Fetch the transaction using the transactionId stored in transaction_code
-            Transaction transaction = transactionRepository.findById(Long.parseLong(payment.getTransactionCode()))
-                    .orElseThrow(() -> new EntityNotFoundException("Transaction not found for ID=" + payment.getTransactionCode()));
+        Transaction transaction = transactionRepository.findById(Long.parseLong(payment.getTransactionCode()))
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Transaction not found for ID=" + payment.getTransactionCode()));
 
-
-            Artist artist = transaction.getVirtualCoin().getArtist();
-            if ("Completed".equalsIgnoreCase(status)) {
-                // Update payment status
-                payment.setPaymentStatus(PaymentStatus.COMPLETED);
-                paymentRepository.save(payment);
-
-                // Update transaction status
-                transaction.setStatus(Status.APPROVED);
-                transactionRepository.save(transaction);
-
-                // Update virtual coin balance
-                VirtualCoin virtualCoin = transaction.getVirtualCoin();
-                double newBalance = virtualCoin.getBalance() - transaction.getAmount();
-                virtualCoin.setBalance(newBalance);
-                virtualCoinRepository.save(virtualCoin);
-
-                mailService.sendWithdrawalConfirmationEmail(
-                        artist.getUser().getFullName(),
-                        artist.getUser().getEmailId(),
-                        amount,
-                        transaction.getTransactionId()
-                );
-
-                return ResponseEntity.ok("Withdrawal payment processed successfully");
-            } else {
-                log.info("Withdrawal failed for pidx={}", pidx);
-                payment.setPaymentStatus(PaymentStatus.FAILED);
-                paymentRepository.save(payment);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Withdrawal failed");
-            }
-        } catch (Exception e) {
-            log.error("Error occurred while processing withdrawal callback: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error occurred");
+        if (payment.getPaymentStatus() == PaymentStatus.COMPLETED) {
+            log.info("Withdrawal {} already settled; ignoring duplicate callback.", pidx);
+            return ResponseEntity.ok("Withdrawal already processed");
         }
+
+        KhaltiLookupResponse verified = khaltiClient.lookup(pidx);
+        if (verified == null || !verified.isCompleted()) {
+            log.warn("Khalti reports withdrawal pidx={} as '{}' - releasing hold.",
+                    pidx, verified == null ? "no response" : verified.getStatus());
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            transactionService.releaseWithdrawalHold(transaction);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Withdrawal failed");
+        }
+
+        payment.setPaymentStatus(PaymentStatus.COMPLETED);
+        payment.setTransactionId(verified.getTransactionId());
+        paymentRepository.save(payment);
+
+        // Balance already reduced when the request was raised; only the status changes here.
+        transaction.setStatus(Status.APPROVED);
+        transactionRepository.save(transaction);
+
+        Artist artist = transaction.getVirtualCoin().getArtist();
+        mailService.sendWithdrawalConfirmationEmail(
+                artist.getUser().getFullName(),
+                artist.getUser().getEmailId(),
+                transaction.getAmount(),
+                transaction.getTransactionId());
+
+        log.info("Withdrawal {} disbursed to artist {}.", pidx, artist.getId());
+        return ResponseEntity.ok("Withdrawal payment processed successfully");
     }
 }
-

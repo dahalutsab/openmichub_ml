@@ -50,9 +50,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
-                    auth.requestMatchers("/api/v1/payments/booking").permitAll();
-                    auth.requestMatchers("/api/v1/payments/callback").permitAll();
-                    auth.requestMatchers("/api/v1/artist/withdraw").permitAll();
+                    // Gateway callbacks only. Both verify the payment with Khalti server-to-server,
+                    // so nothing on the request is trusted. /payments/booking and /artist/withdraw
+                    // are deliberately NOT here - they initiate payments and require a caller.
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/payments/callback").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/artist/withdraw/callback").permitAll();
                     for (WHITE_LIST_URLS entry : WHITE_LIST_URLS.values()) {
                         for (HttpMethod method : entry.getMethods()) {
                             auth.requestMatchers(method, entry.getUrl()).permitAll();

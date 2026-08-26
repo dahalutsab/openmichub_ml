@@ -12,12 +12,10 @@ public enum WHITE_LIST_URLS {
     ARTIST_CALENDAR("/api/v1/artist/calendar/**", new HttpMethod[]{HttpMethod.GET}),
     PUBLIC_APIS("/api/v1/public/**", new HttpMethod[]{HttpMethod.GET}),
     FILES("/media/**", new HttpMethod[]{HttpMethod.GET}),
-    PAYMENT_URL("http://localhost:4200/organization/payment-return/**", new HttpMethod[]{HttpMethod.GET, HttpMethod.POST}),
-    PAYMENT_INIT("https://a.khalti.com/api/v2/epayment/initiate/**", new HttpMethod[]{HttpMethod.POST, HttpMethod.GET}),
-    PAYMENT("https://test-pay.khalti.com/**", new HttpMethod[]{HttpMethod.GET, HttpMethod.POST}),
-    CALLBACK("http://localhost:4200/user/artist/payment-callback", new HttpMethod[]{HttpMethod.GET, HttpMethod.POST}),
-    WITHDRAW_CALLBACK("/api/v1/artist/withdraw/callback", new HttpMethod[]{HttpMethod.GET, HttpMethod.POST}),
-    BOT("/api/v1/chat/**", new HttpMethod[]{HttpMethod.GET, HttpMethod.POST}),;
+    // Gateway callbacks. These verify the payment with Khalti before settling anything.
+    PAYMENT_CALLBACK("/api/v1/payments/callback", new HttpMethod[]{HttpMethod.POST}),
+    WITHDRAW_CALLBACK("/api/v1/artist/withdraw/callback", new HttpMethod[]{HttpMethod.POST}),
+    BOT("/api/v1/chat/**", new HttpMethod[]{HttpMethod.POST});
 
     private final String url;
     private final HttpMethod[] methods;

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -100,6 +101,8 @@ public class BookingController extends BaseController {
 //        return successResponse(bookingService.getAllBookingsOfArtists(pageable), "All bookings fetched successfully for artists");
 //    }
 //
+    /** Disburses a pending withdrawal request. Admin only - this moves money out of the platform. */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/withdraw")
     public Mono<ResponseEntity<String>> withdraw(@RequestBody WithDrawRequest withDrawRequest) {
         return bookingService.withdraw(withDrawRequest)
@@ -113,12 +116,9 @@ public class BookingController extends BaseController {
     }
 
     @PostMapping("/withdraw/callback")
-    public ResponseEntity<String> handleWithdrawCallBack(
-            @RequestParam String pidx,
-            @RequestParam String status,
-            @RequestParam double amount) {
-        log.info("Callback received with pidx={}, status={}, amount={}", pidx, status, amount);
-        return bookingService.handleWithdrawCallBack(pidx, status, amount);
+    public ResponseEntity<String> handleWithdrawCallBack(@RequestParam String pidx) {
+        // Verified server-to-server; any status or amount on the query string is ignored.
+        return bookingService.handleWithdrawCallBack(pidx);
     }
 
 }

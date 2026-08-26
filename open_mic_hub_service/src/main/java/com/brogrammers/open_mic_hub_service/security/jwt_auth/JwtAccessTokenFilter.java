@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,6 +32,8 @@ import java.util.Enumeration;
 @Slf4j
 public class JwtAccessTokenFilter extends OncePerRequestFilter {
 
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+
     private final RSAKeyRecord rsaKeyRecord;
     private final JwtTokenUtils jwtTokenUtils;
 
@@ -42,7 +45,7 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
 //        logRequestDetails(request);
 
         String requestURI = request.getRequestURI();
-        if (isWhitelisted(requestURI)) {
+        if (isWhitelisted(request)) {
             log.info("Skipping JWT filter for: {}", requestURI);
             filterChain.doFilter(request, response);
             return;
@@ -94,10 +97,20 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isWhitelisted(String requestURI) {
+    /**
+     * Whether this request is on the public allow-list.
+     *
+     * <p>Matches on method as well as path, and uses Spring's Ant matcher rather than treating the
+     * pattern as a regex. The previous version ignored the method entirely, so a path allow-listed
+     * for GET also skipped token processing for POST and DELETE.
+     */
+    private boolean isWhitelisted(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
         return Arrays.stream(WHITE_LIST_URLS.values())
-                .map(WHITE_LIST_URLS::getUrl)
-                .anyMatch(url -> requestURI.matches(url.replace("**", ".*")));
+                .filter(entry -> PATH_MATCHER.match(entry.getUrl(), uri))
+                .anyMatch(entry -> Arrays.stream(entry.getMethods())
+                        .anyMatch(allowed -> allowed.matches(method)));
     }
 
 

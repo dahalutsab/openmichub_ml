@@ -33,6 +33,6 @@ public interface BookingService {
 //
     Mono<String> withdraw(WithDrawRequest withDrawRequest);
 
-        ResponseEntity<String> handleWithdrawCallBack(String pidx, String status, double amount);
+        ResponseEntity<String> handleWithdrawCallBack(String pidx);
 
 }
