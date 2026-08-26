@@ -1,43 +1,81 @@
-<table class="table table-hover align-middle">
-  <thead class="table-dark">
-    <tr>
-   
-      <th>Artist</th>
-      <th>Type</th>
-      <th>Date</th>
-      <th>Time</th>
-      <th>Venue</th>
-      <th>Status</th>
-      <th>Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr *ngFor="let booking of bookings">
-      <td class="d-flex align-items-center gap-2">
-        <div>
-          <strong>{{ booking.artistResponse.artistName }}</strong><br />
-          <small class="text-muted">{{ booking.artistResponse.stageName }}</small>
-        </div>
-      </td>
-      <td>{{ booking.bookingType }}</td>
-      <td>{{ booking.bookingDate }}</td>
-      <td>{{ booking.startTime }} - {{ booking.endTime }}</td>
-      <td>{{ booking.venue }}</td>
-      <td>
-        <span class="badge"
-              [ngClass]="{
-                'bg-success': booking.bookingStatus === 'CONFIRMED',
-                'bg-warning text-dark': booking.bookingStatus === 'PENDING',
-                'bg-danger': booking.bookingStatus === 'CANCELLED'
-              }">
-          {{ booking.bookingStatus }}
-        </span>
-      </td>
-      <td>
-        Rs. {{ booking.receivedAmount }} / {{ booking.totalAmount }}
-        <br />
-        <small class="text-muted">Remaining: Rs. {{ booking.remainingAmount }}</small>
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="omh-display text-2xl">My bookings</h1>
+    <p class="mt-0.5 text-base text-muted">Every artist you have requested or confirmed.</p>
+  </div>
+  <a routerLink="/discover" class="omh-btn-primary">
+    <i class="bi bi-stars"></i> Find an artist
+  </a>
+</div>
+
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="isLoading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading bookings…</span>
+</div>
+
+<div class="omh-alert-critical mb-4" *ngIf="error && !isLoading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="fetchBookings()">Try again</button>
+</div>
+
+<section class="omh-panel" *ngIf="!isLoading && !error">
+  <div class="omh-table-wrap" *ngIf="bookings.length; else noBookings">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Artist</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Venue</th>
+          <th>Status</th>
+          <th class="omh-num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let booking of bookings">
+          <td>
+            <div class="font-medium">{{ booking.artistResponse?.artistName || '—' }}</div>
+            <div class="text-xs text-muted">{{ booking.artistResponse?.stageName }}</div>
+          </td>
+
+          <td>{{ pretty(booking.bookingType) }}</td>
+
+          <td class="whitespace-nowrap">{{ booking.bookingDate | date:'mediumDate' }}</td>
+
+          <td class="whitespace-nowrap text-muted">
+            {{ shortTime(booking.startTime) }}
+            <span class="text-muted">–</span>
+            {{ shortTime(booking.endTime) }}
+          </td>
+
+          <td>{{ booking.venue || '—' }}</td>
+
+          <td><span [class]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus }}</span></td>
+
+          <td class="omh-num">
+            <div class="omh-metric text-sm">
+              NPR {{ booking.receivedAmount | number:'1.0-0' }}
+              <span class="font-normal text-muted">/ {{ booking.totalAmount | number:'1.0-0' }}</span>
+            </div>
+            <div class="text-xs text-muted" *ngIf="booking.remainingAmount > 0">
+              NPR {{ booking.remainingAmount | number:'1.0-0' }} remaining
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noBookings>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-journal-bookmark omh-empty-icon"></i>
+        <p class="omh-empty-title">No bookings yet</p>
+        <p class="omh-empty-text">Browse artists and send your first request.</p>
+        <a routerLink="/discover" class="omh-btn-primary mt-4">Find an artist</a>
+      </div>
+    </div>
+  </ng-template>
+</section>

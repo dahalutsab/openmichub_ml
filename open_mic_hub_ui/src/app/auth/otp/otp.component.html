@@ -1,52 +1,58 @@
-<div class="otp-wrapper">
-  <div class="otp-container">
-    <div class="header-section">
-      <h2 class="main-title">Verify Your Email</h2>
-      <p class="subtitle">Enter the OTP sent to {{ email || 'your email' }}</p>
+<div class="omh-app flex min-h-screen items-center justify-center bg-ground p-6">
+  <div class="w-full max-w-sm">
+
+    <a routerLink="/" class="mb-8 flex items-center justify-center gap-2 font-display text-md font-extrabold text-ink">
+      <span class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent text-accent-ink">
+        <i class="bi bi-soundwave text-sm"></i>
+      </span>
+      OpenMicHub
+    </a>
+
+    <div class="omh-tile">
+      <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft">
+        <i class="bi bi-envelope-check text-xl text-accent"></i>
+      </div>
+
+      <h1 class="omh-display text-center text-xl">Verify your email</h1>
+      <p class="mt-1 text-center text-base text-muted">
+        Enter the code we sent to
+        <span class="font-medium text-ink">{{ email || 'your email' }}</span>.
+      </p>
+
+      <form [formGroup]="otpForm" (ngSubmit)="onSubmit()" class="mt-6 flex flex-col gap-4">
+
+        <div class="omh-field">
+          <label for="otp" class="omh-label">One-time code <span class="text-hot">*</span></label>
+          <!-- Wide tracking and a tabular face so six digits read as six
+               separate characters rather than a word. -->
+          <input id="otp"
+                 formControlName="otp"
+                 type="text"
+                 class="omh-input text-center font-display text-xl font-bold tracking-[0.5em] tabular-nums"
+                 placeholder="000000"
+                 maxlength="6"
+                 inputmode="numeric"
+                 autocomplete="one-time-code">
+          <p class="omh-error" *ngIf="submitted && otpForm.get('otp')?.invalid">
+            Enter the 6-digit code.
+          </p>
+        </div>
+
+        <div class="omh-alert-critical" *ngIf="errorMessage">
+          <i class="bi bi-exclamation-circle mt-0.5"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <button type="submit" class="omh-btn-primary omh-btn-lg" [disabled]="isSubmitting">
+          <span class="omh-spinner-sm" *ngIf="isSubmitting"></span>
+          {{ isSubmitting ? 'Verifying…' : 'Verify code' }}
+        </button>
+      </form>
     </div>
 
-    <form [formGroup]="otpForm" (ngSubmit)="onSubmit()" class="otp-form">
-      <div class="form-group">
-        <label for="otp" class="form-label">
-          <span class="label-text">OTP</span>
-          <span class="required-indicator">*</span>
-        </label>
-        <div class="input-container">
-          <input
-            id="otp"
-            formControlName="otp"
-            type="text"
-            class="form-input"
-            [class.error]="submitted && otpForm.get('otp')?.invalid"
-            placeholder="Enter 6-digit OTP"
-            maxlength="6"
-            inputmode="numeric"
-          />
-          <div class="input-focus-border"></div>
-        </div>
-        <div *ngIf="submitted && otpForm.get('otp')?.invalid" class="error-message">
-          <span class="error-icon">⚠️</span>
-          Please enter a valid 6-digit OTP
-        </div>
-      </div>
-
-      <div *ngIf="errorMessage" class="global-error-message">
-        <span class="error-icon">❌</span>
-        {{ errorMessage }}
-      </div>
-
-      <button
-        type="submit"
-        [disabled]="isSubmitting"
-        class="submit-button"
-        [class.loading]="isSubmitting"
-      >
-        <span class="button-content">
-          <span *ngIf="isSubmitting" class="loading-spinner"></span>
-          <span class="button-text">{{ isSubmitting ? 'Verifying...' : 'Verify OTP' }}</span>
-        </span>
-        <div class="button-shine"></div>
-      </button>
-    </form>
+    <p class="mt-4 text-center text-sm text-muted">
+      Wrong address?
+      <a routerLink="/auth/register" class="font-medium text-accent hover:underline">Start over</a>
+    </p>
   </div>
 </div>

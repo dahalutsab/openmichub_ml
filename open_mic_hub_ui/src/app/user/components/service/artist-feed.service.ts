@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { PostsResponse, LikeToggleResponse } from '../models/post.model';
+import { environment } from '../../../environment/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ArtistFeedService {
-  private baseUrl = 'http://localhost:8181/api/v1';
+  private baseUrl = environment.baseUrl;
 
   constructor(private http: HttpClient) {}
 

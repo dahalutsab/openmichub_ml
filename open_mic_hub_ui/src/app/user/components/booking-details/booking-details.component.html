@@ -1,73 +1,100 @@
-<div class="container mt-4">
-  <h3 class="mb-3">Booking Details</h3>
-
-  <div *ngIf="isLoading" class="text-center">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="omh-display text-2xl">Booking details</h1>
+    <p class="mt-0.5 text-base text-muted">Confirmed bookings ready to pay for.</p>
   </div>
-
-  <div *ngIf="error" class="alert alert-danger">
-    {{ error }}
-  </div>
-
-  <table *ngIf="!isLoading && bookings.length > 0" class="table table-bordered table-hover align-middle">
-    <thead class="table-dark">
-      <tr>
-        <th>Artist Name</th>
-        <th>Venue</th>
-        <th>Date</th>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let booking of bookings">
-        <td>
-          <strong>{{ booking.artistResponse?.artistName }}</strong><br />
-          <small class="text-muted">{{ booking.artistResponse?.stageName }}</small>
-        </td>
-        <td>{{ booking.venue }}</td>
-        <td>{{ booking.bookingDate }}</td>
-        <td>{{ formatTime(booking.startTime) }}</td>
-        <td>{{ formatTime(booking.endTime) }}</td>
-        <td>
-          <span
-            class="badge"
-            [ngClass]="{
-              'bg-warning': booking.bookingStatus === 'PENDING',
-              'bg-success': booking.bookingStatus === 'CONFIRMED',
-              'bg-danger': booking.bookingStatus === 'REJECTED'
-            }"
-          >
-            {{ booking.bookingStatus }}
-          </span>
-        </td>
-        <td>
-          <button
-            *ngIf="booking.bookingStatus === 'CONFIRMED'"
-            class="btn btn-sm btn-primary mb-2"
-            (click)="togglePaymentOptions(booking.bookingId)"
-          >
-            Pay Khalti
-          </button>
-
-          <div *ngIf="selectedBookingId === booking.bookingId" class="d-flex gap-2">
-            <button class="btn btn-outline-primary btn-sm" (click)="processPayment(booking.bookingId, 'partial')">
-              Partial
-            </button>
-            <button class="btn btn-outline-success btn-sm" (click)="processPayment(booking.bookingId, 'full')">
-              Full
-            </button>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div *ngIf="!isLoading && bookings.length === 0" class="text-center text-muted mt-3">
-    No bookings found.
-  </div>
+  <a routerLink="/user/payment-history" class="omh-btn-secondary">
+    <i class="bi bi-clock-history"></i> Payment history
+  </a>
 </div>
+
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="isLoading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading bookings…</span>
+</div>
+
+<div class="omh-alert-critical mb-4" *ngIf="error && !isLoading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="fetchBookings()">Try again</button>
+</div>
+
+<section class="omh-panel" *ngIf="!isLoading && !error">
+  <div class="omh-table-wrap" *ngIf="bookings.length; else noBookings">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Artist</th>
+          <th>Venue</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th class="text-right">Payment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let booking of bookings">
+          <td>
+            <div class="font-medium">{{ booking.artistResponse?.artistName || '—' }}</div>
+            <div class="text-xs text-muted">{{ booking.artistResponse?.stageName }}</div>
+          </td>
+
+          <td>{{ booking.venue || '—' }}</td>
+
+          <td class="whitespace-nowrap">{{ booking.bookingDate | date:'mediumDate' }}</td>
+
+          <td class="whitespace-nowrap text-muted">
+            {{ formatTime(booking.startTime) }}
+            <span class="text-muted">–</span>
+            {{ formatTime(booking.endTime) }}
+          </td>
+
+          <td><span [class]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus }}</span></td>
+
+          <td class="text-right">
+            <ng-container *ngIf="booking.bookingStatus === 'CONFIRMED'; else noPayment">
+              <!-- The choice replaces the button in place, so the row does not
+                   grow and shove the table around while deciding. -->
+              <div class="flex justify-end gap-1.5" *ngIf="selectedBookingId === booking.bookingId; else payButton">
+                <button type="button" class="omh-btn-secondary omh-btn-sm"
+                        [disabled]="paying" (click)="processPayment(booking.bookingId, 'partial')">
+                  Partial
+                </button>
+                <button type="button" class="omh-btn-primary omh-btn-sm"
+                        [disabled]="paying" (click)="processPayment(booking.bookingId, 'full')">
+                  Full
+                </button>
+                <button type="button" class="omh-btn-icon" aria-label="Cancel"
+                        (click)="togglePaymentOptions(booking.bookingId)">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <ng-template #payButton>
+                <button type="button" class="omh-btn-primary omh-btn-sm"
+                        (click)="togglePaymentOptions(booking.bookingId)">
+                  <i class="bi bi-wallet2"></i> Pay with Khalti
+                </button>
+              </ng-template>
+            </ng-container>
+
+            <ng-template #noPayment>
+              <span class="text-xs text-muted">Not payable yet</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noBookings>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-journal-bookmark omh-empty-icon"></i>
+        <p class="omh-empty-title">No bookings found</p>
+        <p class="omh-empty-text">Book an artist and the payment options appear here.</p>
+        <a routerLink="/discover" class="omh-btn-primary mt-4">Find an artist</a>
+      </div>
+    </div>
+  </ng-template>
+</section>

@@ -1,17 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { UserService } from '../../user.service';
+import { AVATAR_FALLBACK } from '../../../shared/avatar';
 
 @Component({
   selector: 'app-profile',
   standalone:false,
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.scss']
 })
 export class ProfileComponent implements OnInit {
   userId!: number;
   userData: any;
   isLoading = true;
+
+  readonly fallbackAvatar = AVATAR_FALLBACK;
 
   constructor(
     private route: ActivatedRoute,

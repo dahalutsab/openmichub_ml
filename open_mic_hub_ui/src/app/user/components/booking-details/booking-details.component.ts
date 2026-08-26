@@ -1,22 +1,25 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { UserService } from '../../user.service';
+import { ToastrService } from 'ngx-toastr';
+import { environment } from '../../../environment/environment';
 
 @Component({
   selector: 'app-booking-details',
-  standalone:false,
+  standalone: false,
   templateUrl: './booking-details.component.html',
-  styleUrls: ['./booking-details.component.scss'],
 })
 export class BookingDetailsComponent implements OnInit {
   bookings: any[] = [];
   isLoading = true;
   error: string | null = null;
   selectedBookingId: number | null = null;
+  paying = false;
 
   constructor(
     private service: UserService,
-    private http: HttpClient
+    private http: HttpClient,
+    private toast: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -24,6 +27,8 @@ export class BookingDetailsComponent implements OnInit {
   }
 
   fetchBookings(): void {
+    this.isLoading = true;
+    this.error = null;
     this.service.getAllUserBookings().subscribe({
       next: (res: any) => {
         this.bookings = res?.data?.content || [];
@@ -37,10 +42,27 @@ export class BookingDetailsComponent implements OnInit {
     });
   }
 
+  statusClass(status: string): string {
+    switch ((status || '').toUpperCase()) {
+      case 'CONFIRMED':
+      case 'COMPLETED':
+        return 'omh-status-positive';
+      case 'PENDING':
+        return 'omh-status-pending';
+      case 'REJECTED':
+      case 'CANCELLED':
+      case 'DECLINED':
+        return 'omh-status-critical';
+      default:
+        return 'omh-status-neutral';
+    }
+  }
+
   formatTime(time: string): string {
     if (!time) return '';
     const [hour, minute] = time.split(':');
     const h = parseInt(hour, 10);
+    if (Number.isNaN(h)) return time;
     const ampm = h >= 12 ? 'PM' : 'AM';
     const formattedHour = h % 12 === 0 ? 12 : h % 12;
     return `${formattedHour}:${minute} ${ampm}`;
@@ -50,23 +72,43 @@ export class BookingDetailsComponent implements OnInit {
     this.selectedBookingId = this.selectedBookingId === bookingId ? null : bookingId;
   }
 
+  /**
+   * Hands off to the gateway. The endpoint replies with a redirect URL as plain
+   * text.
+   *
+   * The base URL was hard-coded to localhost:8181 here, so this was the one
+   * call in the screen that could not follow the environment.
+   */
   processPayment(bookingId: number, paymentType: 'partial' | 'full'): void {
-    const url = `http://localhost:8181/api/v1/payments/booking?bookingId=${bookingId}&paymentType=${paymentType}`;
+    if (this.paying) {
+      return;
+    }
+    this.paying = true;
 
-    // Assuming backend returns plain URL string in response
-    this.http.post(url, null, { responseType: 'text' }).subscribe({
-      next: (paymentUrl: string) => {
-        if (paymentUrl) {
-          window.open(paymentUrl, '_blank'); // open the Khalti payment URL in a new tab
-        } else {
-          alert('Payment URL not received from server.');
-        }
-        this.selectedBookingId = null;
-      },
-      error: (err) => {
-        console.error('Payment failed:', err);
-        alert('Payment failed. Please try again.');
-      }
-    });
+    const params = new HttpParams()
+      .set('bookingId', bookingId)
+      .set('paymentType', paymentType);
+
+    this.http
+      .post(`${environment.baseUrl}/payments/booking`, null, {
+        params,
+        responseType: 'text',
+      })
+      .subscribe({
+        next: (paymentUrl: string) => {
+          this.paying = false;
+          this.selectedBookingId = null;
+          if (paymentUrl) {
+            window.open(paymentUrl, '_blank');
+          } else {
+            this.toast.error('No payment link came back from the server.');
+          }
+        },
+        error: (err) => {
+          this.paying = false;
+          console.error('Payment failed:', err);
+          this.toast.error('Payment failed. Please try again.');
+        },
+      });
   }
 }

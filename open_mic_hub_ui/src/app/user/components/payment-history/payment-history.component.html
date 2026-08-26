@@ -1,1 +1,115 @@
-<p>payment-history works!</p>
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="omh-display text-2xl">Payment history</h1>
+    <p class="mt-0.5 text-base text-muted">
+      {{ totalElements }} {{ totalElements === 1 ? 'payment' : 'payments' }} on your account.
+    </p>
+  </div>
+  <a routerLink="/user/bookings" class="omh-btn-secondary">
+    <i class="bi bi-journal-bookmark"></i> My bookings
+  </a>
+</div>
+
+<div class="omh-alert-critical mb-4" *ngIf="error">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="fetch()">Try again</button>
+</div>
+
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading payments…</span>
+</div>
+
+<ng-container *ngIf="!loading && !error">
+
+  <div class="mb-3 grid gap-3 sm:grid-cols-2" *ngIf="payments.length">
+    <div class="omh-tile">
+      <div class="omh-tile-head"><span class="omh-tile-title">Paid on this page</span></div>
+      <div class="omh-metric text-2xl"><span class="text-muted">NPR </span>{{ totalPaid | number:'1.0-2' }}</div>
+    </div>
+    <div class="omh-tile">
+      <div class="omh-tile-head"><span class="omh-tile-title">Payments recorded</span></div>
+      <div class="omh-metric text-2xl">{{ totalElements }}</div>
+    </div>
+  </div>
+
+  <section class="omh-panel">
+    <div class="omh-table-wrap" *ngIf="payments.length; else noPayments">
+      <table class="omh-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Booking</th>
+            <th>Method</th>
+            <th>Status</th>
+            <th>Reference</th>
+            <th class="omh-num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let payment of payments">
+            <td>
+              <div class="font-medium">{{ payment.paymentTime | date:'mediumDate' }}</div>
+              <div class="text-xs text-muted">{{ payment.paymentTime | date:'shortTime' }}</div>
+            </td>
+
+            <td>
+              <div class="font-medium" *ngIf="payment.booking?.eventType">
+                {{ pretty(payment.booking?.eventType) }}
+              </div>
+              <div class="text-xs text-muted">
+                {{ payment.booking?.venue || (payment.booking?.id ? '#' + payment.booking?.id : '—') }}
+              </div>
+            </td>
+
+            <td>{{ pretty(payment.paymentMethod) }}</td>
+
+            <td><span [class]="statusClass(payment.paymentStatus)">{{ payment.paymentStatus }}</span></td>
+
+            <td class="font-mono text-xs text-muted">{{ payment.productCode || '—' }}</td>
+
+            <td class="omh-num omh-metric text-sm">NPR {{ payment.receivedAmount | number:'1.0-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noPayments>
+      <div class="p-4">
+        <div class="omh-empty">
+          <i class="bi bi-receipt omh-empty-icon"></i>
+          <p class="omh-empty-title">No payments yet</p>
+          <p class="omh-empty-text">Once you book and pay for an artist, the receipt shows up here.</p>
+          <a routerLink="/discover" class="omh-btn-primary mt-4">Find an artist</a>
+        </div>
+      </div>
+    </ng-template>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"
+         *ngIf="totalPages > 1">
+      <p class="text-xs text-muted">Page {{ page + 1 }} of {{ totalPages }}</p>
+
+      <nav class="omh-pagination" aria-label="Payment pagination">
+        <button type="button" class="omh-page-btn" [disabled]="page === 0"
+                (click)="goToPage(page - 1)" aria-label="Previous page">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <button type="button"
+                *ngFor="let p of pageNumbers"
+                class="omh-page-btn"
+                [class.is-active]="p === page"
+                [attr.aria-current]="p === page ? 'page' : null"
+                (click)="goToPage(p)">
+          {{ p + 1 }}
+        </button>
+
+        <button type="button" class="omh-page-btn" [disabled]="page >= totalPages - 1"
+                (click)="goToPage(page + 1)" aria-label="Next page">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </nav>
+    </div>
+  </section>
+</ng-container>

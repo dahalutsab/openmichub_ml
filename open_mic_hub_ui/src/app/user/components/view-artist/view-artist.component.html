@@ -1,1 +1,112 @@
-<p>view-artist works!</p>
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading artist…</span>
+</div>
+
+<div class="omh-alert-critical" *ngIf="error && !loading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <span class="flex-1">{{ error }}</span>
+  <a routerLink="/user/artists" class="omh-btn-ghost omh-btn-sm">Browse artists</a>
+</div>
+
+<ng-container *ngIf="artist && !loading">
+
+  <a routerLink="/user/artists" class="omh-btn-ghost omh-btn-sm mb-3 -ml-3">
+    <i class="bi bi-arrow-left"></i> Back to artists
+  </a>
+
+  <!-- Header on the dark stage: this is the artist's poster. -->
+  <section class="omh-stage relative overflow-hidden rounded-[14px] p-6">
+    <div class="flex flex-wrap items-center gap-5">
+      <img [src]="artist.profilePicture || artist.profileImage || fallbackAvatar"
+           [alt]="artist.stageName || artist.fullName"
+           class="h-24 w-24 shrink-0 rounded-full border-2 border-white/15 object-cover">
+
+      <div class="min-w-0 flex-1">
+        <h1 class="omh-display text-3xl text-on-stage">
+          {{ artist.stageName || artist.fullName }}
+        </h1>
+        <p class="text-base text-on-stage-dim" *ngIf="artist.stageName">{{ artist.fullName }}</p>
+
+        <div class="mt-2 flex flex-wrap items-center gap-3">
+          <span class="flex items-center gap-1 text-stage" *ngIf="artist.rating">
+            <i class="bi text-xs" *ngFor="let star of stars" [ngClass]="starClass(star)"></i>
+            <span class="ml-1 text-xs text-on-stage-dim">{{ artist.rating | number:'1.1-1' }}</span>
+          </span>
+          <span class="omh-chip-toggle pointer-events-none" *ngIf="artist.location">
+            <i class="bi bi-geo-alt"></i> {{ artist.location }}
+          </span>
+          <span class="omh-chip-toggle pointer-events-none" *ngIf="artist.hourlyRate">
+            NPR {{ artist.hourlyRate | number:'1.0-0' }}/hr
+          </span>
+        </div>
+      </div>
+
+      <button type="button" class="omh-btn-primary shrink-0" (click)="book()">
+        <i class="bi bi-calendar-plus"></i> Book this artist
+      </button>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-1.5" *ngIf="genres.length">
+      <span class="omh-chip-toggle pointer-events-none" *ngFor="let genre of genres">{{ genre }}</span>
+    </div>
+  </section>
+
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+
+    <section class="omh-tile lg:col-span-2">
+      <div class="omh-tile-head"><span class="omh-tile-title">About</span></div>
+      <p class="whitespace-pre-wrap text-base leading-relaxed text-ink-soft" *ngIf="artist.bio; else noBio">
+        {{ artist.bio }}
+      </p>
+      <ng-template #noBio>
+        <p class="omh-help">This artist has not written a bio yet.</p>
+      </ng-template>
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head"><span class="omh-tile-title">Contact</span></div>
+      <dl class="omh-deflist">
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Email</dt>
+          <dd class="omh-defvalue truncate">{{ artist.userEmail || artist.email || '—' }}</dd>
+        </div>
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Phone</dt>
+          <dd class="omh-defvalue">{{ artist.phoneNumber || '—' }}</dd>
+        </div>
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Location</dt>
+          <dd class="omh-defvalue">{{ artist.location || '—' }}</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
+  <!-- Availability -->
+  <section class="omh-tile mt-3">
+    <div class="omh-tile-head">
+      <span class="omh-tile-title">Weekly availability</span>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" *ngIf="availability.length; else noAvailability">
+      <div *ngFor="let day of availability" class="rounded-card border border-line p-3">
+        <p class="font-display text-sm font-bold text-ink">{{ pretty(day.dayOfWeek) }}</p>
+        <ul class="mt-2 flex flex-col gap-1">
+          <li *ngFor="let slot of day.availabilityTimes"
+              class="flex items-center justify-between rounded-[6px] bg-surface-2 px-2.5 py-1.5 text-sm">
+            <span class="text-ink">{{ shortTime(slot.startTime) }} – {{ shortTime(slot.endTime) }}</span>
+            <i class="bi bi-check2 text-positive"></i>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <ng-template #noAvailability>
+      <p class="omh-help">
+        This artist has not published a schedule. You can still send a booking request.
+      </p>
+    </ng-template>
+  </section>
+
+</ng-container>

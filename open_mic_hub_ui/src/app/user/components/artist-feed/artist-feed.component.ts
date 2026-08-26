@@ -1,16 +1,25 @@
-import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { Post } from '../models/post.model';
 import { ArtistFeedService } from '../service/artist-feed.service';
+import { AVATAR_FALLBACK } from '../../../shared/avatar';
 
-declare var bootstrap: any;
-
+/**
+ * The booker's feed of artist posts.
+ *
+ * Previously this reached for two globals that were never guaranteed to be
+ * there: Bootstrap's `Tooltip` (whose bundle is no longer loaded at all) and
+ * AOS, which was never a dependency of this project — `initializeAOS` checked
+ * `window.AOS` and silently did nothing, on every load, forever. Both are gone;
+ * the lightbox and the entry animation are the component's own.
+ */
 @Component({
   selector: 'app-artist-feed',
   standalone: false,
   templateUrl: './artist-feed.component.html',
-  styleUrl: './artist-feed.component.scss'
 })
-export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ArtistFeedComponent implements OnInit {
+  readonly fallbackAvatar = AVATAR_FALLBACK;
+
   posts: Post[] = [];
   loading = false;
   error: string | null = null;
@@ -20,19 +29,14 @@ export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
   totalElements = 0;
   hasMore = true;
 
+  /** Open post in the lightbox, and which of its images is showing. */
+  lightboxPost: Post | null = null;
+  lightboxIndex = 0;
+
   constructor(private artistFeedsService: ArtistFeedService) {}
 
   ngOnInit(): void {
     this.loadPosts();
-  }
-
-  ngAfterViewInit(): void {
-    this.initializeTooltips();
-    this.initializeAOS();
-  }
-
-  ngOnDestroy(): void {
-    this.disposeTooltips();
   }
 
   loadPosts(page: number = 0): void {
@@ -41,20 +45,14 @@ export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.artistFeedsService.getPosts(page, this.pageSize).subscribe({
       next: (response) => {
-        if (page === 0) {
-          this.posts = response.data.content;
-        } else {
-          this.posts = [...this.posts, ...response.data.content];
-        }
-        
-        this.currentPage = response.data.number;
-        this.totalPages = response.data.totalPages;
-        this.totalElements = response.data.totalElements;
-        this.hasMore = !response.data.last;
+        const content = response.data?.content ?? [];
+        this.posts = page === 0 ? content : [...this.posts, ...content];
+
+        this.currentPage = response.data?.number ?? 0;
+        this.totalPages = response.data?.totalPages ?? 0;
+        this.totalElements = response.data?.totalElements ?? 0;
+        this.hasMore = !(response.data?.last ?? true);
         this.loading = false;
-        
-        // Reinitialize tooltips after new content is loaded
-        setTimeout(() => this.initializeTooltips(), 100);
       },
       error: (error) => {
         this.error = 'Failed to load posts. Please try again.';
@@ -84,10 +82,46 @@ export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  // ---- lightbox ----------------------------------------------------------
+
+  openImage(post: Post, index: number): void {
+    if (!post.images?.length) {
+      return;
+    }
+    this.lightboxPost = post;
+    this.lightboxIndex = index;
+  }
+
+  closeImage(): void {
+    this.lightboxPost = null;
+  }
+
+  /** Wraps at both ends, so the arrows never dead-end. */
+  stepImage(delta: number): void {
+    if (!this.lightboxPost?.images?.length) {
+      return;
+    }
+    const count = this.lightboxPost.images.length;
+    this.lightboxIndex = (this.lightboxIndex + delta + count) % count;
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (!this.lightboxPost) {
+      return;
+    }
+    if (event.key === 'Escape') this.closeImage();
+    if (event.key === 'ArrowRight') this.stepImage(1);
+    if (event.key === 'ArrowLeft') this.stepImage(-1);
+  }
+
+  // ---- helpers -----------------------------------------------------------
+
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
+    if (Number.isNaN(date.getTime())) return '';
+
+    const diffInMs = Date.now() - date.getTime();
     const diffInMins = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
@@ -96,12 +130,17 @@ export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
     if (diffInMins < 60) return `${diffInMins}m ago`;
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
-    
+
     return date.toLocaleDateString();
   }
 
+  /**
+   * Falls back to the shared avatar. The old handler pointed at
+   * `assets/images/placeholder.jpg`, which does not exist in this project — so
+   * a broken image was replaced by a second broken image.
+   */
   onImageError(event: any): void {
-    event.target.src = 'assets/images/placeholder.jpg';
+    event.target.src = AVATAR_FALLBACK;
   }
 
   refresh(): void {
@@ -109,46 +148,9 @@ export class ArtistFeedComponent implements OnInit, AfterViewInit, OnDestroy {
     this.posts = [];
     this.hasMore = true;
     this.loadPosts();
-    // Reinitialize tooltips after content refresh
-    setTimeout(() => this.initializeTooltips(), 200);
   }
 
   trackByPostId(index: number, post: any): any {
     return post && post.id ? post.id : index;
-  }
-
-  private initializeTooltips(): void {
-    if (typeof bootstrap !== 'undefined') {
-      setTimeout(() => {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-          return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-      }, 100);
-    }
-  }
-
-  private disposeTooltips(): void {
-    if (typeof bootstrap !== 'undefined') {
-      const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-      tooltips.forEach(tooltip => {
-        const instance = bootstrap.Tooltip.getInstance(tooltip);
-        if (instance) {
-          instance.dispose();
-        }
-      });
-    }
-  }
-
-  private initializeAOS(): void {
-    // Initialize AOS (Animate On Scroll) if available
-    if (typeof window !== 'undefined' && (window as any).AOS) {
-      (window as any).AOS.init({
-        duration: 600,
-        easing: 'ease-out',
-        once: true,
-        offset: 50
-      });
-    }
   }
 }
