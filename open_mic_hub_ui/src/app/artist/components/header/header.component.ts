@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ArtistService } from '../../artist.service';
 import { LayoutService } from '../../../shared/layout.service';
+import { ThemeService } from '../../../shared/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -10,7 +11,9 @@ import { LayoutService } from '../../../shared/layout.service';
 })
 export class HeaderComponent implements OnInit {
   menuOpen = false;
+  query = '';
   userBalance: string = '0.00';
+  pendingRequests = 0;
 
   userProfile = {
     name: 'Artist',
@@ -21,12 +24,14 @@ export class HeaderComponent implements OnInit {
   constructor(
     private router: Router,
     private artistService: ArtistService,
-    public layout: LayoutService
+    public layout: LayoutService,
+    public theme: ThemeService
   ) { }
 
   ngOnInit() {
     this.fetchArtistProfile();
     this.fetchVirtualCoin();
+    this.fetchPending();
   }
 
   fetchArtistProfile(): void {
@@ -51,6 +56,25 @@ export class HeaderComponent implements OnInit {
       },
       error: (error: any) => console.error('Error fetching virtual coin:', error)
     });
+  }
+
+  /** Drives the notification dot: requests still waiting on an answer. */
+  fetchPending(): void {
+    this.artistService.getAllBookings(0, 50).subscribe({
+      next: (response: any) => {
+        const bookings: any[] = response?.data?.content ?? [];
+        this.pendingRequests = bookings.filter(b => b.bookingStatus === 'PENDING').length;
+      },
+      error: () => {}
+    });
+  }
+
+  search(): void {
+    const term = this.query.trim();
+    if (!term) {
+      return;
+    }
+    this.router.navigate(['/artist/bookings'], { queryParams: { q: term } });
   }
 
   viewProfile(): void {

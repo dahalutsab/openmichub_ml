@@ -1,14 +1,12 @@
-import { Component, OnInit } from '@angular/core';
-import { AdminService } from '../../admin.service';
-import { TransactionService, TransactionResponse } from '../coin-transaction/transaction.service';
-import { PaymentService, Payment } from '../payment-records/payment.service';
+import { Component, OnInit, signal } from '@angular/core';
+import { AdminOverview, AnalyticsService, RANGES } from '../../../shared/analytics.service';
+import { Slice, statusColor } from '../../../shared/charts';
 
 /**
- * Admin overview.
+ * Platform analytics board.
  *
- * This route was a bare `<h1>Admin Dashboard</h1>` — the CLI stub it was
- * generated as. Everything here is assembled from endpoints the app already
- * calls elsewhere; no new API surface is assumed.
+ * One request per range change: the API returns everything the screen draws,
+ * so changing the window is a single round trip rather than eight.
  */
 @Component({
   selector: 'app-admin-dashboard',
@@ -16,69 +14,84 @@ import { PaymentService, Payment } from '../payment-records/payment.service';
   templateUrl: './admin-dashboard.component.html',
 })
 export class AdminDashboardComponent implements OnInit {
-  loading = true;
+  readonly ranges = RANGES;
 
-  totalUsers = 0;
-  totalArtists = 0;
-  totalTransactions = 0;
-  totalPayments = 0;
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly days = signal(30);
+  readonly data = signal<AdminOverview | null>(null);
 
-  recentTransactions: TransactionResponse[] = [];
-  recentPayments: Payment[] = [];
-
-  constructor(
-    private adminService: AdminService,
-    private transactionService: TransactionService,
-    private paymentService: PaymentService
-  ) {}
+  constructor(private analytics: AnalyticsService) {}
 
   ngOnInit(): void {
-    // A page size of 1 is enough: only the totalElements count is read from
-    // these two, and pulling every user just to count them is wasteful.
-    this.adminService.getAllUsers(undefined, 0, 1).subscribe({
-      next: res => (this.totalUsers = res.data.totalElements),
-      error: () => {},
-    });
+    this.load();
+  }
 
-    this.adminService.getAllUsers('ARTIST', 0, 1).subscribe({
-      next: res => (this.totalArtists = res.data.totalElements),
-      error: () => {},
-    });
+  load(): void {
+    this.loading.set(true);
+    this.error.set('');
 
-    this.transactionService.getAllTransactions(0, 6).subscribe({
-      next: res => {
-        this.totalTransactions = res.data.totalElements;
-        this.recentTransactions = res.data.content ?? [];
-        this.loading = false;
+    this.analytics.adminOverview(this.days()).subscribe({
+      next: overview => {
+        this.data.set(overview);
+        this.loading.set(false);
       },
-      error: () => (this.loading = false),
-    });
-
-    this.paymentService.getPayments(0, 6).subscribe({
-      next: res => {
-        this.totalPayments = res.data.totalElements;
-        this.recentPayments = res.data.content ?? [];
+      error: err => {
+        console.error('Failed to load platform analytics', err);
+        this.error.set('Could not load analytics. Please try again.');
+        this.loading.set(false);
       },
-      error: () => {},
     });
   }
 
-  statusClass(status: string | undefined): string {
+  setRange(days: number): void {
+    if (days === this.days()) {
+      return;
+    }
+    this.days.set(days);
+    this.load();
+  }
+
+  /** Colour for a status slice, shared with the donut so legend and ring agree. */
+  sliceColor(slice: Slice): string {
+    return statusColor(slice.label);
+  }
+
+  statusClass(status: string | null): string {
     switch ((status ?? '').toUpperCase()) {
-      case 'COMPLETE':
+      case 'CONFIRMED':
       case 'COMPLETED':
-      case 'SUCCESS':
         return 'omh-status-positive';
       case 'PENDING':
-      case 'INITIATED':
         return 'omh-status-pending';
-      case 'FAILED':
-      case 'REFUNDED':
-      case 'CANCELED':
       case 'CANCELLED':
+      case 'DECLINED':
+      case 'NO_SHOW':
         return 'omh-status-critical';
       default:
         return 'omh-status-neutral';
     }
+  }
+
+  pretty(label: string | null): string {
+    return (label || '')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  /** Share of the leaderboard's top earner, for the inline bar in each row. */
+  earningsShare(earnings: number): number {
+    const top = this.data()?.topArtists?.[0]?.earnings ?? 0;
+    return top <= 0 ? 0 : Math.round((earnings / top) * 100);
+  }
+
+  initials(name: string | null): string {
+    return (name || '?')
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 }

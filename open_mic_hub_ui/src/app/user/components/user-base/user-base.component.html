@@ -1,4 +1,7 @@
-<div class="omh-shell">
+<!-- `omh-app` scopes the dashboard's own theme tokens. Everything inside it
+     re-themes with the light/dark toggle; the marketing pages outside it keep
+     the palette they were designed in. -->
+<div class="omh-app omh-shell">
 
   <app-sidebar></app-sidebar>
 
@@ -10,7 +13,7 @@
     </main>
 
     <footer class="omh-footer">
-      Copyright &copy; OpenMicHub {{ currentYear }}
+      &copy; OpenMicHub {{ currentYear }}
     </footer>
   </div>
 

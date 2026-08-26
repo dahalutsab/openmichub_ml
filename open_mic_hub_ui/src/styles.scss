@@ -60,6 +60,13 @@
   --omh-hot:        224  62  45;
   --omh-hot-soft:   254 235 232;
 
+  /* The dashboard's accent, declared here too because a few globally-mounted
+     pieces — the chat widget, toasts — render outside `.omh-app` and would
+     otherwise resolve it to nothing. `.omh-app` overrides these per theme. */
+  --omh-accent:      216  92  16;
+  --omh-accent-soft: 254 238 226;
+  --omh-accent-ink: 255 255 255;
+
   /* Spotlight amber — ratings and pending states. */
   --omh-stage:      214 138  20;
   --omh-stage-soft: 253 242 220;
@@ -95,11 +102,132 @@
 
   --omh-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
-  /* Shell geometry. The sidebar width and topbar height are read by both the
-     sidebar and the content column, so they live here rather than being typed
-     twice and drifting. */
-  --omh-sidebar-w: 264px;
-  --omh-topbar-h:  60px;
+  /* Shell geometry. Read by both the rail and the content column, so they live
+     here rather than being typed twice and drifting. */
+  --omh-rail-w:    68px;
+  --omh-sidebar-w: 248px;
+  --omh-topbar-h:  64px;
+
+  /* Categorical chart palette. Ordered by how often a series needs to be told
+     apart from the one before it, not by hue family — adjacent entries are
+     always far apart in both hue and lightness, so a stacked bar or a donut
+     stays readable at small sizes and in greyscale. */
+  --omh-cat-1: 244 128  36;
+  --omh-cat-2:  96 132 255;
+  --omh-cat-3:  38 190 142;
+  --omh-cat-4: 224  86 118;
+  --omh-cat-5: 168 130 255;
+  --omh-cat-6:  90 200 236;
+  --omh-cat-7: 232 182  58;
+  --omh-cat-8: 128 148 176;
+}
+
+/* -------------------------------------------------------------------------
+   Dashboard theme
+
+   The marketing pages above keep the light palette they were designed in. The
+   dashboard is its own room: `.omh-app` redeclares the same token names, so
+   every component already written against them re-themes for free — a
+   `bg-surface` card is a white card on the landing page and a raised charcoal
+   card on the board, with no component-level branching anywhere.
+
+   Dark is the default. `data-theme` is stamped onto <html> by ThemeService,
+   which resolves the `system` setting against the OS before writing it, so
+   only two states ever reach CSS.
+   ------------------------------------------------------------------------- */
+
+.omh-app {
+  /* Not flat black. A near-black with a little of the brand's blue in it keeps
+     large dark areas from looking like a switched-off screen, and gives the
+     raised cards something to sit against. */
+  --omh-ground:     13  14  20;
+  --omh-surface:    22  24  32;
+  --omh-surface-2:  32  35  45;
+  --omh-line:       44  48  60;
+  --omh-ink:       242 243 248;
+  --omh-ink-soft:  178 183 199;
+  --omh-muted:     130 137 156;
+
+  /* Ember. The reference boards run a single warm accent against a cold dark
+     ground, and one accent used sparingly is what makes a dense screen
+     readable — everything wearing it is the thing to look at. */
+  --omh-accent:      244 128  36;
+  --omh-accent-soft:  58  36  18;
+  --omh-accent-ink:   20  14   8;
+
+  --omh-brand:        124 140 255;
+  --omh-brand-strong: 152 165 255;
+  --omh-brand-soft:    34  38  62;
+
+  --omh-hot:        244 128  36;
+  --omh-hot-soft:    58  36  18;
+
+  --omh-stage:      232 182  58;
+  --omh-stage-soft:  56  44  18;
+
+  --omh-positive:      52 199 146;
+  --omh-positive-soft: 18  50  40;
+  --omh-warning:      232 182  58;
+  --omh-warning-soft:  56  44  18;
+  --omh-critical:     255 118 108;
+  --omh-critical-soft: 60  26  26;
+
+  /* On a dark ground a drop shadow does nothing — depth has to come from the
+     surface being lighter than what is behind it. These stay for the overlays,
+     where the scrim provides the separation. */
+  --omh-shadow-soft: 0 1px 1px rgb(0 0 0 / 0.3);
+  --omh-shadow-lift: 0 2px 6px rgb(0 0 0 / 0.4), 0 24px 48px -16px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+  background-color: rgb(var(--omh-ground));
+  color: rgb(var(--omh-ink));
+}
+
+:root[data-theme='light'] .omh-app {
+  --omh-ground:     243 244 248;
+  --omh-surface:    255 255 255;
+  --omh-surface-2:  238 240 246;
+  --omh-line:       223 226 235;
+  --omh-ink:         18  20  28;
+  --omh-ink-soft:    68  74  92;
+  --omh-muted:      118 126 146;
+
+  --omh-accent:      216  92  16;
+  --omh-accent-soft: 254 238 226;
+  --omh-accent-ink:  255 255 255;
+
+  --omh-brand:        79  70 205;
+  --omh-brand-strong: 60  52 165;
+  --omh-brand-soft:  238 236 254;
+
+  --omh-hot:        216  92  16;
+  --omh-hot-soft:   254 238 226;
+
+  --omh-stage:      181 128  16;
+  --omh-stage-soft: 253 242 220;
+
+  --omh-positive:      22 125  86;
+  --omh-positive-soft:223 245 235;
+  --omh-warning:      177 108  10;
+  --omh-warning-soft: 253 242 220;
+  --omh-critical:     183  45  37;
+  --omh-critical-soft:253 233 231;
+
+  --omh-shadow-soft: 0 1px 1px rgb(16 12 30 / 0.03);
+  --omh-shadow-lift: 0 1px 2px rgb(16 12 30 / 0.06), 0 18px 36px -14px rgb(16 12 30 / 0.28);
+
+  /* The categorical palette is tuned for a dark ground; on white the lightest
+     entries wash out, so they are deepened rather than reused as-is. */
+  --omh-cat-1: 214  92  16;
+  --omh-cat-2:  62  92 214;
+  --omh-cat-3:  16 148 106;
+  --omh-cat-4: 196  52  86;
+  --omh-cat-5: 122  76 210;
+  --omh-cat-6:  28 148 186;
+  --omh-cat-7: 176 130  16;
+  --omh-cat-8:  92 112 140;
+
+  color-scheme: light;
 }
 
 /* -------------------------------------------------------------------------
@@ -676,102 +804,168 @@ a {
 
   /* ============================================================== shell === */
 
-  /* Dashboard frame. The sidebar is fixed and the content column is offset by
-     its width, so the two scroll independently and the sidebar never drifts
-     out of view on a long table. */
+  /* Dashboard frame.
+     A narrow icon rail is always present, and a labelled drawer slides out of
+     it on demand. The rail is the permanent structure — it costs 68px, so the
+     board keeps almost the full width for data, which is the point of the
+     layout in the references. */
   .omh-shell { @apply min-h-screen bg-ground; }
 
-  .omh-sidebar {
-    @apply omh-stage fixed inset-y-0 left-0 z-sidebar flex flex-col
-           overflow-y-auto border-r;
-    width: var(--omh-sidebar-w);
-    border-right-color: rgb(255 255 255 / 0.07);
-    transition: transform 0.28s var(--omh-ease);
+  .omh-rail {
+    @apply fixed inset-y-0 left-0 z-rail hidden flex-col items-center gap-1
+           border-r border-line bg-surface py-3 lg:flex;
+    width: var(--omh-rail-w);
   }
 
-  /* Below lg the sidebar becomes a drawer. */
-  @media (max-width: 1023px) {
-    .omh-sidebar { transform: translateX(-100%); }
-    .omh-sidebar.is-open { transform: translateX(0); }
+  .omh-rail-mark {
+    @apply mb-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]
+           text-lg text-accent-ink;
+    background-color: rgb(var(--omh-accent));
   }
 
-  .omh-sidebar-brand {
-    @apply flex h-[var(--omh-topbar-h)] shrink-0 items-center gap-2 px-5
-           font-display text-lg font-extrabold;
-    color: rgb(var(--omh-on-stage));
-    letter-spacing: -0.02em;
-  }
-
-  .omh-sidebar-section {
-    @apply px-5 pb-2 pt-5 font-display text-micro font-bold uppercase tracking-[0.16em];
-    color: rgb(var(--omh-on-stage-dim) / 0.7);
-  }
-
-  .omh-sidebar-link {
-    @apply flex w-full items-center gap-3 rounded-[5px] border-0 bg-transparent
-           px-3 py-2 text-left font-display text-sm font-semibold cursor-pointer;
-    color: rgb(var(--omh-on-stage-dim));
+  /* Rail button. The active item gets a filled tile rather than a tint — at
+     this size a tint is indistinguishable from a hover. */
+  .omh-rail-btn {
+    @apply relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center
+           rounded-[12px] border-0 bg-transparent text-lg text-muted;
     transition: color 0.16s var(--omh-ease), background-color 0.16s var(--omh-ease);
 
-    i { @apply text-base opacity-80; }
-
-    &:hover {
-      color: rgb(var(--omh-on-stage));
-      background-color: rgb(255 255 255 / 0.07);
-    }
+    &:hover { @apply bg-surface-2 text-ink; }
 
     &.is-active {
-      color: #fff;
-      background-color: rgb(var(--omh-hot));
-      i { opacity: 1; }
+      background-color: rgb(var(--omh-accent) / 0.14);
+      color: rgb(var(--omh-accent));
     }
 
     &:focus-visible {
       @apply outline-none;
-      box-shadow: 0 0 0 3px rgb(var(--omh-hot) / 0.4);
+      box-shadow: 0 0 0 3px rgb(var(--omh-accent) / 0.35);
     }
   }
 
-  /* Child items in an expanded group: quieter, and marked by a rule rather than
-     a fill so an open group does not read as five selected items. */
-  .omh-sidebar-sublink {
-    @apply omh-sidebar-link text-xs font-medium;
-    color: rgb(var(--omh-on-stage-dim) / 0.85);
+  /* Label that appears beside the rail on hover, so an icon-only nav is still
+     legible without opening the drawer. */
+  .omh-rail-tip {
+    @apply pointer-events-none absolute left-[calc(100%+8px)] z-overlay whitespace-nowrap
+           rounded-[6px] border border-line bg-surface px-2 py-1
+           font-display text-xs font-semibold text-ink opacity-0;
+    box-shadow: var(--omh-shadow-lift);
+    transition: opacity 0.14s var(--omh-ease);
+
+    .omh-rail-btn:hover &,
+    .omh-rail-btn:focus-visible & { @apply opacity-100; }
+  }
+
+  /* The labelled drawer. Overlays the content rather than pushing it, so the
+     charts never reflow just because someone opened the menu. */
+  .omh-drawer {
+    @apply fixed inset-y-0 z-sidebar flex flex-col overflow-y-auto
+           border-r border-line bg-surface;
+    left: 0;
+    width: var(--omh-sidebar-w);
+    transform: translateX(-100%);
+    transition: transform 0.26s var(--omh-ease);
+
+    @screen lg { left: var(--omh-rail-w); }
+
+    &.is-open { transform: translateX(0); }
+  }
+
+  .omh-drawer-head {
+    @apply flex shrink-0 items-center justify-between gap-2 border-b border-line px-4;
+    height: var(--omh-topbar-h);
+  }
+
+  .omh-nav-section {
+    @apply px-4 pb-1.5 pt-4 font-display text-micro font-bold uppercase tracking-[0.16em] text-muted;
+  }
+
+  .omh-nav-link {
+    @apply flex w-full items-center gap-3 rounded-[8px] border-0 bg-transparent
+           px-3 py-2 text-left font-display text-sm font-semibold text-ink-soft cursor-pointer;
+    transition: color 0.16s var(--omh-ease), background-color 0.16s var(--omh-ease);
+
+    i { @apply text-base text-muted; }
+
+    &:hover { @apply bg-surface-2 text-ink; i { @apply text-ink; } }
 
     &.is-active {
-      background-color: rgb(255 255 255 / 0.08);
-      color: rgb(var(--omh-on-stage));
+      background-color: rgb(var(--omh-accent) / 0.14);
+      color: rgb(var(--omh-accent));
+      i { color: rgb(var(--omh-accent)); }
+    }
+
+    &:focus-visible {
+      @apply outline-none;
+      box-shadow: 0 0 0 3px rgb(var(--omh-accent) / 0.35);
     }
   }
 
-  .omh-sidebar-sublist {
-    @apply ml-5 mt-1 flex flex-col gap-0.5 border-l pl-2;
-    border-color: rgb(255 255 255 / 0.1);
-  }
-
-  /* Content column, offset past the fixed sidebar. */
+  /* Content column, offset past the rail. */
   .omh-main {
     @apply flex min-h-screen flex-col;
-    @screen lg { margin-left: var(--omh-sidebar-w); }
+    @screen lg { margin-left: var(--omh-rail-w); }
   }
 
   .omh-topbar {
-    @apply sticky top-0 z-topbar flex shrink-0 items-center gap-3
-           border-b border-line bg-surface/95 px-4 lg:px-6;
+    @apply sticky top-0 z-topbar flex shrink-0 items-center gap-2
+           border-b border-line px-4 lg:px-5;
     height: var(--omh-topbar-h);
-    backdrop-filter: saturate(140%) blur(8px);
+    background-color: rgb(var(--omh-ground) / 0.88);
+    backdrop-filter: saturate(150%) blur(10px);
+  }
+
+  /* Global search. Wide enough to read a full artist name, and it is the only
+     thing in the bar with a filled ground, so it reads as the entry point. */
+  .omh-search {
+    @apply flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line
+           bg-surface px-3 py-2 md:max-w-md;
+    transition: border-color 0.16s var(--omh-ease), box-shadow 0.16s var(--omh-ease);
+
+    &:focus-within {
+      border-color: rgb(var(--omh-accent) / 0.6);
+      box-shadow: 0 0 0 3px rgb(var(--omh-accent) / 0.15);
+    }
+
+    input {
+      @apply min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-ink outline-none;
+      &::placeholder { @apply text-muted; }
+    }
+  }
+
+  /* Round topbar control — theme toggle, notifications, drawer handle. */
+  .omh-icon-btn {
+    @apply relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center
+           rounded-[10px] border border-line bg-surface text-base text-ink-soft;
+    transition: color 0.16s var(--omh-ease), background-color 0.16s var(--omh-ease),
+                border-color 0.16s var(--omh-ease);
+
+    &:hover { @apply bg-surface-2 text-ink; }
+
+    &:focus-visible {
+      @apply outline-none;
+      box-shadow: 0 0 0 3px rgb(var(--omh-accent) / 0.35);
+    }
+  }
+
+  /* Unread marker on a topbar control. */
+  .omh-dot {
+    @apply absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full;
+    background-color: rgb(var(--omh-accent));
+    box-shadow: 0 0 0 2px rgb(var(--omh-surface));
   }
 
   /* Content padding. One value, so no dashboard is inset differently. */
-  .omh-content { @apply flex-1 p-4 lg:p-6; }
+  .omh-content { @apply flex-1 p-4 lg:p-5; }
 
   .omh-footer {
     @apply border-t border-line px-6 py-4 text-center text-xs text-muted;
   }
 
-  /* Drawer scrim, below lg only. */
+  /* Drawer scrim. */
   .omh-scrim {
-    @apply fixed inset-0 z-overlay bg-stage-ink/60 lg:hidden;
+    @apply fixed inset-0 z-overlay;
+    background-color: rgb(0 0 0 / 0.5);
     backdrop-filter: blur(2px);
   }
 
@@ -926,6 +1120,97 @@ a {
     }
 
     &:disabled { @apply cursor-not-allowed opacity-45; }
+  }
+
+  /* ========================================================== analytics === */
+
+  /* A board tile. Everything on a dashboard is one of these, which is what
+     makes a dense grid read as one surface rather than a pile of widgets. */
+  .omh-tile {
+    @apply flex flex-col rounded-[14px] border border-line bg-surface p-4;
+  }
+
+  .omh-tile-head {
+    @apply mb-3 flex items-start justify-between gap-3;
+  }
+
+  .omh-tile-title {
+    @apply flex items-center gap-1.5 font-display text-sm font-semibold text-ink-soft;
+  }
+
+  /* The headline number on a tile. Tabular so a figure that ticks upward does
+     not shuffle the digits beside it. */
+  .omh-metric {
+    @apply font-display font-bold text-ink;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  /* Period-over-period delta. Direction is carried by colour *and* an arrow —
+     colour alone fails for the ~8% of men with a red/green deficiency. */
+  .omh-delta {
+    @apply inline-flex items-center gap-1 rounded-pill px-1.5 py-0.5
+           font-display text-xs font-bold;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .omh-delta-up {
+    @apply omh-delta;
+    background-color: rgb(var(--omh-positive) / 0.14);
+    color: rgb(var(--omh-positive));
+  }
+
+  .omh-delta-down {
+    @apply omh-delta;
+    background-color: rgb(var(--omh-critical) / 0.14);
+    color: rgb(var(--omh-critical));
+  }
+
+  .omh-delta-flat {
+    @apply omh-delta bg-surface-2 text-muted;
+  }
+
+  /* Legend entry. The swatch is a filled round rather than a line so it reads
+     at 8px, where a stroked shape turns to mush. */
+  .omh-legend {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-1.5;
+  }
+
+  .omh-legend-item {
+    @apply flex items-center gap-1.5 text-xs text-muted;
+  }
+
+  .omh-swatch {
+    @apply inline-block h-2 w-2 shrink-0 rounded-full;
+  }
+
+  /* Range picker on a chart tile. */
+  .omh-range {
+    @apply inline-flex items-center rounded-[8px] border border-line bg-surface p-0.5;
+  }
+
+  .omh-range-btn {
+    @apply cursor-pointer rounded-[6px] border-0 bg-transparent px-2 py-1
+           font-display text-xs font-semibold text-muted;
+    transition: color 0.14s var(--omh-ease), background-color 0.14s var(--omh-ease);
+
+    &:hover { @apply text-ink; }
+
+    &.is-active {
+      @apply bg-surface-2 text-ink;
+    }
+  }
+
+  /* Chart tooltip, positioned by the chart components. */
+  .omh-tooltip {
+    @apply pointer-events-none absolute z-overlay whitespace-nowrap rounded-[8px]
+           border border-line bg-surface px-2.5 py-1.5 text-xs text-ink;
+    box-shadow: var(--omh-shadow-lift);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .omh-tooltip-label {
+    @apply mb-0.5 font-display text-micro font-bold uppercase tracking-[0.1em] text-muted;
   }
 
   /* ============================================================= layout === */

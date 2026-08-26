@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserService } from '../../user.service';
 import { LayoutService } from '../../../shared/layout.service';
+import { ThemeService } from '../../../shared/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -10,6 +11,7 @@ import { LayoutService } from '../../../shared/layout.service';
 })
 export class HeaderComponent implements OnInit {
   menuOpen = false;
+  query = '';
   loggedInUserId: number | null = null;
 
   userProfile = {
@@ -21,7 +23,8 @@ export class HeaderComponent implements OnInit {
   constructor(
     private router: Router,
     private service: UserService,
-    public layout: LayoutService
+    public layout: LayoutService,
+    public theme: ThemeService
   ) { }
 
   ngOnInit(): void {
@@ -40,6 +43,15 @@ export class HeaderComponent implements OnInit {
       },
       error: (err) => console.error('Error fetching profile:', err)
     });
+  }
+
+  /** Hands the term to discovery, which is the app's real search surface. */
+  search(): void {
+    const term = this.query.trim();
+    if (!term) {
+      return;
+    }
+    this.router.navigate(['/discover'], { queryParams: { q: term } });
   }
 
   logout(): void {

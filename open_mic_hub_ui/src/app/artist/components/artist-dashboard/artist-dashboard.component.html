@@ -1,129 +1,215 @@
-<div class="omh-page-head">
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
   <div>
-    <h1 class="omh-page-title">Welcome back, {{ artistName }}</h1>
-    <p class="omh-page-sub">Your bookings and earnings at a glance.</p>
+    <h1 class="omh-display text-2xl">Welcome back, {{ firstName() }}</h1>
+    <p class="mt-0.5 text-base text-muted">Your last {{ days() }} days on stage.</p>
   </div>
-  <div class="flex gap-2">
-    <a routerLink="/artist/posts/create" class="omh-btn-secondary">
+
+  <div class="flex items-center gap-2">
+    <div class="omh-range" role="group" aria-label="Reporting window">
+      <button *ngFor="let range of ranges"
+              type="button"
+              class="omh-range-btn"
+              [class.is-active]="days() === range.days"
+              [attr.aria-pressed]="days() === range.days"
+              (click)="setRange(range.days)">
+        {{ range.label }}
+      </button>
+    </div>
+    <a routerLink="/artist/posts/create" class="omh-btn-primary omh-btn-sm">
       <i class="bi bi-plus-lg"></i> New post
     </a>
-    <a routerLink="/artist/bookings" class="omh-btn-primary">
-      <i class="bi bi-calendar-check"></i> Bookings
-    </a>
   </div>
 </div>
 
-<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-  <div class="omh-stat omh-stat-hot">
-    <div class="omh-stat-label">Wallet balance</div>
-    <div class="omh-stat-value">{{ balance | number:'1.2-2' }}</div>
-    <div class="omh-stat-meta">NPR available</div>
-    <i class="bi bi-wallet2 omh-stat-icon"></i>
-  </div>
-
-  <div class="omh-stat omh-stat-warning">
-    <div class="omh-stat-label">Awaiting reply</div>
-    <div class="omh-stat-value">{{ pendingCount }}</div>
-    <div class="omh-stat-meta">Requests need an answer</div>
-    <i class="bi bi-hourglass-split omh-stat-icon"></i>
-  </div>
-
-  <div class="omh-stat omh-stat-positive">
-    <div class="omh-stat-label">Approved</div>
-    <div class="omh-stat-value">{{ approvedCount }}</div>
-    <div class="omh-stat-meta">Gigs confirmed</div>
-    <i class="bi bi-check2-circle omh-stat-icon"></i>
-  </div>
-
-  <div class="omh-stat omh-stat-brand">
-    <div class="omh-stat-label">Total requests</div>
-    <div class="omh-stat-value">{{ bookings.length }}</div>
-    <div class="omh-stat-meta">All time</div>
-    <i class="bi bi-inboxes omh-stat-icon"></i>
-  </div>
+<div class="omh-alert-critical mb-4" *ngIf="error()">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error() }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="load()">Try again</button>
 </div>
 
-<div class="mt-4 grid gap-4 xl:grid-cols-3">
+<div class="grid gap-3 lg:grid-cols-3" *ngIf="loading() && !data()">
+  <div class="omh-skeleton h-[260px] rounded-[14px] lg:col-span-2"></div>
+  <div class="omh-skeleton h-[260px] rounded-[14px]"></div>
+</div>
 
-  <!-- Requests needing an answer -->
-  <section class="omh-panel xl:col-span-2">
-    <div class="omh-panel-head">
-      <h2 class="omh-panel-title">Waiting on you</h2>
-      <a routerLink="/artist/bookings" class="omh-btn-ghost omh-btn-sm">
-        View all <i class="bi bi-arrow-right"></i>
+<ng-container *ngIf="data() as d">
+
+  <!-- Hero: earnings on the dark stage, the way the poster reads -->
+  <div class="grid gap-3 lg:grid-cols-3">
+
+    <section class="omh-stage relative overflow-hidden rounded-[14px] p-5 lg:col-span-2">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="omh-eyebrow text-on-stage-dim">Earnings · last {{ d.windowDays }} days</p>
+          <div class="mt-2 flex flex-wrap items-baseline gap-3">
+            <span class="omh-metric text-4xl text-on-stage">
+              <span class="text-on-stage-dim">NPR </span>{{ d.earnings.value | number:'1.0-0' }}
+            </span>
+            <span [class]="d.earnings.changePercent >= 0 ? 'omh-delta-up' : 'omh-delta-down'">
+              <i class="bi text-[10px]"
+                 [ngClass]="d.earnings.changePercent >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right'"></i>
+              {{ (d.earnings.changePercent < 0 ? -d.earnings.changePercent : d.earnings.changePercent) | number:'1.1-1' }}%
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-on-stage-dim">
+            NPR {{ d.lifetimeEarnings | number:'1.0-0' }} earned all time
+          </p>
+        </div>
+
+        <div class="text-right">
+          <p class="omh-eyebrow text-on-stage-dim">Available</p>
+          <p class="omh-metric mt-1 text-xl text-on-stage">NPR {{ available() | number:'1.0-2' }}</p>
+          <p class="text-micro text-on-stage-dim" *ngIf="d.heldFunds > 0">
+            NPR {{ d.heldFunds | number:'1.0-2' }} held
+          </p>
+          <a routerLink="/artist/wallet" class="omh-navlink mt-1 -mr-3">
+            Withdraw <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- The chart sits on the stage, so it uses the light-on-dark palette. -->
+      <div class="mt-4">
+        <omh-area-chart
+          [data]="d.earningsSeries"
+          [height]="150"
+          primaryColor="rgb(var(--omh-accent))"
+          secondaryColor="rgb(var(--omh-on-stage-dim))"
+          primaryLabel="earned"
+          [showSecondary]="false"
+          [showAxis]="true"
+          prefix="NPR " />
+      </div>
+    </section>
+
+    <!-- Identity + standing -->
+    <section class="omh-tile">
+      <div class="flex items-center gap-3">
+        <img [src]="d.profileImage || fallbackAvatar" alt="" class="omh-avatar-lg">
+        <div class="min-w-0">
+          <h2 class="truncate font-display text-lg font-bold text-ink">{{ d.stageName }}</h2>
+          <p class="truncate text-sm text-muted">{{ d.fullName }}</p>
+          <div class="mt-1 flex items-center gap-1 text-stage" *ngIf="d.rating !== null">
+            <i class="bi text-xs" *ngFor="let star of stars" [ngClass]="starClass(star)"></i>
+            <span class="ml-1 text-xs text-muted">{{ d.rating | number:'1.1-1' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <dl class="mt-4 flex flex-col gap-3 border-t border-line pt-4">
+        <div class="flex items-center justify-between">
+          <dt class="text-sm text-muted">Awaiting your reply</dt>
+          <dd>
+            <span [class]="d.pendingRequests > 0 ? 'omh-status-pending' : 'omh-status-neutral'">
+              {{ d.pendingRequests }}
+            </span>
+          </dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt class="text-sm text-muted">Acceptance rate</dt>
+          <dd class="omh-metric text-lg">{{ d.acceptanceRate | number:'1.0-1' }}%</dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt class="text-sm text-muted">Bookings this period</dt>
+          <dd class="omh-metric text-lg">{{ d.bookings.value | number:'1.0-0' }}</dd>
+        </div>
+      </dl>
+
+      <a routerLink="/artist/bookings" class="omh-btn-secondary omh-btn-sm mt-4">
+        Manage bookings <i class="bi bi-arrow-right"></i>
       </a>
-    </div>
+    </section>
+  </div>
 
-    <div class="flex items-center justify-center gap-3 py-12" *ngIf="loading">
-      <span class="omh-spinner-md"></span>
-      <span class="text-base text-muted">Loading…</span>
-    </div>
+  <!-- Demand -->
+  <div class="mt-3 grid gap-3 xl:grid-cols-3">
 
-    <ng-container *ngIf="!loading">
-      <div class="omh-table-wrap" *ngIf="upcoming.length; else allCaughtUp">
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Booking requests</span>
+        <span class="omh-metric text-lg">{{ d.bookings.value | number:'1.0-0' }}</span>
+      </div>
+      <omh-bar-chart [data]="d.bookingsSeries" [height]="150" valueLabel="requests" />
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Outcome of requests</span>
+      </div>
+      <omh-donut-chart
+        [data]="d.bookingsByStatus"
+        [byStatus]="true"
+        [size]="132"
+        totalLabel="Requests" />
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">When you get booked</span>
+        <span class="text-xs text-muted">By start time</span>
+      </div>
+      <omh-heatmap [data]="d.demandHeatmap" />
+    </section>
+  </div>
+
+  <!-- Upcoming + earnings mix -->
+  <div class="mt-3 grid gap-3 xl:grid-cols-3">
+
+    <section class="omh-tile xl:col-span-2">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Coming up</span>
+        <a routerLink="/artist/calender" class="omh-btn-ghost omh-btn-sm">
+          Availability <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="omh-table-wrap" *ngIf="d.upcomingBookings.length; else nothingBooked">
         <table class="omh-table omh-table-compact">
           <thead>
             <tr>
-              <th>Venue</th>
               <th>Date</th>
               <th>Time</th>
+              <th>Venue</th>
+              <th>Booker</th>
               <th>Status</th>
+              <th class="omh-num">Fee</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let booking of upcoming">
-              <td class="font-medium">{{ booking.venue || '—' }}</td>
-              <td>{{ booking.bookingDate | date:'mediumDate' }}</td>
-              <td class="whitespace-nowrap">
-                {{ formatTime(booking.startTime) }}
-                <span class="text-muted">–</span>
-                {{ formatTime(booking.endTime) }}
+            <tr *ngFor="let booking of d.upcomingBookings">
+              <td class="whitespace-nowrap font-medium">{{ booking.eventDate | date:'MMM d' }}</td>
+              <td class="whitespace-nowrap text-muted">
+                {{ shortTime(booking.startTime) }}
               </td>
-              <td><span [class]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus }}</span></td>
+              <td>{{ booking.venue || '—' }}</td>
+              <td class="text-muted">{{ booking.bookerName || '—' }}</td>
+              <td><span [class]="statusClass(booking.status)">{{ booking.status }}</span></td>
+              <td class="omh-num omh-metric text-sm">{{ booking.totalAmount | number:'1.0-0' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <ng-template #allCaughtUp>
-        <div class="p-4">
-          <div class="omh-empty">
-            <i class="bi bi-check2-all omh-empty-icon"></i>
-            <p class="omh-empty-title">You're all caught up</p>
-            <p class="omh-empty-text">No booking requests are waiting on a reply.</p>
-          </div>
+      <ng-template #nothingBooked>
+        <div class="omh-empty border-0 py-10">
+          <i class="bi bi-calendar-heart omh-empty-icon"></i>
+          <p class="omh-empty-title">Nothing booked yet</p>
+          <p class="omh-empty-text">
+            Set your availability and post a clip — that is what bookers search.
+          </p>
+          <a routerLink="/artist/calender" class="omh-btn-primary omh-btn-sm mt-4">
+            Set availability
+          </a>
         </div>
       </ng-template>
-    </ng-container>
-  </section>
+    </section>
 
-  <!-- Shortcuts -->
-  <section class="omh-panel">
-    <div class="omh-panel-head">
-      <h2 class="omh-panel-title">Quick actions</h2>
-    </div>
-    <div class="flex flex-col gap-1 p-2">
-      <a routerLink="/artist/calender" class="omh-menu-item">
-        <i class="bi bi-person-lines-fill"></i>
-        <span>Set your availability</span>
-      </a>
-      <a routerLink="/artist/posts" class="omh-menu-item">
-        <i class="bi bi-images"></i>
-        <span>Manage posts</span>
-      </a>
-      <a routerLink="/artist/wallet" class="omh-menu-item">
-        <i class="bi bi-wallet2"></i>
-        <span>Withdraw earnings</span>
-      </a>
-      <a routerLink="/artist/coin-transactions" class="omh-menu-item">
-        <i class="bi bi-currency-exchange"></i>
-        <span>Coin transactions</span>
-      </a>
-      <a routerLink="/artist/profile" class="omh-menu-item">
-        <i class="bi bi-person-circle"></i>
-        <span>Edit your profile</span>
-      </a>
-    </div>
-  </section>
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Where earnings come from</span>
+      </div>
+      <omh-donut-chart [data]="d.earningsByPurpose" [size]="132" totalLabel="Entries" />
+    </section>
+  </div>
 
-</div>
+</ng-container>

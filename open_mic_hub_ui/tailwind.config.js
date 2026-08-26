@@ -26,6 +26,23 @@ module.exports = {
           DEFAULT: 'rgb(var(--omh-hot) / <alpha-value>)',
           soft: 'rgb(var(--omh-hot-soft) / <alpha-value>)',
         },
+        // The dashboard's single warm accent. Defined per theme in styles.scss.
+        accent: {
+          DEFAULT: 'rgb(var(--omh-accent) / <alpha-value>)',
+          soft: 'rgb(var(--omh-accent-soft) / <alpha-value>)',
+          ink: 'rgb(var(--omh-accent-ink) / <alpha-value>)',
+        },
+        // Categorical series colours, for charts and legends.
+        cat: {
+          1: 'rgb(var(--omh-cat-1) / <alpha-value>)',
+          2: 'rgb(var(--omh-cat-2) / <alpha-value>)',
+          3: 'rgb(var(--omh-cat-3) / <alpha-value>)',
+          4: 'rgb(var(--omh-cat-4) / <alpha-value>)',
+          5: 'rgb(var(--omh-cat-5) / <alpha-value>)',
+          6: 'rgb(var(--omh-cat-6) / <alpha-value>)',
+          7: 'rgb(var(--omh-cat-7) / <alpha-value>)',
+          8: 'rgb(var(--omh-cat-8) / <alpha-value>)',
+        },
         'stage-ink': 'rgb(var(--omh-stage-ink) / <alpha-value>)',
         'stage-ink-2': 'rgb(var(--omh-stage-ink-2) / <alpha-value>)',
         'on-stage': 'rgb(var(--omh-on-stage) / <alpha-value>)',
@@ -73,6 +90,7 @@ module.exports = {
         lift: '0 1px 2px rgb(16 12 30 / 0.06), 0 18px 36px -14px rgb(16 12 30 / 0.28)',
       },
       zIndex: {
+        rail: '45',
         sidebar: '40',
         topbar: '30',
         overlay: '50',

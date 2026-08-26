@@ -1,36 +1,69 @@
 <header class="omh-topbar">
 
   <button type="button"
-          class="omh-btn-icon lg:hidden"
-          aria-label="Toggle navigation"
+          class="omh-icon-btn lg:hidden"
+          aria-label="Open navigation"
           (click)="layout.toggleSidebar()">
-    <i class="bi bi-list text-xl"></i>
+    <i class="bi bi-list"></i>
   </button>
+
+  <label class="omh-search">
+    <i class="bi bi-search shrink-0 text-sm text-muted"></i>
+    <input type="search"
+           name="q"
+           placeholder="Search your bookings and posts…"
+           [(ngModel)]="query"
+           (keyup.enter)="search()"
+           aria-label="Search">
+  </label>
 
   <div class="flex-1"></div>
 
-  <!-- Balance, read straight from the topbar on wide screens so an artist never
-       has to open the menu to see it. -->
-  <div class="mr-1 hidden text-right sm:block">
-    <div class="omh-stat-label">Balance</div>
-    <div class="omh-figure text-md">NPR {{ userBalance }}</div>
-  </div>
+  <!-- Balance in the bar: an artist should never have to open a menu to see
+       what they have earned. -->
+  <a routerLink="/artist/wallet"
+     class="hidden items-center gap-2 rounded-[10px] border border-line bg-surface px-3 py-1.5 hover:bg-surface-2 sm:flex">
+    <i class="bi bi-wallet2 text-accent"></i>
+    <span class="text-left">
+      <span class="block text-micro uppercase tracking-[0.1em] text-muted">Balance</span>
+      <span class="omh-metric block text-sm leading-tight">NPR {{ userBalance }}</span>
+    </span>
+  </a>
+
+  <button type="button"
+          class="omh-icon-btn"
+          [attr.aria-label]="'Theme: ' + theme.label"
+          [title]="'Theme: ' + theme.label"
+          (click)="theme.toggle()">
+    <i class="bi" [ngClass]="theme.icon"></i>
+  </button>
+
+  <button type="button" class="omh-icon-btn" aria-label="Notifications">
+    <i class="bi bi-bell"></i>
+    <span class="omh-dot" *ngIf="pendingRequests > 0"></span>
+  </button>
 
   <div class="relative" (omhClickOutside)="menuOpen = false">
     <button type="button"
-            class="flex items-center gap-2 rounded-card border-0 bg-transparent px-2 py-1.5 cursor-pointer hover:bg-surface-2"
+            class="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 cursor-pointer hover:bg-surface-2"
             [attr.aria-expanded]="menuOpen"
             aria-haspopup="menu"
             (click)="menuOpen = !menuOpen">
       <span class="relative inline-flex">
-        <img [src]="userProfile.avatar" alt="" class="omh-avatar-sm">
-        <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-positive"></span>
+        <img [src]="userProfile.avatar" alt="" class="omh-avatar-xs">
+        <span class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-surface bg-positive"></span>
+      </span>
+      <span class="hidden max-w-[120px] text-left sm:block">
+        <span class="block truncate font-display text-xs font-bold leading-tight text-ink">
+          {{ userProfile.name }}
+        </span>
+        <span class="block text-micro leading-tight text-muted">Artist</span>
       </span>
       <i class="bi bi-chevron-down text-xs text-muted transition-transform duration-200"
          [class.rotate-180]="menuOpen"></i>
     </button>
 
-    <div class="omh-menu right-0 top-full mt-1.5 w-[264px] animate-menu-in" *ngIf="menuOpen" role="menu">
+    <div class="omh-menu right-0 top-full mt-1.5 w-[248px] animate-menu-in" *ngIf="menuOpen" role="menu">
 
       <div class="omh-menu-head flex items-center gap-3">
         <img [src]="userProfile.avatar" alt="" class="omh-avatar-md">
@@ -40,9 +73,9 @@
         </div>
       </div>
 
-      <div class="my-1 rounded-card bg-surface-2 px-3 py-2.5">
-        <div class="omh-stat-label">Wallet balance</div>
-        <div class="omh-figure mt-0.5 text-xl">NPR {{ userBalance }}</div>
+      <div class="my-1 rounded-[8px] bg-surface-2 px-3 py-2.5">
+        <div class="text-micro uppercase tracking-[0.1em] text-muted">Wallet balance</div>
+        <div class="omh-metric mt-0.5 text-lg">NPR {{ userBalance }}</div>
       </div>
 
       <button type="button" class="omh-menu-item" role="menuitem" (click)="viewProfile()">
@@ -52,6 +85,10 @@
       <button type="button" class="omh-menu-item" role="menuitem" (click)="goToWallet()">
         <i class="bi bi-wallet2"></i>
         <span>Wallet</span>
+      </button>
+      <button type="button" class="omh-menu-item" role="menuitem" (click)="theme.toggle()">
+        <i class="bi" [ngClass]="theme.icon"></i>
+        <span>Theme: {{ theme.label }}</span>
       </button>
 
       <div class="omh-menu-divider"></div>
