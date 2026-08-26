@@ -11,4 +11,7 @@ public interface OTPService {
     void validateOTP(UserEntity user, String otp, OTPPurpose purpose);
 
     OTP getOTP(String otp, OTPPurpose purpose);
+
+    /** Marks a secret spent so it cannot be redeemed twice. */
+    void consumeOTP(OTP otp);
 }

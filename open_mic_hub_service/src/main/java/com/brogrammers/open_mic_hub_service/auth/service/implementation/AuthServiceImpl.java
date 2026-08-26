@@ -34,6 +34,7 @@ import com.brogrammers.open_mic_hub_service.user_management.user.role.repository
 import com.brogrammers.open_mic_hub_service.util.file.FileHandlerUtil;
 import com.brogrammers.open_mic_hub_service.util.file.FileType;
 import com.brogrammers.open_mic_hub_service.util.validator.EmailValidator;
+import com.brogrammers.open_mic_hub_service.util.validator.PasswordValidator;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.virtual_coin.entity.VirtualCoin;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.virtual_coin.repository.VirtualCoinRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,7 +47,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -71,6 +72,7 @@ public class AuthServiceImpl implements AuthService {
     private final OTPService otpService;
     private final MailService mailService;
     private final VirtualCoinRepository virtualCoinRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${frontend.domain}")
     private String frontEndUrl;
@@ -120,22 +122,47 @@ public class AuthServiceImpl implements AuthService {
 
 
 
+    /**
+     * Sends a reset link if the address belongs to an account.
+     *
+     * <p>The response is the same either way: answering 404 for an unknown address turned this
+     * endpoint into a way to enumerate who has an account.
+     */
     @Override
     public ForgotPasswordResponse forgotPassword(String email) {
-        UserEntity userEntity = userInfoRepository.findByEmailId(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, AuthExceptionMessages.USER_NOT_FOUND + email));
-        OTP otp = otpService.saveOTP(userEntity, OTPPurpose.FORGOT_PASSWORD);
-        String forgotPasswordLink = frontEndUrl + forgotPasswordUrl + "?token=" + otp.getOtpValue();
-        mailService.sendForgotPasswordMail(userEntity, forgotPasswordLink, otp.getExpiryTime());
-        return new ForgotPasswordResponse(AuthResponseMessages.PASSWORD_RESET_LINK_SENT, userEntity.getEmailId(), otp.getExpiryTime());
+        var user = userInfoRepository.findByEmailId(email);
+        if (user.isPresent()) {
+            OTP otp = otpService.saveOTP(user.get(), OTPPurpose.FORGOT_PASSWORD);
+            String forgotPasswordLink = frontEndUrl + forgotPasswordUrl + "?token=" + otp.getOtpValue();
+            mailService.sendForgotPasswordMail(user.get(), forgotPasswordLink, otp.getExpiryTime());
+        } else {
+            log.info("Password reset requested for unknown address; no mail sent.");
+        }
+        return new ForgotPasswordResponse(AuthResponseMessages.PASSWORD_RESET_LINK_SENT, email, null);
     }
 
+    /**
+     * Redeems a password-reset token.
+     *
+     * <p>The token is single-use: it is consumed here, so replaying the same link fails even inside
+     * its validity window.
+     */
     @Override
+    @Transactional
     public String resetPassword(ResetPasswordRequest resetPasswordRequest) {
+        if (!PasswordValidator.isValid(resetPasswordRequest.getNewPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Password must be at least 8 characters and include an uppercase letter, "
+                            + "a lowercase letter, a number and a special character.");
+        }
+
         OTP otp = otpService.getOTP(resetPasswordRequest.getOtp(), OTPPurpose.FORGOT_PASSWORD);
         UserEntity userEntity = otp.getUser();
-        userEntity.setPassword(new BCryptPasswordEncoder().encode(resetPasswordRequest.getNewPassword()));
+        userEntity.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
         userInfoRepository.save(userEntity);
+        otpService.consumeOTP(otp);
+
+        log.info("Password reset completed for {}", userEntity.getEmailId());
         return AuthResponseMessages.PASSWORD_RESET_SUCCESS;
     }
 
@@ -149,7 +176,7 @@ public class AuthServiceImpl implements AuthService {
         UserEntity userEntity = new UserEntity();
         userEntity.setFullName(registration.fullName());
         userEntity.setEmailId(registration.userEmail());
-        userEntity.setPassword(new BCryptPasswordEncoder().encode(registration.password()));
+        userEntity.setPassword(passwordEncoder.encode(registration.password()));
         userEntity.setPhoneNumber(registration.phoneNumber());
         userEntity.setLocation(registration.location());
         Roles role = rolesRepository.findByName(UserRole.USER.name()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
@@ -184,7 +211,7 @@ public class AuthServiceImpl implements AuthService {
         UserEntity userEntity = new UserEntity();
         userEntity.setFullName(registration.getFullName());
         userEntity.setEmailId(registration.getUserEmail());
-        userEntity.setPassword(new BCryptPasswordEncoder().encode(registration.getPassword()));
+        userEntity.setPassword(passwordEncoder.encode(registration.getPassword()));
         userEntity.setPhoneNumber(registration.getPhoneNumber());
         userEntity.setLocation(registration.getLocation());
         userEntity.setVerified(false);

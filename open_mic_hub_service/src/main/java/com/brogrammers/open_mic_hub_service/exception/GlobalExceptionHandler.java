@@ -6,6 +6,7 @@ import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalErrorResponse;
 import com.brogrammers.open_mic_hub_service.exception.custom.*;
 import com.brogrammers.open_mic_hub_service.payment.gateway.PaymentVerificationException;
+import com.brogrammers.open_mic_hub_service.security.ratelimit.RateLimitExceededException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.mail.AuthenticationFailedException;
@@ -193,6 +194,12 @@ public class GlobalExceptionHandler extends BaseController {
     public ResponseEntity<GlobalErrorResponse> handleAuthentication(AuthenticationException exception) {
         log.warn("Authentication failed: {}", exception.getMessage());
         return errorResponse(HttpStatus.UNAUTHORIZED, "Invalid credentials", exception);
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ResponseEntity<GlobalErrorResponse> handleRateLimit(RateLimitExceededException exception) {
+        return errorResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), exception);
     }
 
     @ExceptionHandler(PaymentVerificationException.class)
