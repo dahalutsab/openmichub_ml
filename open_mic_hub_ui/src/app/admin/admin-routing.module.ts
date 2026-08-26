@@ -7,7 +7,7 @@ import { ADMIN_ROLES } from '../shared/role';
 import {UsersListComponent} from './components/users-list/users-list.component';
 import {TransactionsListComponent} from './components/coin-transaction/transactions-list.component';
 import {PaymentRecordsComponent} from './components/payment-records/payment-records.component';
-import {ProfileComponent} from '../artist/components/profile/profile.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import {WithdrawlCallbackComponent} from './withdrawl-callback/withdrawl-callback.component';
 
 const routes: Routes = [
@@ -17,6 +17,9 @@ const routes: Routes = [
     canActivate: [authGuard],
     data: { roles: ADMIN_ROLES },
     children: [
+      // Login lands on /admin or /artist with no child path. Without this
+      // the shell rendered around an empty router-outlet.
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
         component: AdminDashboardComponent

@@ -13,7 +13,7 @@ export interface ArtistResponse {
 
 export interface TransactionResponse {
   transactionId: number;
-  artist: ArtistResponse;
+  artist?: ArtistResponse;
   bookingId: number;
   amount: number;
   transactionType: string;

@@ -1,1 +1,274 @@
-<h1>Admin Dashboard</h1>
+<!-- Header -->
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="omh-display text-2xl">Platform overview</h1>
+    <p class="mt-0.5 text-base text-muted">
+      Everything moving through OpenMicHub over the last {{ days() }} days.
+    </p>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <div class="omh-range" role="group" aria-label="Reporting window">
+      <button *ngFor="let range of ranges"
+              type="button"
+              class="omh-range-btn"
+              [class.is-active]="days() === range.days"
+              [attr.aria-pressed]="days() === range.days"
+              (click)="setRange(range.days)">
+        {{ range.label }}
+      </button>
+    </div>
+    <button type="button" class="omh-icon-btn" aria-label="Refresh" (click)="load()">
+      <i class="bi bi-arrow-clockwise" [class.animate-spin]="loading()"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Error -->
+<div class="omh-alert-critical mb-4" *ngIf="error()">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error() }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="load()">Try again</button>
+</div>
+
+<!-- Skeleton -->
+<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" *ngIf="loading() && !data()">
+  <div class="omh-tile h-[116px]" *ngFor="let i of [1,2,3,4]">
+    <div class="omh-skeleton h-3 w-24"></div>
+    <div class="omh-skeleton mt-4 h-7 w-32"></div>
+    <div class="omh-skeleton mt-2 h-3 w-20"></div>
+  </div>
+</div>
+
+<ng-container *ngIf="data() as d">
+
+  <!-- Metric row -->
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <omh-metric-tile
+      label="Revenue"
+      icon="bi-cash-stack"
+      caption="Settled booking value"
+      prefix="NPR "
+      [metric]="d.revenue"
+      [trend]="d.revenueSeries" />
+
+    <omh-metric-tile
+      label="Bookings"
+      icon="bi-calendar-check"
+      caption="Requests raised"
+      [metric]="d.bookings"
+      [trend]="d.bookingsSeries" />
+
+    <omh-metric-tile
+      label="New users"
+      icon="bi-person-plus"
+      caption="Signed up in window"
+      [metric]="d.newUsers" />
+
+    <omh-metric-tile
+      label="Platform fees"
+      icon="bi-percent"
+      caption="System charges collected"
+      prefix="NPR "
+      [metric]="d.platformFees" />
+  </div>
+
+  <!-- Revenue + side stats -->
+  <div class="mt-3 grid gap-3 xl:grid-cols-3">
+
+    <section class="omh-tile xl:col-span-2">
+      <div class="omh-tile-head">
+        <div>
+          <span class="omh-tile-title">Revenue</span>
+          <div class="omh-metric mt-1 text-3xl">
+            <span class="text-muted">NPR </span>{{ d.revenue.value | number:'1.0-0' }}
+          </div>
+        </div>
+        <div class="omh-legend">
+          <span class="omh-legend-item">
+            <span class="omh-swatch bg-accent"></span> Settled
+          </span>
+          <span class="omh-legend-item">
+            <span class="omh-swatch bg-muted"></span> Requested
+          </span>
+        </div>
+      </div>
+
+      <omh-area-chart
+        [data]="d.revenueSeries"
+        [height]="200"
+        primaryLabel="settled"
+        secondaryLabel="requested"
+        prefix="NPR " />
+    </section>
+
+    <div class="flex flex-col gap-3">
+      <section class="omh-tile">
+        <div class="omh-tile-head">
+          <span class="omh-tile-title">Pending payouts</span>
+        </div>
+        <div class="omh-metric text-2xl">
+          <span class="text-muted">NPR </span>{{ d.pendingPayouts | number:'1.0-2' }}
+        </div>
+        <p class="mt-1 text-xs text-muted">Withdrawal requests awaiting approval</p>
+        <a routerLink="/admin/transactions" class="omh-btn-secondary omh-btn-sm mt-3 self-start">
+          Review requests <i class="bi bi-arrow-right"></i>
+        </a>
+      </section>
+
+      <section class="omh-tile flex-1">
+        <div class="omh-tile-head">
+          <span class="omh-tile-title">Accounts</span>
+        </div>
+        <dl class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <dt class="text-sm text-muted">Total users</dt>
+            <dd class="omh-metric text-lg">{{ d.totalUsers | number }}</dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt class="text-sm text-muted">Artists</dt>
+            <dd class="omh-metric text-lg">{{ d.totalArtists | number }}</dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt class="text-sm text-muted">Bookers</dt>
+            <dd class="omh-metric text-lg">{{ d.totalBookers | number }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </div>
+
+  <!-- Volume, statuses, heatmap -->
+  <div class="mt-3 grid gap-3 xl:grid-cols-3">
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Booking volume</span>
+        <span class="omh-metric text-lg">{{ d.bookings.value | number:'1.0-0' }}</span>
+      </div>
+      <omh-bar-chart [data]="d.bookingsSeries" [height]="150" valueLabel="bookings" />
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Bookings by status</span>
+      </div>
+      <omh-donut-chart
+        [data]="d.bookingsByStatus"
+        [byStatus]="true"
+        [size]="132"
+        totalLabel="Bookings" />
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">When gigs happen</span>
+        <span class="text-xs text-muted">By start time</span>
+      </div>
+      <omh-heatmap [data]="d.activityHeatmap" />
+    </section>
+  </div>
+
+  <!-- Leaderboard, recent bookings, payment mix -->
+  <div class="mt-3 grid gap-3 xl:grid-cols-3">
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Top earning artists</span>
+      </div>
+
+      <ol class="flex flex-col gap-3" *ngIf="d.topArtists.length; else noArtists">
+        <li *ngFor="let artist of d.topArtists; let i = index" class="flex items-center gap-3">
+          <span class="omh-rank w-4 shrink-0 text-center text-sm text-muted">{{ i + 1 }}</span>
+
+          <img *ngIf="artist.profileImage; else artistInitials"
+               [src]="artist.profileImage" alt="" class="omh-avatar-sm">
+          <ng-template #artistInitials>
+            <span class="omh-avatar-fallback h-8 w-8 text-micro">{{ initials(artist.stageName) }}</span>
+          </ng-template>
+
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-display text-sm font-semibold text-ink">
+              {{ artist.stageName }}
+            </div>
+            <!-- Bar reads relative to the top earner, so the gap between first
+                 and second is visible without reading both figures. -->
+            <div class="mt-1 h-1 w-full overflow-hidden rounded-pill bg-surface-2">
+              <div class="h-full rounded-pill bg-accent"
+                   [style.width.%]="earningsShare(artist.earnings)"></div>
+            </div>
+          </div>
+
+          <div class="shrink-0 text-right">
+            <div class="omh-metric text-sm">{{ artist.earnings | number:'1.0-0' }}</div>
+            <div class="text-micro text-muted">{{ artist.bookings }} gigs</div>
+          </div>
+        </li>
+      </ol>
+
+      <ng-template #noArtists>
+        <p class="omh-help py-6 text-center">No settled bookings in this window.</p>
+      </ng-template>
+    </section>
+
+    <section class="omh-tile xl:col-span-2">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Recent bookings</span>
+        <a routerLink="/admin/payments" class="omh-btn-ghost omh-btn-sm">
+          Payments <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="omh-table-wrap" *ngIf="d.recentBookings.length; else noBookings">
+        <table class="omh-table omh-table-compact">
+          <thead>
+            <tr>
+              <th>Artist</th>
+              <th>Booker</th>
+              <th>Venue</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th class="omh-num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let booking of d.recentBookings">
+              <td class="font-medium">{{ booking.artistStageName || '—' }}</td>
+              <td class="text-muted">{{ booking.bookerName || '—' }}</td>
+              <td class="text-muted">{{ booking.venue || '—' }}</td>
+              <td class="whitespace-nowrap">{{ booking.eventDate | date:'mediumDate' }}</td>
+              <td><span [class]="statusClass(booking.status)">{{ booking.status }}</span></td>
+              <td class="omh-num omh-metric text-sm">{{ booking.totalAmount | number:'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noBookings>
+        <p class="omh-help py-6 text-center">No bookings yet.</p>
+      </ng-template>
+    </section>
+  </div>
+
+  <!-- Money mix -->
+  <div class="mt-3 grid gap-3 md:grid-cols-2">
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Payments by method</span>
+      </div>
+      <omh-donut-chart [data]="d.paymentsByMethod" [size]="132" totalLabel="Payments" />
+    </section>
+
+    <section class="omh-tile">
+      <div class="omh-tile-head">
+        <span class="omh-tile-title">Coin flow</span>
+      </div>
+      <omh-donut-chart
+        [data]="d.transactionsByType"
+        [byStatus]="true"
+        [size]="132"
+        totalLabel="Transactions" />
+    </section>
+  </div>
+
+</ng-container>

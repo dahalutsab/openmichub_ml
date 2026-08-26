@@ -9,9 +9,10 @@ import { ToastrService } from 'ngx-toastr';
   selector: 'app-login',
   standalone: false,
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
 })
 export class LoginComponent implements OnInit {
+
+  readonly currentYear = new Date().getFullYear();
 
   loginError: boolean = false;
   loginForm: any;

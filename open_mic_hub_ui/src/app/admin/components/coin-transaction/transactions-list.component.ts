@@ -1,19 +1,15 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   TransactionService,
   TransactionResponse,
   TransactionApiResponse,
-  ArtistResponse
 } from './transaction.service';
 
 @Component({
   selector: 'app-transactions-list',
   standalone: false,
   templateUrl: './transactions-list.component.html',
-  styleUrls: ['./transactions-list.component.scss']
 })
 export class TransactionsListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -39,6 +35,10 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
   // State properties
   loading: boolean = false;
   error: string = '';
+
+  /** The row awaiting withdrawal confirmation, or null when the modal is shut. */
+  pendingWithdrawal: TransactionResponse | null = null;
+  processing = false;
 
   constructor(private transactionService: TransactionService) {
     // Setup artist search with debounce
@@ -68,7 +68,7 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: TransactionApiResponse) => {
-          this.transactions = response.data.content;
+          this.transactions = response.data.content ?? [];
           this.totalTransactions = response.data.totalElements;
           this.applyFilters();
           this.loading = false;
@@ -108,7 +108,9 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(t => t.transactionType === this.selectedType);
     }
 
-    // Filter by purpose
+    // Filter by purpose. The "all purposes" option used to carry the value
+    // 'ALL', which is truthy and matched no row's purpose — choosing it emptied
+    // the table. It is now an empty string like every other "all" option here.
     if (this.selectedPurpose) {
       filtered = filtered.filter(t => t.transactionPurpose === this.selectedPurpose);
     }
@@ -117,8 +119,8 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
     if (this.artistSearchTerm) {
       const searchTerm = this.artistSearchTerm.toLowerCase();
       filtered = filtered.filter(t =>
-        t.artist.artistStageName.toLowerCase().includes(searchTerm) ||
-        t.artist.email.toLowerCase().includes(searchTerm)
+        t.artist?.artistStageName?.toLowerCase().includes(searchTerm) ||
+        t.artist?.email?.toLowerCase().includes(searchTerm)
       );
     }
 
@@ -159,7 +161,7 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
     const pages: number[] = [];
     const maxVisible = 5;
     let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages - 1, start + maxVisible - 1);
+    const end = Math.min(this.totalPages - 1, start + maxVisible - 1);
 
     if (end - start + 1 < maxVisible) {
       start = Math.max(0, end - maxVisible + 1);
@@ -173,7 +175,7 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
   }
 
   get startIndex(): number {
-    return this.currentPage * this.pageSize + 1;
+    return this.filteredTransactions.length === 0 ? 0 : this.currentPage * this.pageSize + 1;
   }
 
   get endIndex(): number {
@@ -196,42 +198,53 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
     return type === 'CREDIT' || type === 'REFUND';
   }
 
+  typeClass(type: string): string {
+    switch (type) {
+      case 'CREDIT': return 'omh-status-positive';
+      case 'DEBIT': return 'omh-status-critical';
+      case 'REFUND': return 'omh-status-pending';
+      case 'PAYMENT': return 'omh-status-brand';
+      default: return 'omh-status-neutral';
+    }
+  }
+
   formatPurpose(purpose: string): string {
-    return purpose.replace(/_/g, ' ').toLowerCase()
+    return (purpose || '').replace(/_/g, ' ').toLowerCase()
       .replace(/\b\w/g, l => l.toUpperCase());
-  }
-
-  viewTransactionDetails(transaction: TransactionResponse) {
-    // Implement transaction details modal or navigation
-    console.log('View transaction details:', transaction);
-  }
-
-  viewArtistProfile(artist: ArtistResponse) {
-    // Implement artist profile navigation
-    console.log('View artist profile:', artist);
   }
 
   trackByTransactionId(index: number, transaction: TransactionResponse): number {
     return transaction.transactionId;
   }
 
-  processWithdrawal(transaction: TransactionResponse) {
-    if (confirm(`Process withdrawal of ${transaction.amount} for ${transaction.artist.artistStageName}?`)) {
-      this.loading = true;
-      this.error = '';
-      this.transactionService.processWithdrawal(transaction.transactionId)
-        .subscribe(
-          (url: string) => {
-            console.log('Withdrawal processed successfully:', url);
-            // Safely trigger navigation
-            setTimeout(() => window.location.href = url, 0);
-          },
-          (error) => {
-            this.error = 'Failed to process withdrawal. Please try again.';
-            console.error('Error processing withdrawal:', error);
-          }
-        );
+  askWithdrawal(transaction: TransactionResponse) {
+    this.pendingWithdrawal = transaction;
+  }
+
+  confirmWithdrawal() {
+    const transaction = this.pendingWithdrawal;
+    if (!transaction || this.processing) {
+      return;
     }
 
+    this.processing = true;
+    this.error = '';
+
+    this.transactionService.processWithdrawal(transaction.transactionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (url: string) => {
+          this.processing = false;
+          this.pendingWithdrawal = null;
+          // The gateway hands back a redirect target.
+          setTimeout(() => (window.location.href = url), 0);
+        },
+        error: (error) => {
+          this.processing = false;
+          this.pendingWithdrawal = null;
+          this.error = 'Failed to process withdrawal. Please try again.';
+          console.error('Error processing withdrawal:', error);
+        },
+      });
   }
 }

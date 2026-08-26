@@ -1,104 +1,103 @@
-<!-- header.component.html -->
-<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-  <!-- Sidebar Toggle (Topbar) -->
-  <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" (click)="toggleSidebar()">
-    <i class="fa fa-bars"></i>
+<header class="omh-topbar">
+
+  <button type="button"
+          class="omh-icon-btn lg:hidden"
+          aria-label="Open navigation"
+          (click)="layout.toggleSidebar()">
+    <i class="bi bi-list"></i>
   </button>
 
-  <!-- Topbar Navbar -->
-  <ul class="navbar-nav ms-auto">
-    <div class="topbar-divider d-none d-sm-block"></div>
+  <label class="omh-search">
+    <i class="bi bi-search shrink-0 text-sm text-muted"></i>
+    <input type="search"
+           name="q"
+           placeholder="Search your bookings and posts…"
+           [(ngModel)]="query"
+           (keyup.enter)="search()"
+           aria-label="Search">
+  </label>
 
-    <!-- Nav Item - User Information -->
-    <li class="nav-item dropdown no-arrow">
-      <a class="nav-link dropdown-toggle profile-toggle" href="#" id="userDropdown" role="button"
-         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <div class="d-flex align-items-center">
-          <div class="balance-info mr-3 d-none d-lg-block">
-            <div class="balance-label">Balance</div>
-            <div class="balance-amount">NPR. {{userBalance}}</div>
-          </div>
-          <div class="profile-image-container">
-            <img class="img-profile rounded-circle" [src]="userProfile.avatar" alt="Profile">
-            <div class="online-indicator"></div>
-          </div>
+  <div class="flex-1"></div>
+
+  <!-- Balance in the bar: an artist should never have to open a menu to see
+       what they have earned. -->
+  <a routerLink="/artist/wallet"
+     class="hidden items-center gap-2 rounded-[10px] border border-line bg-surface px-3 py-1.5 hover:bg-surface-2 sm:flex">
+    <i class="bi bi-wallet2 text-accent"></i>
+    <span class="text-left">
+      <span class="block text-micro uppercase tracking-[0.1em] text-muted">Balance</span>
+      <span class="omh-metric block text-sm leading-tight">NPR {{ userBalance }}</span>
+    </span>
+  </a>
+
+  <button type="button"
+          class="omh-icon-btn"
+          [attr.aria-label]="'Theme: ' + theme.label"
+          [title]="'Theme: ' + theme.label"
+          (click)="theme.toggle()">
+    <i class="bi" [ngClass]="theme.icon"></i>
+  </button>
+
+  <button type="button" class="omh-icon-btn" aria-label="Notifications">
+    <i class="bi bi-bell"></i>
+    <span class="omh-dot" *ngIf="pendingRequests > 0"></span>
+  </button>
+
+  <div class="relative" (omhClickOutside)="menuOpen = false">
+    <button type="button"
+            class="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2 py-1.5 cursor-pointer hover:bg-surface-2"
+            [attr.aria-expanded]="menuOpen"
+            aria-haspopup="menu"
+            (click)="menuOpen = !menuOpen">
+      <span class="relative inline-flex">
+        <img [src]="userProfile.avatar" alt="" class="omh-avatar-xs">
+        <span class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-surface bg-positive"></span>
+      </span>
+      <span class="hidden max-w-[120px] text-left sm:block">
+        <span class="block truncate font-display text-xs font-bold leading-tight text-ink">
+          {{ userProfile.name }}
+        </span>
+        <span class="block text-micro leading-tight text-muted">Artist</span>
+      </span>
+      <i class="bi bi-chevron-down text-xs text-muted transition-transform duration-200"
+         [class.rotate-180]="menuOpen"></i>
+    </button>
+
+    <div class="omh-menu right-0 top-full mt-1.5 w-[248px] animate-menu-in" *ngIf="menuOpen" role="menu">
+
+      <div class="omh-menu-head flex items-center gap-3">
+        <img [src]="userProfile.avatar" alt="" class="omh-avatar-md">
+        <div class="min-w-0">
+          <div class="truncate font-display text-base font-bold text-ink">{{ userProfile.name }}</div>
+          <span class="omh-status-positive mt-1">Active</span>
         </div>
-      </a>
+      </div>
 
-      <!-- Enhanced Dropdown - User Information -->
-      <div class="dropdown-menu dropdown-menu-right shadow-lg profile-dropdown animated--grow-in"
-           aria-labelledby="userDropdown">
+      <div class="my-1 rounded-[8px] bg-surface-2 px-3 py-2.5">
+        <div class="text-micro uppercase tracking-[0.1em] text-muted">Wallet balance</div>
+        <div class="omh-metric mt-0.5 text-lg">NPR {{ userBalance }}</div>
+      </div>
 
-        <!-- Profile Header -->
-        <div class="profile-header">
-          <div class="profile-cover"></div>
-          <div class="profile-info">
-            <div class="profile-avatar">
-              <img [src]="userProfile.avatar" alt="Profile" class="rounded-circle">
-              <div class="status-dot bg-success"></div>
-            </div>
-            <div class="profile-details">
-              <h6 class="profile-name">{{userProfile.name}}</h6>
-              <span class="profile-status">
-                  <i class="fas fa-circle text-success mr-1"></i>Active
-                </span>
-            </div>
-          </div>
-        </div>
+      <button type="button" class="omh-menu-item" role="menuitem" (click)="viewProfile()">
+        <i class="bi bi-person-circle"></i>
+        <span>View profile</span>
+      </button>
+      <button type="button" class="omh-menu-item" role="menuitem" (click)="goToWallet()">
+        <i class="bi bi-wallet2"></i>
+        <span>Wallet</span>
+      </button>
+      <button type="button" class="omh-menu-item" role="menuitem" (click)="theme.toggle()">
+        <i class="bi" [ngClass]="theme.icon"></i>
+        <span>Theme: {{ theme.label }}</span>
+      </button>
 
-        <!-- Balance Card -->
-        <div class="balance-card">
-          <div class="balance-header">
-            <span class="balance-title">Wallet Balance</span>
-            <button class="btn btn-sm btn-outline-success add-money-btn">
-              <i class="bi bi-plus-circle"></i>
-            </button>
-          </div>
-          <div class="balance-amount-large">NPR. {{userBalance}}</div>
-        </div>
+      <div class="omh-menu-divider"></div>
 
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <div class="action-item" (click)="viewProfile()">
-            <i class="bi bi-person-circle action-icon"></i>
-            <span>View profile</span>
-          </div>
-        </div>
+      <button type="button" class="omh-menu-item is-danger" role="menuitem" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
 
-<!--        &lt;!&ndash; Menu Items &ndash;&gt;-->
-<!--        <div class="profile-menu">-->
-<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('statement')">-->
-<!--            <i class="fas fa-file-alt menu-icon"></i>-->
-<!--            <span>Statement</span>-->
-<!--          </a>-->
-
-<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('limits')">-->
-<!--            <i class="fas fa-chart-line menu-icon"></i>-->
-<!--            <span>My Limit</span>-->
-<!--          </a>-->
-
-<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('activities')">-->
-<!--            <i class="fas fa-history menu-icon"></i>-->
-<!--            <span>User Activities</span>-->
-<!--          </a>-->
-
-<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('bank-account')">-->
-<!--            <i class="fas fa-university menu-icon"></i>-->
-<!--            <span>Bank account</span>-->
-<!--          </a>-->
-
-<!--          <a class="dropdown-item profile-menu-item" href="#" (click)="navigateTo('linked-bank')">-->
-<!--            <i class="fas fa-link menu-icon"></i>-->
-<!--            <span>Linked Bank account</span>-->
-<!--          </a>-->
-
-          <a class="dropdown-item profile-menu-item logout-item" (click)="logout()" style="cursor: pointer;">
-            <i class="fas fa-sign-out-alt menu-icon text-danger"></i>
-            <span class="text-danger"> 
-              <i class="bi bi-box-arrow-right"></i> Logout</span>
-          </a>
-        </div>
-<!--      </div>-->
-    </li>
-  </ul>
-</nav>
+</header>

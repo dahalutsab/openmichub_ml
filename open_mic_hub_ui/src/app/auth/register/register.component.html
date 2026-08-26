@@ -1,277 +1,199 @@
-<div class="registration-wrapper">
-  <div class="bg-animation"></div>
-  <div class="bg-particles"></div>
+<div class="omh-app min-h-screen bg-ground py-10">
+  <div class="mx-auto w-full max-w-3xl px-5">
 
-  <div class="register-container">
-    <div class="header-section">
-      <h2 class="main-title">Create Your Account</h2>
-      <p class="subtitle">Join our community of music lovers and artists</p>
+    <a routerLink="/" class="mb-8 flex items-center justify-center gap-2 font-display text-md font-extrabold text-ink">
+      <span class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent text-accent-ink">
+        <i class="bi bi-soundwave text-sm"></i>
+      </span>
+      OpenMicHub
+    </a>
+
+    <div class="mb-6 text-center">
+      <h1 class="omh-display text-3xl">Create your account</h1>
+      <p class="mt-1.5 text-base text-muted">
+        Book the acts, or be the act. You can be both.
+      </p>
     </div>
 
-    <div class="tabs-container" [class.artist-active]="activeRole === 'artist'">
-      <div class="tabs-background"></div>
-      <button 
-        type="button"
-        class="tab-button"
-        [class.active]="activeRole === 'user'"
-        (click)="setRole('user')">
-        <span class="tab-icon">👤</span>
-        <span>User</span>
+    <!-- Role picker. Which one is chosen changes what the form asks for, so it
+         sits above the form rather than inside it. -->
+    <div class="mx-auto mb-5 grid max-w-md grid-cols-2 gap-2">
+      <button type="button"
+              class="flex flex-col items-center gap-1.5 rounded-card border p-4 cursor-pointer transition-colors"
+              [class.border-accent]="activeRole === 'user'"
+              [class.bg-accent-soft]="activeRole === 'user'"
+              [class.border-line]="activeRole !== 'user'"
+              [class.bg-surface]="activeRole !== 'user'"
+              [attr.aria-pressed]="activeRole === 'user'"
+              (click)="setRole('user')">
+        <i class="bi bi-person text-xl"
+           [class.text-accent]="activeRole === 'user'"
+           [class.text-muted]="activeRole !== 'user'"></i>
+        <span class="font-display text-sm font-bold text-ink">I'm booking</span>
+        <span class="text-xs text-muted">Hire artists for events</span>
       </button>
-      <button 
-        type="button"
-        class="tab-button"
-        [class.active]="activeRole === 'artist'"
-        (click)="setRole('artist')">
-        <span class="tab-icon">🎵</span>
-        <span>Artist</span>
+
+      <button type="button"
+              class="flex flex-col items-center gap-1.5 rounded-card border p-4 cursor-pointer transition-colors"
+              [class.border-accent]="activeRole === 'artist'"
+              [class.bg-accent-soft]="activeRole === 'artist'"
+              [class.border-line]="activeRole !== 'artist'"
+              [class.bg-surface]="activeRole !== 'artist'"
+              [attr.aria-pressed]="activeRole === 'artist'"
+              (click)="setRole('artist')">
+        <i class="bi bi-music-note-beamed text-xl"
+           [class.text-accent]="activeRole === 'artist'"
+           [class.text-muted]="activeRole !== 'artist'"></i>
+        <span class="font-display text-sm font-bold text-ink">I'm performing</span>
+        <span class="text-xs text-muted">Get booked and paid</span>
       </button>
     </div>
 
-    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="fullName" class="form-label">
-            <span class="label-text">Full Name</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="fullName" 
-              formControlName="fullName" 
-              type="text" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('fullName')?.invalid"
-              placeholder="Enter your full name">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('fullName')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Full name is required (minimum 3 characters)
-          </div>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="omh-tile">
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="omh-field">
+          <label for="fullName" class="omh-label">Full name <span class="text-hot">*</span></label>
+          <input id="fullName" formControlName="fullName" type="text" class="omh-input"
+                 autocomplete="name" placeholder="Your name">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('fullName')?.invalid">
+            Enter your name (at least 3 characters).
+          </p>
         </div>
 
-        <div class="form-group">
-          <label for="userEmail" class="form-label">
-            <span class="label-text">Email Address</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="userEmail" 
-              formControlName="userEmail" 
-              type="email" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('userEmail')?.invalid"
-              placeholder="Enter your email address">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('userEmail')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Please enter a valid email address
-          </div>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="password" class="form-label">
-            <span class="label-text">Password</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="password" 
-              formControlName="password" 
-              type="password" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('password')?.invalid"
-              placeholder="Create a strong password">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('password')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Password is required (minimum 6 characters)
-          </div>
+        <div class="omh-field">
+          <label for="userEmail" class="omh-label">Email address <span class="text-hot">*</span></label>
+          <input id="userEmail" formControlName="userEmail" type="email" class="omh-input"
+                 autocomplete="email" placeholder="you@example.com">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('userEmail')?.invalid">
+            Enter a valid email address.
+          </p>
         </div>
 
-        <div class="form-group">
-          <label for="phoneNumber" class="form-label">
-            <span class="label-text">Phone Number</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="phoneNumber" 
-              formControlName="phoneNumber" 
-              type="tel" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('phoneNumber')?.invalid"
-              placeholder="Enter your phone number">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('phoneNumber')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Please enter a valid phone number (7-15 digits)
-          </div>
+        <div class="omh-field">
+          <label for="password" class="omh-label">Password <span class="text-hot">*</span></label>
+          <input id="password" formControlName="password" type="password" class="omh-input"
+                 autocomplete="new-password" placeholder="At least 6 characters">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('password')?.invalid">
+            Choose a password of at least 6 characters.
+          </p>
+        </div>
+
+        <div class="omh-field">
+          <label for="phoneNumber" class="omh-label">Phone number <span class="text-hot">*</span></label>
+          <input id="phoneNumber" formControlName="phoneNumber" type="tel" class="omh-input"
+                 autocomplete="tel" placeholder="98XXXXXXXX">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('phoneNumber')?.invalid">
+            Enter a valid phone number (7–15 digits).
+          </p>
+        </div>
+
+        <div class="omh-field" [class.sm:col-span-2]="activeRole !== 'artist'">
+          <label for="location" class="omh-label">Location <span class="text-hot">*</span></label>
+          <input id="location" formControlName="location" type="text" class="omh-input"
+                 placeholder="City or region">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('location')?.invalid">
+            Where are you based?
+          </p>
+        </div>
+
+        <div class="omh-field" *ngIf="activeRole === 'artist'">
+          <label for="stageName" class="omh-label">Stage name <span class="text-hot">*</span></label>
+          <input id="stageName" formControlName="stageName" type="text" class="omh-input"
+                 placeholder="What you go by on stage">
+          <p class="omh-error" *ngIf="submitted && registerForm.get('stageName')?.invalid">
+            Enter a stage name (at least 3 characters).
+          </p>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="location" class="form-label">
-            <span class="label-text">Location</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="location" 
-              formControlName="location" 
-              type="text" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('location')?.invalid"
-              placeholder="Enter your city or region">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('location')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Location is required
-          </div>
-        </div>
+      <!-- Artist-only section -->
+      <div class="mt-5 border-t border-line pt-5" *ngIf="activeRole === 'artist'">
 
-        <div class="form-group" *ngIf="activeRole === 'artist'">
-          <label for="stageName" class="form-label">
-            <span class="label-text">Stage Name</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="input-container">
-            <input 
-              id="stageName" 
-              formControlName="stageName" 
-              type="text" 
-              class="form-input"
-              [class.error]="submitted && registerForm.get('stageName')?.invalid"
-              placeholder="Enter your stage name">
-            <div class="input-focus-border"></div>
-          </div>
-          <div *ngIf="submitted && registerForm.get('stageName')?.invalid" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Stage name is required (minimum 3 characters)
-          </div>
-        </div>
-      </div>
+        <div class="omh-field">
+          <label class="omh-label">Genres <span class="text-hot">*</span></label>
+          <p class="omh-help mb-2">{{ getSelectedGenresText() }}</p>
 
-      <div class="artist-fields" [class.show]="activeRole === 'artist'">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="genres" class="form-label">
-              <span class="label-text">Genres</span>
-              <span class="required-indicator">*</span>
-            </label>
-            
-            <div class="genre-selection-display">
-              <div class="selected-genres-summary">
-                {{ getSelectedGenresText() }}
-              </div>
-            </div>
-
-            <div class="genre-checkboxes-container">
-              <div *ngFor="let genre of genres" class="genre-group">
-                <h4 class="genre-title">{{ genre.name }}</h4>
-                <div class="subgenre-list">
-                  <label *ngFor="let subGenre of genre.categories" class="checkbox-label">
-                    <input 
-                      type="checkbox"
-                      [checked]="isSubGenreSelected(genre.id, subGenre.id)"
-                      (change)="onGenreCheckboxChange(genre.id, subGenre.id, $event)"
-                      class="checkbox-input">
-                    <span class="checkbox-custom"></span>
-                    <span class="checkbox-text">{{ subGenre.name }}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-            
-            <div *ngIf="submitted && selectedGenres.length === 0 && activeRole === 'artist'" class="error-message">
-              <span class="error-icon">⚠️</span>
-              At least one genre is required
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="bio" class="form-label">
-              <span class="label-text">Bio</span>
-              <span class="required-indicator">*</span>
-            </label>
-            <div class="input-container">
-              <textarea 
-                id="bio" 
-                formControlName="bio" 
-                class="form-textarea"
-                [class.error]="submitted && registerForm.get('bio')?.invalid"
-                placeholder="Tell us about yourself and your musical journey..."
-                rows="4"></textarea>
-              <div class="input-focus-border"></div>
-            </div>
-            <div *ngIf="submitted && registerForm.get('bio')?.invalid" class="error-message">
-              <span class="error-icon">⚠️</span>
-              Bio is required (minimum 10 characters)
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="profileImage" class="form-label">
-            <span class="label-text">Profile Picture</span>
-            <span class="required-indicator">*</span>
-          </label>
-          <div class="file-upload-container">
-            <input 
-              id="profileImage" 
-              (change)="onFileChange($event)" 
-              type="file" 
-              accept="image/*" 
-              class="file-input"
-              #fileInput>
-            <div class="file-upload-area" (click)="fileInput.click()">
-              <div class="file-upload-icon">📸</div>
-              <div class="file-upload-text">
-                <span class="primary-text">Click to upload</span>
-                <span class="secondary-text">or drag and drop your image here</span>
+          <div class="max-h-64 overflow-y-auto rounded-card border border-line p-3">
+            <div *ngFor="let genre of genres" class="mb-4 last:mb-0">
+              <p class="mb-2 font-display text-micro font-bold uppercase tracking-[0.12em] text-muted">
+                {{ genre.name }}
+              </p>
+              <div class="flex flex-wrap gap-x-4 gap-y-2">
+                <label *ngFor="let subGenre of genre.categories"
+                       class="flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+                  <input type="checkbox"
+                         class="omh-check"
+                         [checked]="isSubGenreSelected(genre.id, subGenre.id)"
+                         (change)="onGenreCheckboxChange(genre.id, subGenre.id, $event)">
+                  {{ subGenre.name }}
+                </label>
               </div>
             </div>
           </div>
-          
-          <div *ngIf="profileImage" class="image-preview">
-            <img [src]="profileImage" class="preview-image" alt="Profile Preview">
-            <button type="button" class="remove-image" (click)="removeImage()">×</button>
-          </div>
-          
-          <div *ngIf="submitted && !profileImage" class="error-message">
-            <span class="error-icon">⚠️</span>
-            Please upload a profile picture
-          </div>
+
+          <p class="omh-error" *ngIf="submitted && selectedGenres.length === 0">
+            Pick at least one genre.
+          </p>
+        </div>
+
+        <div class="omh-field mt-4">
+          <label for="bio" class="omh-label">Bio <span class="text-hot">*</span></label>
+          <textarea id="bio" formControlName="bio" rows="4" class="omh-textarea"
+                    placeholder="Tell bookers who you are and what you play…"></textarea>
+          <p class="omh-error" *ngIf="submitted && registerForm.get('bio')?.invalid">
+            Write a short bio (at least 10 characters).
+          </p>
         </div>
       </div>
 
-      <div *ngIf="errorMessage" class="global-error-message">
-        <span class="error-icon">❌</span>
-        {{ errorMessage }}
+      <!-- Profile picture -->
+      <div class="omh-field mt-5 border-t border-line pt-5">
+        <label class="omh-label">Profile picture <span class="text-hot">*</span></label>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="relative" *ngIf="profileImage">
+            <img [src]="profileImage" alt="Profile preview"
+                 class="h-24 w-24 rounded-card border border-line object-cover">
+            <button type="button"
+                    class="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-0 bg-critical text-white cursor-pointer"
+                    aria-label="Remove picture"
+                    (click)="removeImage()">
+              <i class="bi bi-x text-xs"></i>
+            </button>
+          </div>
+
+          <label for="profileImage"
+                 class="flex flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-line bg-surface-2/50 px-6 py-6 text-center hover:border-muted">
+            <i class="bi bi-camera text-xl text-muted"></i>
+            <span class="font-display text-sm font-semibold text-ink">
+              {{ profileImage ? 'Choose a different picture' : 'Upload a picture' }}
+            </span>
+            <span class="text-xs text-muted">PNG or JPG</span>
+          </label>
+          <input id="profileImage" type="file" accept="image/*" class="sr-only"
+                 (change)="onFileChange($event)">
+        </div>
+
+        <p class="omh-error" *ngIf="submitted && !profileImage">
+          A profile picture is required.
+        </p>
       </div>
 
-      <button 
-        type="submit" 
-        [disabled]="isSubmitting" 
-        class="submit-button"
-        [class.loading]="isSubmitting">
-        <span class="button-content">
-          <span *ngIf="isSubmitting" class="loading-spinner"></span>
-          <span class="button-text">{{ isSubmitting ? 'Creating Account...' : 'Create Account' }}</span>
-        </span>
-        <div class="button-shine"></div>
+      <div class="omh-alert-critical mt-5" *ngIf="errorMessage">
+        <i class="bi bi-exclamation-circle mt-0.5"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <button type="submit" class="omh-btn-primary omh-btn-lg mt-5 w-full" [disabled]="isSubmitting">
+        <span class="omh-spinner-sm" *ngIf="isSubmitting"></span>
+        {{ isSubmitting ? 'Creating account…' : 'Create account' }}
       </button>
+
+      <p class="mt-4 text-center text-sm text-muted">
+        Already have an account?
+        <a routerLink="/auth/login" class="font-medium text-accent hover:underline">Sign in</a>
+      </p>
     </form>
   </div>
 </div>

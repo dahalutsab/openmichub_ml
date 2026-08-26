@@ -1,153 +1,159 @@
-<div class="availability-container">
-  <div class="availability-card">
-    <div class="card-header">
-      <div class="calendar-avatar">
-        <svg class="icon" viewBox="0 0 24 24">
-          <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0-2-2 0V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-        </svg>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Weekly schedule</h1>
+    <p class="omh-page-sub">Tell bookers the hours you can play.</p>
+  </div>
+  <button type="button" class="omh-btn-secondary" (click)="toggleTimeFormat()">
+    <i class="bi bi-clock"></i>
+    Switch to {{ timeFormat === '12h' ? '24-hour' : '12-hour' }}
+  </button>
+</div>
+
+<!-- Day picker -->
+<div class="omh-tabs mb-4 overflow-x-auto" role="tablist">
+  <button *ngFor="let day of daysOfWeek; let i = index"
+          type="button"
+          role="tab"
+          class="omh-tab whitespace-nowrap"
+          [attr.aria-selected]="selectedTabIndex === i"
+          (click)="onDayTabChange(i)">
+    {{ day.label }}
+    <span class="ml-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
+          [class.bg-positive]="hasAvailabilityForDay(day.key)"
+          [class.bg-transparent]="!hasAvailabilityForDay(day.key)"
+          [attr.title]="hasAvailabilityForDay(day.key) ? 'Slots set' : null"></span>
+  </button>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-3">
+
+  <!-- Editor -->
+  <section class="omh-panel lg:col-span-2">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">{{ selectedDay.label }}</h2>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="omh-chip">{{ getTotalHours() }} total</span>
+        <span class="omh-chip">{{ timeSlots.length }} slot{{ timeSlots.length === 1 ? '' : 's' }}</span>
       </div>
-      <h1>Weekly Schedule</h1>
-      <p class="subtitle">Manage your availability</p>
     </div>
 
-    <div class="card-content">
-      <div class="format-toggle">
-        <button class="toggle-button" (click)="toggleTimeFormat()">
-          Switch to {{ timeFormat === '12h' ? '24-hour' : '12-hour' }} format
-        </button>
-      </div>
+    <form [formGroup]="calendarForm" (ngSubmit)="saveAvailability()">
+      <div class="omh-panel-body flex flex-col gap-5">
 
-      <div class="day-tabs-container">
-        <div class="tab-group">
-          <button *ngFor="let day of daysOfWeek; let i = index" 
-                  class="tab" 
-                  [class.active]="selectedTabIndex === i"
-                  (click)="selectedTabIndex = i; onDayTabChange(i)">
-            <div class="tab-content">
-              <span>{{ day.label }}</span>
-              <span *ngIf="hasAvailabilityForDay(day.key)" 
-                    class="availability-indicator" 
-                    title="Slots set">✓</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div class="day-info-section">
-        <div class="day-header">
-          <h2>{{ selectedDay.label }}</h2>
-          <div class="day-stats">
-            <span class="chip">Total: {{ getTotalHours() }}</span>
-            <span class="chip">{{ timeSlots.length }} slot{{ timeSlots.length === 1 ? '' : 's' }}</span>
+        <!-- Presets -->
+        <div>
+          <p class="omh-label">Presets</p>
+          <div class="flex flex-wrap gap-2">
+            <button *ngFor="let slot of quickTimeSlots"
+                    type="button"
+                    class="omh-btn-secondary omh-btn-sm"
+                    (click)="addQuickSlot(slot)">
+              <i class="bi bi-plus-lg"></i>
+              {{ slot.label }}
+              <span class="text-muted">{{ slot.start }}–{{ slot.end }}</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      <div class="quick-actions-section">
-        <h3>Quick Actions</h3>
-        <div class="quick-actions">
-          <button class="action-button" (click)="copyFromPreviousDay()">Copy Previous</button>
-          <button class="action-button" (click)="clearAllSlots()">Clear</button>
-        </div>
-      </div>
-
-      <div class="quick-slots-section">
-        <h3>Presets</h3>
-        <div class="quick-slots">
-          <button *ngFor="let slot of quickTimeSlots" 
-                  class="slot-button" 
-                  (click)="addQuickSlot(slot)">
-            {{ slot.start }} - {{ slot.end }} {{ slot.label }}
-          </button>
-        </div>
-      </div>
-
-      <form [formGroup]="calendarForm" class="time-slot-form">
-        <div class="section-header">
-          <h3>Custom Slots</h3>
-          <button class="add-button" (click)="addSlot()" title="Add slot">
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-          </button>
-        </div>
-
-        <div formArrayName="timeSlots" class="slots-container">
-          <div *ngFor="let slot of timeSlots.controls; let i = index" 
-               [formGroupName]="i" 
-               class="slot-row" 
-               [ngClass]="{ 'error': slot.invalid && (slot.touched || slot.dirty) }">
-            <div class="slot-header">
-              <span>Slot {{ i + 1 }}</span>
-              <button class="delete-button" 
-                      (click)="removeSlot(i)" 
-                      [disabled]="timeSlots.length === 1" 
-                      title="Remove slot">
-                <svg class="icon" viewBox="0 0 24 24">
-                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                </svg>
+        <!-- Slots -->
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <p class="omh-label mb-0">Time slots</p>
+            <div class="flex gap-1">
+              <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="copyFromPreviousDay()">
+                <i class="bi bi-files"></i> Copy previous day
+              </button>
+              <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="clearAllSlots()">
+                <i class="bi bi-eraser"></i> Clear
               </button>
             </div>
+          </div>
 
-            <div class="slot-content">
-              <div class="form-field">
-                <label>Start Time</label>
-                <select formControlName="startTime">
-                  <option *ngFor="let time of timeOptions" [value]="time">{{ time }}</option>
-                </select>
-                <span class="error-message" *ngIf="slot.get('startTime')?.hasError('required')">
-                  Start time is required
-                </span>
+          <div formArrayName="timeSlots" class="flex flex-col gap-2">
+            <div *ngFor="let slot of timeSlots.controls; let i = index"
+                 [formGroupName]="i"
+                 class="rounded-card border p-3"
+                 [class.border-line]="slot.valid || !(slot.touched || slot.dirty)"
+                 [class.border-critical]="slot.invalid && (slot.touched || slot.dirty)">
+
+              <div class="flex flex-wrap items-end gap-3">
+                <div class="omh-field min-w-[130px] flex-1">
+                  <label [attr.for]="'start' + i" class="omh-label">Start</label>
+                  <select [id]="'start' + i" class="omh-select" formControlName="startTime">
+                    <option value="" disabled>Pick a time</option>
+                    <option *ngFor="let time of timeOptions" [value]="time">{{ time }}</option>
+                  </select>
+                </div>
+
+                <span class="pb-2.5 text-muted"><i class="bi bi-arrow-right"></i></span>
+
+                <div class="omh-field min-w-[130px] flex-1">
+                  <label [attr.for]="'end' + i" class="omh-label">End</label>
+                  <select [id]="'end' + i" class="omh-select" formControlName="endTime">
+                    <option value="" disabled>Pick a time</option>
+                    <option *ngFor="let time of getEndTimeOptions(slot.get('startTime')?.value)"
+                            [value]="time">{{ time }}</option>
+                  </select>
+                </div>
+
+                <button type="button"
+                        class="omh-btn-icon mb-0.5 hover:!text-critical"
+                        [disabled]="timeSlots.length === 1"
+                        aria-label="Remove slot"
+                        (click)="removeSlot(i)">
+                  <i class="bi bi-trash"></i>
+                </button>
               </div>
 
-              <span class="time-arrow">→</span>
-
-              <div class="form-field">
-                <label>End Time</label>
-                <select formControlName="endTime">
-                  <option *ngFor="let time of getEndTimeOptions(slot.get('startTime')?.value)" [value]="time">{{ time }}</option>
-                </select>
-                <span class="error-message" *ngIf="slot.get('endTime')?.hasError('required')">
-                  End time is required
-                </span>
-              </div>
+              <p class="omh-error" *ngIf="slot.hasError('invalidTimeRange') && (slot.touched || slot.dirty)">
+                End time must be after the start time.
+              </p>
             </div>
-
-            <span class="range-error" *ngIf="slot.hasError('invalidTimeRange') && (slot.touched || slot.dirty)">
-              End time must be after start time
-            </span>
           </div>
 
-          <span class="range-error" *ngIf="timeSlots.hasError('overlappingSlots') && (timeSlots.touched || timeSlots.dirty)">
-            Time slots cannot overlap
-          </span>
-        </div>
-
-        <div class="form-actions">
-          <button class="save-button" 
-                  (click)="saveAvailability()" 
-                  [disabled]="!calendarForm.valid || isLoading">
-            <span *ngIf="!isLoading">Save</span>
-            <span *ngIf="isLoading" class="spinner"></span>
-            <span *ngIf="isLoading">Saving...</span>
+          <button type="button" class="omh-btn-secondary mt-2 w-full" (click)="addSlot()">
+            <i class="bi bi-plus-lg"></i> Add another slot
           </button>
-        </div>
-      </form>
 
-      <div *ngIf="savedSlots.length > 0" class="saved-section">
-        <div class="divider"></div>
-        <h3>Saved Slots</h3>
-        <div class="saved-slots-grid">
-          <div *ngFor="let slot of savedSlots" class="saved-slot">
-            <span class="time-display">
-              {{ format(slot.startTime) }} - {{ format(slot.endTime) }}
-            </span>
-            <span class="duration">
-              {{ getSlotDurationFromObject(slot) }}
-            </span>
-          </div>
+          <p class="omh-error" *ngIf="timeSlots.hasError('overlappingSlots') && (timeSlots.touched || timeSlots.dirty)">
+            Time slots cannot overlap.
+          </p>
         </div>
+
       </div>
+
+      <div class="omh-modal-foot">
+        <button type="submit" class="omh-btn-primary" [disabled]="!calendarForm.valid || isLoading">
+          <span class="omh-spinner-sm" *ngIf="isLoading"></span>
+          {{ isLoading ? 'Saving…' : 'Save ' + selectedDay.label }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Saved -->
+  <section class="omh-panel self-start">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">Saved for {{ selectedDay.label }}</h2>
     </div>
-  </div>
+
+    <div class="omh-panel-body">
+      <ul class="flex flex-col gap-2" *ngIf="savedSlots.length; else nothingSaved">
+        <li *ngFor="let slot of savedSlots"
+            class="flex items-center justify-between rounded-card bg-surface-2 px-3 py-2">
+          <span class="font-display text-sm font-semibold text-ink">
+            {{ format(slot.startTime) }} – {{ format(slot.endTime) }}
+          </span>
+          <span class="text-xs text-muted">{{ getSlotDurationFromObject(slot) }}</span>
+        </li>
+      </ul>
+
+      <ng-template #nothingSaved>
+        <p class="omh-help">
+          Nothing saved for {{ selectedDay.label }} yet. Add a slot and save to publish it.
+        </p>
+      </ng-template>
+    </div>
+  </section>
+
 </div>

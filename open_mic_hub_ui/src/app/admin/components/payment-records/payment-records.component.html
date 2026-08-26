@@ -1,65 +1,115 @@
-<!-- src/app/admin/components/payment-records/payment-records.component.html -->
-<div class="container py-3">
-  <h4>Payment Records</h4>
-  <div class="row mb-3">
-    <div class="col-md-3">
-      <select class="form-select" [(ngModel)]="status" (change)="onFilterChange()">
-        <option value="">All Statuses</option>
-        <option *ngFor="let s of paymentStatuses" [value]="s">{{ s }}</option>
-      </select>
-    </div>
-    <div class="col-md-3">
-      <select class="form-select" [(ngModel)]="method" (change)="onFilterChange()">
-        <option value="">All Methods</option>
-        <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
-      </select>
-    </div>
-  </div>
-
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border text-primary"></div>
-    <p>Loading payments...</p>
-  </div>
-  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-
-  <div *ngIf="!loading && payments.length > 0">
-    <table class="table table-bordered">
-      <thead>
-      <tr>
-        <th>Time</th>
-        <th>Amount</th>
-        <th>Method</th>
-        <th>Status</th>
-        <th>Product Code</th>
-        <th>Booking ID</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr *ngFor="let p of payments">
-        <td>{{ p.paymentTime }}</td>
-        <td>{{ p.receivedAmount | currency }}</td>
-        <td>{{ p.paymentMethod }}</td>
-        <td>{{ p.paymentStatus }}</td>
-        <td>{{ p.productCode }}</td>
-        <td>{{ p.booking?.id }}</td>
-      </tr>
-      </tbody>
-    </table>
-    <nav *ngIf="totalPages > 1">
-      <ul class="pagination">
-        <li class="page-item" [class.disabled]="page === 0">
-          <button class="page-link" (click)="goToPage(page - 1)" [disabled]="page === 0">&laquo;</button>
-        </li>
-        <li class="page-item" *ngFor="let p of [].constructor(totalPages); let i = index" [class.active]="i === page">
-          <button class="page-link" (click)="goToPage(i)">{{ i + 1 }}</button>
-        </li>
-        <li class="page-item" [class.disabled]="page === totalPages - 1">
-          <button class="page-link" (click)="goToPage(page + 1)" [disabled]="page === totalPages - 1">&raquo;</button>
-        </li>
-      </ul>
-    </nav>
-  </div>
-  <div *ngIf="!loading && payments.length === 0" class="text-center text-muted py-5">
-    No payments found.
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Payment records</h1>
+    <p class="omh-page-sub">{{ totalElements }} payments processed through the platform.</p>
   </div>
 </div>
+
+<!-- Filters -->
+<section class="omh-card mb-4 p-4">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="omh-field">
+      <label for="statusFilter" class="omh-label">Status</label>
+      <select id="statusFilter" class="omh-select" [(ngModel)]="status" (change)="onFilterChange()">
+        <option value="">All statuses</option>
+        <option *ngFor="let s of paymentStatuses" [value]="s">{{ s | titlecase }}</option>
+      </select>
+    </div>
+
+    <div class="omh-field">
+      <label for="methodFilter" class="omh-label">Method</label>
+      <select id="methodFilter" class="omh-select" [(ngModel)]="method" (change)="onFilterChange()">
+        <option value="">All methods</option>
+        <option *ngFor="let m of paymentMethods" [value]="m">{{ m | titlecase }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3" *ngIf="status || method">
+    <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="clearFilters()">
+      <i class="bi bi-x-lg"></i> Clear filters
+    </button>
+  </div>
+</section>
+
+<div class="omh-alert-critical mb-4" *ngIf="error">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="fetchPayments()">Try again</button>
+</div>
+
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading payments…</span>
+</div>
+
+<section class="omh-panel" *ngIf="!loading">
+  <div class="omh-table-wrap" *ngIf="payments.length; else noPayments">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th class="omh-num">Amount</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Product code</th>
+          <th class="omh-num">Booking</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of payments">
+          <td>
+            <div class="font-medium">{{ p.paymentTime | date:'mediumDate' }}</div>
+            <div class="text-xs text-muted">{{ p.paymentTime | date:'shortTime' }}</div>
+          </td>
+          <td class="omh-num font-display font-bold text-ink">
+            NPR {{ p.receivedAmount | number:'1.2-2' }}
+          </td>
+          <td>{{ p.paymentMethod | titlecase }}</td>
+          <td><span [class]="statusClass(p.paymentStatus)">{{ p.paymentStatus }}</span></td>
+          <td class="font-mono text-xs text-muted">{{ p.productCode || '—' }}</td>
+          <td class="omh-num text-muted">{{ p.booking?.id ? '#' + p.booking.id : '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noPayments>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-credit-card omh-empty-icon"></i>
+        <p class="omh-empty-title">No payments found</p>
+        <p class="omh-empty-text">
+          <span *ngIf="status || method; else noneAtAll">Nothing matches the current filters.</span>
+          <ng-template #noneAtAll>No payments have been recorded yet.</ng-template>
+        </p>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"
+       *ngIf="totalPages > 1">
+    <p class="text-xs text-muted">Page {{ page + 1 }} of {{ totalPages }}</p>
+
+    <nav class="omh-pagination" aria-label="Payments pagination">
+      <button type="button" class="omh-page-btn" [disabled]="page === 0"
+              (click)="goToPage(page - 1)" aria-label="Previous page">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+
+      <button type="button"
+              *ngFor="let p of pageNumbers"
+              class="omh-page-btn"
+              [class.is-active]="p === page"
+              [attr.aria-current]="p === page ? 'page' : null"
+              (click)="goToPage(p)">
+        {{ p + 1 }}
+      </button>
+
+      <button type="button" class="omh-page-btn" [disabled]="page >= totalPages - 1"
+              (click)="goToPage(page + 1)" aria-label="Next page">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </nav>
+  </div>
+</section>

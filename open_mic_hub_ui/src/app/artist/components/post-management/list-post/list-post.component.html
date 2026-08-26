@@ -1,90 +1,135 @@
-<!-- post-list/post-list.component.html -->
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Posts Management</h2>
-    <button type="button" class="btn btn-primary" (click)="createPost()">
-      <i class="fas fa-plus"></i> Create New Post
-    </button>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Posts</h1>
+    <p class="omh-page-sub">{{ totalElements }} {{ totalElements === 1 ? 'post' : 'posts' }} on your feed.</p>
+  </div>
+  <button type="button" class="omh-btn-primary" (click)="createPost()">
+    <i class="bi bi-plus-lg"></i> New post
+  </button>
+</div>
+
+<!-- Loading -->
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading posts…</span>
+</div>
+
+<section class="omh-panel" *ngIf="!loading">
+  <div class="omh-table-wrap" *ngIf="posts.length; else noPosts">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Post</th>
+          <th>Images</th>
+          <th class="omh-num">Likes</th>
+          <th>Created</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let post of posts">
+          <td>
+            <div class="font-medium">{{ post.title }}</div>
+            <div class="mt-0.5 max-w-md truncate text-xs text-muted">{{ post.content }}</div>
+          </td>
+
+          <td>
+            <span class="omh-chip">
+              <i class="bi bi-images"></i>
+              {{ post.images?.length || 0 }}
+            </span>
+          </td>
+
+          <td class="omh-num font-display font-bold text-ink">{{ post.likesCount || 0 }}</td>
+
+          <td class="whitespace-nowrap text-muted">{{ post.createdAt | date:'mediumDate' }}</td>
+
+          <td>
+            <div class="flex justify-end gap-1">
+              <button type="button" class="omh-btn-icon" title="View" aria-label="View post"
+                      (click)="viewPost(post.id!)">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button type="button" class="omh-btn-icon" title="Edit" aria-label="Edit post"
+                      (click)="editPost(post.id!)">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="omh-btn-icon hover:!text-critical" title="Delete"
+                      aria-label="Delete post" (click)="askDelete(post)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- Loading Spinner -->
-  <div *ngIf="loading" class="text-center">
-    <div class="spinner-border" role="status">
-      <span class="visually-hidden">Loading...</span>
+  <ng-template #noPosts>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-images omh-empty-icon"></i>
+        <p class="omh-empty-title">No posts yet</p>
+        <p class="omh-empty-text">Share a clip or a photo from your last set to get discovered.</p>
+        <button type="button" class="omh-btn-primary mt-4" (click)="createPost()">
+          <i class="bi bi-plus-lg"></i> Create your first post
+        </button>
+      </div>
     </div>
+  </ng-template>
+
+  <!-- Pagination -->
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"
+       *ngIf="totalPages > 1">
+    <p class="text-xs text-muted">Page {{ currentPage + 1 }} of {{ totalPages }}</p>
+
+    <nav class="omh-pagination" aria-label="Posts pagination">
+      <button type="button" class="omh-page-btn" [disabled]="currentPage === 0"
+              (click)="onPageChange(currentPage - 1)">
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+
+      <button type="button"
+              *ngFor="let page of pageNumbers"
+              class="omh-page-btn"
+              [class.is-active]="page === currentPage"
+              [attr.aria-current]="page === currentPage ? 'page' : null"
+              (click)="onPageChange(page)">
+        {{ page + 1 }}
+      </button>
+
+      <button type="button" class="omh-page-btn" [disabled]="currentPage >= totalPages - 1"
+              (click)="onPageChange(currentPage + 1)">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </nav>
   </div>
+</section>
 
-  <!-- Posts Table -->
-  <div *ngIf="!loading" class="card">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead class="table-dark">
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Content</th>
-              <th>Images</th>
-              <th>Likes</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let post of posts">
-              <td>{{ post.id }}</td>
-              <td>{{ post.title }}</td>
-              <td>{{ post.content | slice:0:50 }}{{ post.content.length > 50 ? '...' : '' }}</td>
-              <td>
-                <span class="badge bg-info">{{ post.images?.length || 0 }} images</span>
-              </td>
-              <td>
-                <span class="badge bg-success">{{ post.likesCount }}</span>
-              </td>
-              <td>{{ post.createdAt | date:'short' }}</td>
-              <td>
-                <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-sm btn-outline-primary" 
-                          (click)="viewPost(post.id!)" title="View">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-warning" 
-                          (click)="editPost(post.id!)" title="Edit">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger" 
-                          (click)="deletePost(post.id!)" title="Delete">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+<!-- Delete confirmation -->
+<div class="omh-modal-backdrop" *ngIf="pendingDelete" (click)="pendingDelete = null">
+  <div class="omh-modal max-w-md animate-slide-up" (click)="$event.stopPropagation()"
+       role="dialog" aria-modal="true">
+    <div class="omh-modal-head">
+      <h2 class="omh-modal-title">Delete this post?</h2>
+      <button type="button" class="omh-btn-icon" aria-label="Close" (click)="pendingDelete = null">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
 
-      <!-- Pagination -->
-      <nav *ngIf="totalPages > 1" aria-label="Posts pagination">
-        <ul class="pagination justify-content-center">
-          <li class="page-item" [class.disabled]="currentPage === 0">
-            <button class="page-link" (click)="onPageChange(currentPage - 1)" 
-                    [disabled]="currentPage === 0">Previous</button>
-          </li>
-          <li *ngFor="let page of [].constructor(totalPages); let i = index" 
-              class="page-item" [class.active]="i === currentPage">
-            <button class="page-link" (click)="onPageChange(i)">{{ i + 1 }}</button>
-          </li>
-          <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-            <button class="page-link" (click)="onPageChange(currentPage + 1)" 
-                    [disabled]="currentPage === totalPages - 1">Next</button>
-          </li>
-        </ul>
-      </nav>
+    <div class="omh-modal-body">
+      <p>
+        <strong class="text-ink">{{ pendingDelete.title }}</strong> will be removed from your
+        feed. This cannot be undone.
+      </p>
+    </div>
 
-      <!-- No Posts Message -->
-      <div *ngIf="posts.length === 0" class="text-center py-4">
-        <p class="text-muted">No posts found.</p>
-      </div>
+    <div class="omh-modal-foot">
+      <button type="button" class="omh-btn-secondary" (click)="pendingDelete = null">Cancel</button>
+      <button type="button" class="omh-btn-danger" [disabled]="deleting" (click)="confirmDelete()">
+        <span class="omh-spinner-sm" *ngIf="deleting"></span>
+        {{ deleting ? 'Deleting…' : 'Delete post' }}
+      </button>
     </div>
   </div>
 </div>

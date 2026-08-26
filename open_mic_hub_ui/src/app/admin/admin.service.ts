@@ -51,7 +51,7 @@ export class AdminService {
     // },
      {
       id: 'bookings-details',
-      title: ' Booking-Details',
+      title: 'Booking Details',
       icon: 'bi bi-journal-bookmark',
       route: '/user/book-details',
       role: BOOKER_ROLES
@@ -91,7 +91,7 @@ export class AdminService {
     // ---------- Artist Role ----------
     {
       id: 'artist-calender',
-      title: 'Calender ',
+      title: 'Calendar',
       icon: 'bi bi-person-lines-fill',
       route: '/artist/calender',
       role: [Role.ARTIST]

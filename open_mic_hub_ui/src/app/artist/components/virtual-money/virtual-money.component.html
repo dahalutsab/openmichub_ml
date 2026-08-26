@@ -1,188 +1,169 @@
-<div class="virtual-money-container">
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-container">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-3">Loading your wallet...</p>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Wallet</h1>
+    <p class="omh-page-sub">Your virtual coin balance and payouts.</p>
   </div>
+  <button type="button" class="omh-btn-secondary" (click)="loadWalletData()">
+    <i class="bi bi-arrow-clockwise"></i> Refresh
+  </button>
+</div>
 
-  <!-- Main Content -->
-  <div *ngIf="!loading && virtualCoinData" class="wallet-card">
-    <!-- Header -->
-    <div class="wallet-header">
-      <div class="artist-info">
-        <div class="profile-section">
-          <img
-            [src]="getProfileImageUrl()"
-            [alt]="virtualCoinData.data.artist.fullName"
-            class="profile-image"
-            (error)="onImageError($event)"
-          >
-          <div class="artist-details">
-            <h2 class="artist-name">{{ virtualCoinData.data.artist.fullName }}</h2>
-            <p class="stage-name">&#64;{{ virtualCoinData.data.artist.stageName }}</p>
-            <div class="badges">
-                  <span class="badge bg-success" *ngIf="virtualCoinData.data.artist.verified">
-                    <i class="fas fa-check-circle"></i> Verified
-                  </span>
-              <span class="badge bg-primary" *ngIf="virtualCoinData.data.artist.active">
-                    <i class="fas fa-circle"></i> Active
-                  </span>
-            </div>
-          </div>
-        </div>
-      </div>
+<!-- Loading -->
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading your wallet…</span>
+</div>
+
+<!-- Error -->
+<div class="omh-alert-critical mb-4" *ngIf="errorMessage">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ errorMessage }}</div>
+  <button type="button" class="omh-btn-icon" aria-label="Dismiss" (click)="errorMessage = ''">
+    <i class="bi bi-x-lg"></i>
+  </button>
+</div>
+
+<div class="grid gap-4 lg:grid-cols-3" *ngIf="!loading && virtualCoinData">
+
+  <!-- Balance, on the dark ground so the figure reads as the headline of the page -->
+  <section class="omh-stage rounded-card p-6 lg:col-span-2">
+    <p class="omh-eyebrow text-on-stage-dim">Virtual coin balance</p>
+
+    <div class="mt-2 flex items-baseline gap-2">
+      <span class="font-display text-xl font-bold text-on-stage-dim">NPR</span>
+      <span class="omh-figure text-5xl text-on-stage">{{ artist.balance | number:'1.2-2' }}</span>
     </div>
 
-    <!-- Balance Card -->
-    <div class="balance-card">
-      <div class="balance-icon">
-        <i class="fas fa-coins"></i>
-      </div>
-      <div class="balance-info">
-        <h3 class="balance-label">Virtual Coins Balance</h3>
-        <div class="balance-amount">
-          <span class="currency-symbol">₹</span>
-          <span class="amount">{{ virtualCoinData.data.balance | number:'1.2-2' }}</span>
-        </div>
-        <p class="wallet-id">Wallet ID: #{{ virtualCoinData.data.virtualCoinId }}</p>
-      </div>
-    </div>
+    <p class="mt-2 text-sm text-on-stage-dim">Wallet #{{ artist.walletId }}</p>
 
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-      <button
-        class="btn btn-withdraw"
-        [disabled]="virtualCoinData.data.balance <= 0"
-        (click)="showWithdrawModal()"
-      >
-        <i class="fas fa-money-bill-wave"></i>
-        Withdraw Funds
+    <div class="mt-6 flex flex-wrap gap-2">
+      <button type="button"
+              class="omh-btn-primary"
+              [disabled]="artist.balance <= 0"
+              (click)="openWithdraw()">
+        <i class="bi bi-cash-stack"></i> Withdraw funds
       </button>
-      <button class="btn btn-refresh" (click)="loadWalletData()">
-        <i class="fas fa-sync-alt"></i>
-        Refresh
-      </button>
+      <a routerLink="/artist/coin-transactions" class="omh-navlink">
+        View transactions <i class="bi bi-arrow-right"></i>
+      </a>
     </div>
+  </section>
 
-    <!-- Recent Activity Info -->
-    <div class="info-section">
-      <div class="info-card">
-        <i class="fas fa-info-circle"></i>
-        <div>
-          <h5>How it works</h5>
-          <p>Earn virtual coins by performing at open mic events. Withdraw your earnings anytime with admin approval.</p>
-        </div>
+  <!-- Artist identity -->
+  <section class="omh-card p-6">
+    <div class="flex items-center gap-4">
+      <img [src]="getProfileImageUrl()"
+           [alt]="artist.fullName"
+           class="omh-avatar-lg"
+           (error)="onImageError($event)">
+      <div class="min-w-0">
+        <h2 class="omh-display text-lg">{{ artist.fullName }}</h2>
+        <p class="truncate text-sm text-muted">&#64;{{ artist.stageName }}</p>
       </div>
     </div>
-  </div>
 
-  <!-- Withdraw Modal -->
-  <div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="withdrawModalLabel">
-            <i class="fas fa-money-bill-wave me-2"></i>
-            Withdraw Funds
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form [formGroup]="withdrawForm" (ngSubmit)="submitWithdraw()">
-          <div class="modal-body">
-            <div class="current-balance-info">
-              <div class="balance-display">
-                <span class="label">Available Balance:</span>
-                <span class="amount">₹{{ virtualCoinData?.data?.balance | number:'1.2-2' }}</span>
-              </div>
-            </div>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <span class="omh-status-positive" *ngIf="artist.verified">Verified</span>
+      <span class="omh-status-brand" *ngIf="artist.active">Active</span>
+    </div>
 
-            <div class="mb-3">
-              <label for="withdrawAmount" class="form-label">Withdrawal Amount</label>
-              <div class="input-group">
-                <span class="input-group-text">₹</span>
-                <input
-                  type="number"
-                  class="form-control"
-                  id="withdrawAmount"
-                  formControlName="amount"
-                  [class.is-invalid]="withdrawForm.get('amount')?.invalid && withdrawForm.get('amount')?.touched"
-                  placeholder="Enter amount"
-                  min="1"
-                  [max]="virtualCoinData?.data?.balance || 0"
-                  [step]="0.01"
-                >
-              </div>
-              <div class="invalid-feedback" *ngIf="withdrawForm.get('amount')?.invalid && withdrawForm.get('amount')?.touched">
-                <div *ngIf="withdrawForm.get('amount')?.errors?.['required']">Amount is required</div>
-                <div *ngIf="withdrawForm.get('amount')?.errors?.['min']">Minimum withdrawal amount is ₹1</div>
-                <div *ngIf="withdrawForm.get('amount')?.errors?.['max']">Amount cannot exceed available balance</div>
-              </div>
-            </div>
-
-            <div class="withdrawal-info">
-              <div class="alert alert-info">
-                <i class="fas fa-clock me-2"></i>
-                <strong>Processing Time:</strong> Withdrawal requests are typically processed within 24 hours.
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="withdrawForm.invalid || withdrawProcessing"
-            >
-              <span *ngIf="withdrawProcessing" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              {{ withdrawProcessing ? 'Processing...' : 'Submit Withdrawal' }}
-            </button>
-          </div>
-        </form>
+    <div class="omh-alert-info mt-5 text-sm">
+      <i class="bi bi-info-circle mt-0.5"></i>
+      <div>
+        <p class="font-display font-bold">How it works</p>
+        <p class="mt-0.5">
+          Earn coins performing at open mic events. Withdraw any time — payouts
+          clear once an admin approves them.
+        </p>
       </div>
     </div>
-  </div>
+  </section>
+</div>
 
-  <!-- Success Modal -->
-  <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title" id="successModalLabel">
-            <i class="fas fa-check-circle me-2"></i>
-            Withdrawal Request Submitted
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Withdraw -->
+<div class="omh-modal-backdrop" *ngIf="withdrawOpen" (click)="closeWithdraw()">
+  <div class="omh-modal animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <form [formGroup]="withdrawForm" (ngSubmit)="submitWithdraw()">
+      <div class="omh-modal-head">
+        <h2 class="omh-modal-title">Withdraw funds</h2>
+        <button type="button" class="omh-btn-icon" aria-label="Close" (click)="closeWithdraw()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="omh-modal-body">
+        <div class="flex items-baseline justify-between rounded-card bg-surface-2 px-4 py-3">
+          <span class="omh-defterm">Available balance</span>
+          <span class="omh-figure text-lg">NPR {{ artist.balance | number:'1.2-2' }}</span>
         </div>
-        <div class="modal-body text-center" *ngIf="withdrawResponse">
-          <div class="success-icon">
-            <i class="fas fa-check-circle"></i>
+
+        <div class="omh-field mt-4">
+          <label for="withdrawAmount" class="omh-label">Withdrawal amount</label>
+          <div class="relative">
+            <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted">NPR</span>
+            <input type="number"
+                   id="withdrawAmount"
+                   class="omh-input pl-14"
+                   formControlName="amount"
+                   placeholder="0.00"
+                   min="1"
+                   [max]="artist.balance"
+                   step="0.01">
           </div>
-          <h4>Request Submitted Successfully!</h4>
-          <div class="transaction-details">
-            <p><strong>Transaction ID:</strong> #{{ withdrawResponse.data.transactionId }}</p>
-            <p><strong>Amount:</strong> ₹{{ withdrawResponse.data.amount | number:'1.2-2' }}</p>
-            <p><strong>Status:</strong> {{ withdrawResponse.data.transactionStatus }}</p>
-          </div>
-          <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            Your withdrawal request has been sent to the admin and will be processed within 24 hours.
+
+          <div class="omh-error" *ngIf="amountControl?.invalid && amountControl?.touched">
+            <span *ngIf="amountControl?.errors?.['required']">Enter an amount.</span>
+            <span *ngIf="amountControl?.errors?.['min']">The minimum withdrawal is NPR 1.</span>
+            <span *ngIf="amountControl?.errors?.['max']">That is more than your balance.</span>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-success" data-bs-dismiss="modal" (click)="loadWalletData()">
-            Okay, Got it!
-          </button>
+
+        <div class="omh-alert-info mt-4 text-sm">
+          <i class="bi bi-clock mt-0.5"></i>
+          <span><strong>Processing time:</strong> requests are usually settled within 24 hours.</span>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Error Alert -->
-  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fas fa-exclamation-triangle me-2"></i>
-    {{ errorMessage }}
-    <button type="button" class="btn-close" aria-label="Close" (click)="errorMessage = ''"></button>
+      <div class="omh-modal-foot">
+        <button type="button" class="omh-btn-secondary" (click)="closeWithdraw()">Cancel</button>
+        <button type="submit" class="omh-btn-primary" [disabled]="withdrawForm.invalid || withdrawProcessing">
+          <span class="omh-spinner-sm" *ngIf="withdrawProcessing"></span>
+          {{ withdrawProcessing ? 'Processing…' : 'Submit request' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Success -->
+<div class="omh-modal-backdrop" *ngIf="successOpen" (click)="closeSuccess()">
+  <div class="omh-modal animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="omh-modal-body text-center" *ngIf="withdrawResponse">
+      <div class="mx-auto mb-4 mt-2 flex h-14 w-14 items-center justify-center rounded-full bg-positive-soft">
+        <i class="bi bi-check-circle-fill text-2xl text-positive"></i>
+      </div>
+
+      <h2 class="omh-display text-xl">Request submitted</h2>
+      <p class="omh-page-sub">An admin will review your payout shortly.</p>
+
+      <dl class="omh-deflist mt-5 text-left">
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Transaction</dt>
+          <dd class="omh-defvalue">#{{ withdrawResponse.data.transactionId }}</dd>
+        </div>
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Amount</dt>
+          <dd class="omh-defvalue omh-figure">NPR {{ withdrawResponse.data.amount | number:'1.2-2' }}</dd>
+        </div>
+        <div class="omh-defrow">
+          <dt class="omh-defterm">Status</dt>
+          <dd><span class="omh-status-pending">{{ withdrawResponse.data.transactionStatus }}</span></dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="omh-modal-foot">
+      <button type="button" class="omh-btn-primary" (click)="closeSuccess()">Got it</button>
+    </div>
   </div>
 </div>

@@ -1,167 +1,139 @@
-<div class="users-container">
-  <!-- Header Section -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="page-title">Users Management</h2>
-    <div class="users-stats">
-      <span class="badge bg-primary">Total: {{ totalUsers }}</span>
-    </div>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Users</h1>
+    <p class="omh-page-sub">
+      {{ totalUsers }} {{ totalUsers === 1 ? 'account' : 'accounts' }}<span *ngIf="selectedRole"> with the {{ selectedRole | titlecase }} role</span>.
+    </p>
   </div>
 
-  <!-- Filters Section -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <div class="form-group">
-            <label for="roleFilter" class="form-label fw-semibold">Filter by Role:</label>
-            <select
-              id="roleFilter"
-              class="form-select custom-select"
-              [(ngModel)]="selectedRole"
-              (change)="onRoleFilterChange()"
-            >
-              <option value="">All Roles</option>
-              <option value="ADMIN">Admin</option>
-              <option value="USER">User</option>
-              <option value="ARTIST">Artist</option>
-            </select>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="filter-summary">
-            <small class="text-muted">
-              Showing {{ filteredUsers.length }} of {{ totalUsers }} users
-              <span *ngIf="selectedRole"> with role: <strong>{{ selectedRole }}</strong></span>
-            </small>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="omh-field w-full sm:w-56">
+    <label for="roleFilter" class="omh-label">Filter by role</label>
+    <select id="roleFilter"
+            class="omh-select"
+            [(ngModel)]="selectedRole"
+            (change)="onRoleFilterChange()">
+      <option value="">All roles</option>
+      <option value="ADMIN">Admin</option>
+      <option value="USER">User</option>
+      <option value="ARTIST">Artist</option>
+    </select>
   </div>
-
-  <!-- Users Grid -->
-  <div class="row" *ngIf="paginatedUsers.length > 0; else noUsersTemplate">
-    <div class="col-lg-6 col-xl-4 mb-4" *ngFor="let user of paginatedUsers">
-      <div class="card user-card h-100">
-        <div class="card-body">
-          <!-- User Avatar and Status -->
-          <div class="d-flex align-items-center mb-3">
-            <div class="user-avatar me-3">
-              <img
-                *ngIf="user.profileImage; else defaultAvatar"
-                [src]="user.profileImage"
-                [alt]="user.fullName"
-                class="avatar-img"
-                (error)="onImageError($event)"
-              >
-              <ng-template #defaultAvatar>
-                <div class="avatar-placeholder">
-                  {{ getInitials(user.fullName) }}
-                </div>
-              </ng-template>
-            </div>
-            <div class="flex-grow-1">
-              <h5 class="card-title mb-1">{{ user.fullName }}</h5>
-              <span
-                class="badge status-badge"
-                [class.bg-success]="user.active"
-                [class.bg-secondary]="!user.active"
-              >
-                    {{ user.active ? 'Active' : 'Inactive' }}
-                  </span>
-            </div>
-          </div>
-
-          <!-- User Details -->
-          <div class="user-details">
-            <div class="detail-item mb-2">
-              <i class="bi bi-envelope me-2"></i>
-              <span class="text-muted">{{ user.email }}</span>
-            </div>
-
-
-            <!-- Roles -->
-            <div class="roles-section">
-              <div class="d-flex flex-wrap gap-1">
-                    <span
-                      *ngFor="let role of user.roles"
-                      class="badge role-badge"
-                      [class.bg-danger]="role.role === 'ADMIN'"
-                      [class.bg-primary]="role.role === 'USER'"
-                      [class.bg-warning]="role.role === 'ARTIST'"
-                      [title]="role.description"
-                    >
-                      {{ role.role }}
-                    </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- No Users Template -->
-  <ng-template #noUsersTemplate>
-    <div class="card">
-      <div class="card-body text-center py-5">
-        <i class="bi bi-people fs-1 text-muted mb-3"></i>
-        <h4 class="text-muted">No users found</h4>
-        <p class="text-muted mb-0">
-              <span *ngIf="selectedRole; else noUsersAtAll">
-                No users found with role: <strong>{{ selectedRole }}</strong>
-              </span>
-          <ng-template #noUsersAtAll>
-            There are no users available at the moment.
-          </ng-template>
-        </p>
-      </div>
-    </div>
-  </ng-template>
-
-  <!-- Pagination -->
-  <nav aria-label="Users pagination" *ngIf="totalPages > 1">
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <div class="pagination-info">
-        <small class="text-muted">
-          Page {{ currentPage + 1 }} of {{ totalPages }}
-          ({{ startIndex }} - {{ endIndex }} of {{ filteredUsers.length }} users)
-        </small>
-      </div>
-
-      <ul class="pagination mb-0">
-        <li class="page-item" [class.disabled]="currentPage === 0">
-          <button class="page-link" (click)="goToPage(0)" [disabled]="currentPage === 0">
-            <i class="bi bi-chevron-double-left"></i>
-          </button>
-        </li>
-        <li class="page-item" [class.disabled]="currentPage === 0">
-          <button class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
-            <i class="bi bi-chevron-left"></i>
-          </button>
-        </li>
-
-        <li
-          *ngFor="let page of getVisiblePages()"
-          class="page-item"
-          [class.active]="page === currentPage"
-        >
-          <button class="page-link" (click)="goToPage(page)">
-            {{ page + 1 }}
-          </button>
-        </li>
-
-        <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-          <button class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages - 1">
-            <i class="bi bi-chevron-right"></i>
-          </button>
-        </li>
-        <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-          <button class="page-link" (click)="goToPage(totalPages - 1)" [disabled]="currentPage === totalPages - 1">
-            <i class="bi bi-chevron-double-right"></i>
-          </button>
-        </li>
-      </ul>
-    </div>
-  </nav>
 </div>
+
+<section class="omh-panel">
+
+  <!-- Loading -->
+  <div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+    <span class="omh-spinner-md"></span>
+    <span class="text-base text-muted">Loading users…</span>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="omh-table-wrap" *ngIf="users.length; else noUsers">
+      <table class="omh-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td>
+              <div class="flex items-center gap-3">
+                <img *ngIf="user.profileImage; else initials"
+                     [src]="user.profileImage"
+                     [alt]="user.fullName"
+                     class="omh-avatar-sm"
+                     (error)="onImageError(user)">
+                <ng-template #initials>
+                  <span class="omh-avatar-fallback h-8 w-8 text-xs">{{ getInitials(user.fullName) }}</span>
+                </ng-template>
+                <span class="font-medium">{{ user.fullName }}</span>
+              </div>
+            </td>
+
+            <td class="text-muted">{{ user.email }}</td>
+
+            <td>
+              <div class="flex flex-wrap gap-1">
+                <span *ngFor="let role of user.roles"
+                      [class]="roleClass(role.role)"
+                      [title]="role.description">
+                  {{ role.role }}
+                </span>
+              </div>
+            </td>
+
+            <td>
+              <span [class]="user.active ? 'omh-status-positive' : 'omh-status-neutral'">
+                {{ user.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noUsers>
+      <div class="p-4">
+        <div class="omh-empty">
+          <i class="bi bi-people omh-empty-icon"></i>
+          <p class="omh-empty-title">No users found</p>
+          <p class="omh-empty-text">
+            <span *ngIf="selectedRole; else noneAtAll">
+              Nobody currently holds the {{ selectedRole | titlecase }} role.
+            </span>
+            <ng-template #noneAtAll>There are no users registered yet.</ng-template>
+          </p>
+          <button type="button"
+                  class="omh-btn-secondary mt-4"
+                  *ngIf="selectedRole"
+                  (click)="clearFilter()">
+            Clear filter
+          </button>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Pagination -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"
+         *ngIf="totalPages > 1">
+      <p class="text-xs text-muted">
+        Page {{ currentPage + 1 }} of {{ totalPages }} · showing {{ startIndex }}–{{ endIndex }} of {{ totalUsers }}
+      </p>
+
+      <nav class="omh-pagination" aria-label="Users pagination">
+        <button type="button" class="omh-page-btn" [disabled]="currentPage === 0"
+                (click)="goToPage(0)" aria-label="First page">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="currentPage === 0"
+                (click)="goToPage(currentPage - 1)" aria-label="Previous page">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <button type="button"
+                *ngFor="let page of getVisiblePages()"
+                class="omh-page-btn"
+                [class.is-active]="page === currentPage"
+                [attr.aria-current]="page === currentPage ? 'page' : null"
+                (click)="goToPage(page)">
+          {{ page + 1 }}
+        </button>
+
+        <button type="button" class="omh-page-btn" [disabled]="currentPage >= totalPages - 1"
+                (click)="goToPage(currentPage + 1)" aria-label="Next page">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="currentPage >= totalPages - 1"
+                (click)="goToPage(totalPages - 1)" aria-label="Last page">
+          <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </nav>
+    </div>
+  </ng-container>
+
+</section>

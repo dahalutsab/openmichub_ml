@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl, ValidatorFn } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { HttpClient } from '@angular/common/http';
-import { MatDialog } from '@angular/material/dialog';
+import { environment } from '../../../environment/environment';
 
 interface TimeSlot {
   id?: number;
@@ -27,7 +27,6 @@ interface AvailabilityResponse {
   selector: 'app-artist-calendar',
   standalone: false,
   templateUrl: './artist-calendar.component.html',
-  styleUrls: ['./artist-calendar.component.scss']
 })
 export class ArtistCalendarComponent implements OnInit {
   daysOfWeek = [
@@ -60,8 +59,7 @@ export class ArtistCalendarComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private toastr: ToastrService,
-    private dialog: MatDialog
+    private toastr: ToastrService
   ) {
     this.calendarForm = this.fb.group({
       timeSlots: this.fb.array([], [this.timeSlotsValidator()])
@@ -195,7 +193,7 @@ export class ArtistCalendarComponent implements OnInit {
 
   loadExistingAvailability() {
     this.isLoading = true;
-    this.http.get<AvailabilityResponse>('http://localhost:8181/api/v1/artist/availability').subscribe({
+    this.http.get<AvailabilityResponse>(`${environment.baseUrl}/artist/availability`).subscribe({
       next: (response) => {
         this.availabilityData = {};
         if (response.status === 'OK' && Array.isArray(response.data)) {
@@ -290,7 +288,7 @@ export class ArtistCalendarComponent implements OnInit {
       }))
     };
 
-    this.http.post('http://localhost:8181/api/v1/artist/availability', payload).subscribe({
+    this.http.post(`${environment.baseUrl}/artist/availability`, payload).subscribe({
       next: () => {
         this.toastr.success('Availability saved successfully!');
         this.availabilityData[this.selectedDay.key] = payload.availabilityTimes;

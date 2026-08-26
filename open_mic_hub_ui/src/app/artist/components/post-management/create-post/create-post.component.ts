@@ -9,7 +9,6 @@ import { ToastService } from '../../../../auth/toastr.service';
   selector: 'app-create-post',
   standalone: false,
   templateUrl: './create-post.component.html',
-  styleUrl: './create-post.component.scss'
 })
 export class CreatePostComponent {
 
@@ -35,19 +34,21 @@ export class CreatePostComponent {
     this.selectedFiles = [];
     this.imagePreviews = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.type.startsWith('image/')) {
-        this.selectedFiles.push(file);
+    const images = Array.from(files).filter(file => file.type.startsWith('image/'));
+    this.selectedFiles = images;
 
-        // Create image preview
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          this.imagePreviews.push(e.target.result);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
+    // Each preview is written to the slot matching its file. Pushing on
+    // FileReader completion instead meant previews landed in whatever order
+    // the reads finished, so removing one could drop a different image.
+    this.imagePreviews = new Array(images.length).fill('');
+
+    images.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imagePreviews[index] = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   removeImage(index: number): void {
@@ -56,30 +57,24 @@ export class CreatePostComponent {
   }
 
   onSubmit(): void {
-    if (this.postForm.valid) {
-      this.loading = true;
-      const post: Post = this.postForm.value;
-
-      this.postService.createPost(post, this.selectedFiles).subscribe({
-        next: (response) => {
-          console.log('Post created successfully:', response);
-          this.toastr.showSuccess('Post created successfully');
-          this.router.navigate(['artist/posts']);
-        },
-        error: (error) => {
-          console.error('Error creating post:', error);
-          this.loading = false;
-        }
-      });
-    } else {
-      this.markFormGroupTouched();
+    if (this.postForm.invalid) {
+      this.postForm.markAllAsTouched();
+      return;
     }
-  }
 
-  private markFormGroupTouched(): void {
-    Object.keys(this.postForm.controls).forEach(key => {
-      const control = this.postForm.get(key);
-      control?.markAsTouched();
+    this.loading = true;
+    const post: Post = this.postForm.value;
+
+    this.postService.createPost(post, this.selectedFiles).subscribe({
+      next: () => {
+        this.toastr.showSuccess('Post created successfully');
+        this.router.navigate(['artist/posts']);
+      },
+      error: (error) => {
+        console.error('Error creating post:', error);
+        this.toastr.showError('Could not create the post. Please try again.');
+        this.loading = false;
+      }
     });
   }
 
@@ -90,5 +85,3 @@ export class CreatePostComponent {
   get title() { return this.postForm.get('title'); }
   get content() { return this.postForm.get('content'); }
 }
-
-

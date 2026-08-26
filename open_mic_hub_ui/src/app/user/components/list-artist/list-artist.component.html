@@ -1,109 +1,186 @@
-<div class="container">
-    <h1>Available Artist</h1>
-    <hr>
-    
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-    <div class="col" *ngFor="let artist of artists; let i = index">
-      <div class="card shadow-sm border-0 artist-card">
-        <div class="avatar-container">
-          <img [src]="artist.profilePictureUrl" class="avatar-img" alt="{{ artist.stageName }}'s avatar" [ngStyle]="{'object-fit': 'cover'}">
-        </div>
-        <div class="card-body p-3">
-          <h5 class="card-title text-primary mb-1">{{ artist.stageName }}</h5>
-          <h6 class="card-subtitle mb-2 text-muted">{{ artist.fullName }}</h6>
-          <p class="card-text text-secondary bio-text">{{ artist.bio }}</p>
-          <div class="mb-2">
-            <strong class="small-text">Genres:</strong>
-            <span *ngFor="let g of artist.genre" class="badge bg-info text-white me-1 small-text">{{ g.name }}</span>
-          </div>
-          <div class="mb-2">
-            <strong class="small-text">Categories:</strong>
-            <ng-container *ngFor="let g of artist.genre">
-              <span *ngFor="let c of g.categories" class="badge bg-secondary text-white me-1 small-text">{{ c.name }}</span>
-            </ng-container>
-          </div>
-          <button class="btn btn-success w-100 mt-2" (click)="hireArtist(artist)">Hire Artist</button>
-        </div>
-      </div>
-    </div>
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="omh-display text-2xl">Browse artists</h1>
+    <p class="mt-0.5 text-base text-muted">
+      {{ artists.length }} {{ artists.length === 1 ? 'artist' : 'artists' }} available to book.
+    </p>
   </div>
-  <ng-template #noArtists>
-    <div class="alert alert-info text-center" role="alert">
-      No artists found.
-    </div>
-  </ng-template>
+  <a routerLink="/discover" class="omh-btn-secondary">
+    <i class="bi bi-stars"></i> Smart search
+  </a>
 </div>
 
-<!-- Hire Modal -->
-<div class="modal fade" id="hireModal" tabindex="-1" aria-labelledby="hireModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content rounded-3">
-      <div class="modal-header bg-light border-bottom">
-        <h5 class="modal-title" id="hireModalLabel">Availability for {{ selectedArtist?.stageName }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading artists…</span>
+</div>
+
+<div class="omh-alert-critical mb-4" *ngIf="error && !loading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="loadArtists()">Try again</button>
+</div>
+
+<!-- Grid -->
+<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" *ngIf="!loading && artists.length">
+  <article class="omh-tile overflow-hidden !p-0" *ngFor="let artist of artists">
+
+    <div class="relative">
+      <img [src]="artist.profilePictureUrl || fallbackAvatar"
+           [alt]="artist.stageName"
+           class="h-44 w-full object-cover"
+           (error)="onImageError(artist)">
+      <span class="absolute right-2 top-2 flex items-center gap-1 rounded-pill bg-stage-ink/75 px-2 py-1 text-xs text-white"
+            *ngIf="artist.rating">
+        <i class="bi bi-star-fill text-stage"></i>{{ artist.rating | number:'1.1-1' }}
+      </span>
+    </div>
+
+    <div class="flex flex-1 flex-col p-4">
+      <h2 class="truncate font-display text-md font-bold text-ink">{{ artist.stageName }}</h2>
+      <p class="truncate text-sm text-muted">{{ artist.fullName }}</p>
+
+      <p class="mt-2 line-clamp-2 text-sm text-ink-soft" *ngIf="artist.bio">{{ artist.bio }}</p>
+
+      <div class="mt-3 flex flex-wrap gap-1" *ngIf="genresOf(artist).length">
+        <span class="omh-chip" *ngFor="let genre of genresOf(artist)">{{ genre }}</span>
       </div>
-      <div class="modal-body">
-        <ng-container *ngIf="selectedAvailability?.availabilities?.length > 0; else noAvailability">
-          <div *ngFor="let day of selectedAvailability.availabilities" class="mb-4">
-            <h6 class="text-primary fw-bold">{{ day.dayOfWeek }}</h6>
-            <div *ngFor="let slot of day.availabilityTimes" class="d-flex justify-content-between align-items-center border rounded p-3 mb-2 bg-light">
-              <span class="text-dark">{{ slot.startTime }} - {{ slot.endTime }}</span>
-              <button class="btn btn-outline-primary btn-sm" (click)="bookSlot(day.dayOfWeek, slot.startTime, slot.endTime)">Book</button>
+
+      <div class="mt-4 flex gap-2 border-t border-line pt-3">
+        <button type="button" class="omh-btn-primary omh-btn-sm flex-1" (click)="hireArtist(artist)">
+          <i class="bi bi-calendar-plus"></i> Hire
+        </button>
+        <a [routerLink]="['/user/view-artist', artist.artistId || artist.id]"
+           class="omh-btn-secondary omh-btn-sm">
+          View
+        </a>
+      </div>
+    </div>
+  </article>
+</div>
+
+<div class="omh-empty" *ngIf="!loading && !artists.length && !error">
+  <i class="bi bi-music-note-list omh-empty-icon"></i>
+  <p class="omh-empty-title">No artists found</p>
+  <p class="omh-empty-text">Nobody is listed yet. Check back soon.</p>
+</div>
+
+<!-- Availability. Was a Bootstrap modal opened from TypeScript; the bundle that
+     provided that is gone, so it is component state now. -->
+<div class="omh-modal-backdrop" *ngIf="availabilityOpen" (click)="closeAvailability()">
+  <div class="omh-modal max-w-2xl animate-slide-up" (click)="$event.stopPropagation()"
+       role="dialog" aria-modal="true">
+    <div class="omh-modal-head">
+      <div>
+        <h2 class="omh-modal-title">When {{ selectedArtist?.stageName }} can play</h2>
+        <p class="mt-0.5 text-sm text-muted">Pick a slot to start a booking.</p>
+      </div>
+      <button type="button" class="omh-btn-icon" aria-label="Close" (click)="closeAvailability()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="omh-modal-body max-h-[60vh] overflow-y-auto">
+      <div class="flex flex-col gap-4" *ngIf="availabilityDays.length; else noAvailability">
+        <div *ngFor="let day of availabilityDays">
+          <p class="omh-label">{{ pretty(day.dayOfWeek) }}</p>
+          <div class="flex flex-col gap-2">
+            <div *ngFor="let slot of day.availabilityTimes"
+                 class="flex items-center justify-between rounded-card border border-line px-3 py-2.5">
+              <span class="text-base text-ink">
+                {{ shortTime(slot.startTime) }} – {{ shortTime(slot.endTime) }}
+              </span>
+              <button type="button" class="omh-btn-secondary omh-btn-sm"
+                      (click)="bookSlot(day.dayOfWeek, slot.startTime, slot.endTime)">
+                Book this slot
+              </button>
             </div>
           </div>
-        </ng-container>
-        <ng-template #noAvailability>
-          <p class="text-muted text-center">No availability found.</p>
-        </ng-template>
+        </div>
       </div>
-      <div class="modal-footer border-top">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
+
+      <ng-template #noAvailability>
+        <div class="omh-empty border-0 py-8">
+          <i class="bi bi-calendar-x omh-empty-icon"></i>
+          <p class="omh-empty-title">No published availability</p>
+          <p class="omh-empty-text">
+            This artist has not set a schedule yet. You can still send a request with your own times.
+          </p>
+          <button type="button" class="omh-btn-primary mt-4" (click)="bookSlot('', '', '')">
+            Request anyway
+          </button>
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="omh-modal-foot">
+      <button type="button" class="omh-btn-secondary" (click)="closeAvailability()">Close</button>
     </div>
   </div>
 </div>
 
-<!-- Booking Modal -->
-<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content rounded-3 shadow" [formGroup]="bookingForm" (ngSubmit)="bookNow()">
-      <div class="modal-header bg-light border-bottom">
-        <h5 class="modal-title" id="bookingModalLabel">Book {{ selectedArtist?.stageName }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Booking form -->
+<div class="omh-modal-backdrop" *ngIf="bookingOpen" (click)="closeBooking()">
+  <div class="omh-modal animate-slide-up" (click)="$event.stopPropagation()"
+       role="dialog" aria-modal="true">
+    <form [formGroup]="bookingForm" (ngSubmit)="bookNow()">
+      <div class="omh-modal-head">
+        <h2 class="omh-modal-title">Book {{ selectedArtist?.stageName }}</h2>
+        <button type="button" class="omh-btn-icon" aria-label="Close" (click)="closeBooking()">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
-      <div class="modal-body row g-3">
-        <div class="col-12">
-          <label class="form-label fw-semibold">Venue</label>
-          <input type="text" formControlName="venue" class="form-control" placeholder="Enter venue name" />
+      <div class="omh-modal-body">
+        <div class="grid gap-4">
+          <div class="omh-field">
+            <label for="venue" class="omh-label">Venue <span class="text-hot">*</span></label>
+            <input id="venue" type="text" class="omh-input" formControlName="venue"
+                   placeholder="Where is the event?">
+            <p class="omh-error" *ngIf="invalid('venue')">A venue is required.</p>
+          </div>
+
+          <div class="omh-field">
+            <label for="eventDate" class="omh-label">Event date <span class="text-hot">*</span></label>
+            <input id="eventDate" type="date" class="omh-input" formControlName="eventDate"
+                   [min]="today">
+            <p class="omh-error" *ngIf="invalid('eventDate')">Pick a date.</p>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="omh-field">
+              <label for="startTime" class="omh-label">Start time <span class="text-hot">*</span></label>
+              <input id="startTime" type="time" class="omh-input" formControlName="startTime">
+              <p class="omh-error" *ngIf="invalid('startTime')">Pick a start time.</p>
+            </div>
+            <div class="omh-field">
+              <label for="endTime" class="omh-label">End time <span class="text-hot">*</span></label>
+              <input id="endTime" type="time" class="omh-input" formControlName="endTime">
+              <p class="omh-error" *ngIf="invalid('endTime')">Pick an end time.</p>
+            </div>
+          </div>
+
+          <div class="omh-field">
+            <label for="eventType" class="omh-label">Event type <span class="text-hot">*</span></label>
+            <input id="eventType" type="text" class="omh-input" formControlName="eventType"
+                   placeholder="Concert, comedy night, private party…">
+            <p class="omh-error" *ngIf="invalid('eventType')">Tell the artist what the event is.</p>
+          </div>
         </div>
 
-        <div class="col-12">
-          <label class="form-label fw-semibold">Event Date</label>
-          <input type="date" formControlName="eventDate" class="form-control" />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Start Time <small class="text-muted">(AM/PM)</small></label>
-          <input type="time" formControlName="startTime" class="form-control" />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">End Time <small class="text-muted">(AM/PM)</small></label>
-          <input type="time" formControlName="endTime" class="form-control" />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label fw-semibold">Event Type</label>
-          <input type="text" formControlName="eventType" class="form-control" placeholder="e.g., Concert, Comedy Show" />
+        <div class="omh-alert-info mt-4 text-sm">
+          <i class="bi bi-info-circle mt-0.5"></i>
+          <span>The artist reviews your request before any payment is taken.</span>
         </div>
       </div>
 
-      <div class="modal-footer border-top">
-        <button class="btn btn-primary" type="submit">Confirm Booking</button>
-        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancel</button>
+      <div class="omh-modal-foot">
+        <button type="button" class="omh-btn-secondary" (click)="closeBooking()">Cancel</button>
+        <button type="submit" class="omh-btn-primary" [disabled]="booking">
+          <span class="omh-spinner-sm" *ngIf="booking"></span>
+          {{ booking ? 'Sending…' : 'Send request' }}
+        </button>
       </div>
     </form>
   </div>
 </div>
-

@@ -1,13 +1,12 @@
 import { Component, NgZone, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../user.service';
-import { MatSnackBar } from '@angular/material/snack-bar'; 
+import { ToastService } from '../../auth/toastr.service';
 
 @Component({
   selector: 'app-payment-callback',
-  standalone:false,
+  standalone: false,
   templateUrl: './payment-callback.component.html',
-  styleUrls: ['./payment-callback.component.scss']
 })
 export class PaymentCallbackComponent implements OnInit {
   queryParams: any;
@@ -15,40 +14,44 @@ export class PaymentCallbackComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private userService: UserService,
-    private snackBar: MatSnackBar,         
-    private router: Router  ,
-      private ngZone: NgZone 
+    private toast: ToastService,
+    private router: Router,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
-  this.route.queryParams.subscribe(params => {
-    this.queryParams = params;
+    this.route.queryParams.subscribe(params => {
+      this.queryParams = params;
 
-    console.log('Callback Params:', params); // Debug
+      if (this.isComplete) {
+        this.userService.confirmPaymentViaPost(params).subscribe({
+          next: () => {
+            this.toast.showSuccess('Payment successful!');
+            this.ngZone.run(() => {
+              this.router.navigate(['/user/bookings']);
+            });
+          },
+          error: (err) => {
+            console.error('Payment Callback Failed', err);
+            this.toast.showError('Payment processing failed on the server.');
+          }
+        });
+      }
+    });
+  }
 
-    if (params['status']?.toLowerCase() === 'completed') {
-      this.userService.confirmPaymentViaPost(params).subscribe({
-        next: (res) => {
-          this.snackBar.open('Payment Successful!', 'Close', { duration: 3000 });
+  get isComplete(): boolean {
+    return this.queryParams?.['status']?.toLowerCase() === 'completed';
+  }
 
-          this.ngZone.run(() => {
-            this.router.navigate(['/user/bookings']);
-          });
-        },
-        error: (err) => {
-          console.error('Payment Callback Failed', err);
-          this.snackBar.open('Payment processing failed on server.', 'Close', { duration: 3000 });
-        }
-      });
-    }
-  });
-}
+  /** The gateway reports paisa; the UI shows rupees. */
+  get amount(): number {
+    return Number(this.queryParams?.['amount'] ?? 0) / 100;
+  }
 
-
-goToBookings() {
-  this.ngZone.run(() => {
-    this.router.navigate(['/user/bookings']);
-  });
-}
-
+  goToBookings() {
+    this.ngZone.run(() => {
+      this.router.navigate(['/user/bookings']);
+    });
+  }
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { environment } from '../../../environment/environment';
 
 interface VirtualCoinResponse {
   timestamp: string;
@@ -36,11 +37,21 @@ interface WithdrawResponse {
   status: string;
 }
 
+/** Inline SVG stand-in, used when an artist's picture fails to load. */
+const AVATAR_FALLBACK =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+       <rect width="80" height="80" fill="#eeedf3"/>
+       <circle cx="40" cy="32" r="13" fill="#b6b2c6"/>
+       <path d="M14 74c0-14.4 11.6-24 26-24s26 9.6 26 24z" fill="#b6b2c6"/>
+     </svg>`
+  );
+
 @Component({
   selector: 'app-virtual-money',
   standalone: false,
   templateUrl: './virtual-money.component.html',
-  styleUrls: ['./virtual-money.component.scss'],
 })
 export class VirtualMoneyComponent implements OnInit {
   virtualCoinData: VirtualCoinResponse | null = null;
@@ -50,7 +61,13 @@ export class VirtualMoneyComponent implements OnInit {
   withdrawProcessing = false;
   errorMessage = '';
 
-  private readonly API_BASE_URL = 'http://localhost:8181/api/v1';
+  // Modal state. These were Bootstrap modals driven from TypeScript via
+  // `new window.bootstrap.Modal(...)`; the bundle that provided that is gone,
+  // so they are plain component state now.
+  withdrawOpen = false;
+  successOpen = false;
+
+  private readonly apiBaseUrl = environment.baseUrl;
 
   constructor(
     private http: HttpClient,
@@ -69,17 +86,35 @@ export class VirtualMoneyComponent implements OnInit {
     this.loadWalletData();
   }
 
+  /** Flattened view of the response, so the template is not five levels deep. */
+  get artist() {
+    const data = this.virtualCoinData?.data;
+    return {
+      walletId: data?.virtualCoinId ?? 0,
+      balance: data?.balance ?? 0,
+      fullName: data?.artist?.fullName ?? 'Artist',
+      stageName: data?.artist?.stageName ?? '',
+      verified: data?.artist?.verified ?? false,
+      active: data?.artist?.active ?? false,
+      profileImage: data?.artist?.profileImage ?? '',
+    };
+  }
+
+  get amountControl(): AbstractControl | null {
+    return this.withdrawForm.get('amount');
+  }
+
   loadWalletData() {
     this.loading = true;
     this.errorMessage = '';
 
-    this.http.get<VirtualCoinResponse>(`${this.API_BASE_URL}/virtual-coins/get-logged-in-artist`)
+    this.http.get<VirtualCoinResponse>(`${this.apiBaseUrl}/virtual-coins/get-logged-in-artist`)
       .subscribe({
         next: (response) => {
           this.virtualCoinData = response;
           this.loading = false;
-          // Update form validators with new balance
-          this.withdrawForm.get('amount')?.updateValueAndValidity();
+          // Re-run the max validator against the balance that just arrived.
+          this.amountControl?.updateValueAndValidity();
         },
         error: (error) => {
           console.error('Error loading wallet data:', error);
@@ -89,62 +124,65 @@ export class VirtualMoneyComponent implements OnInit {
       });
   }
 
-  maxBalanceValidator(control: any) {
+  maxBalanceValidator(control: AbstractControl) {
     if (!this.virtualCoinData) return null;
     const value = control.value;
-    if (value && value > this.virtualCoinData.data.balance) {
-      return { max: { max: this.virtualCoinData.data.balance, actual: value } };
+    const balance = this.virtualCoinData.data.balance;
+    if (value && value > balance) {
+      return { max: { max: balance, actual: value } };
     }
     return null;
   }
 
   getProfileImageUrl(): string {
-    if (this.virtualCoinData?.data.artist.profileImage) {
-      return this.virtualCoinData.data.artist.profileImage;
-    }
-    return 'assets/default-avatar.png'; // Fallback image
+    return this.artist.profileImage || AVATAR_FALLBACK;
   }
 
   onImageError(event: any) {
-    event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNFNUU3RUIiLz4KPHN2ZyB4PSIyMCIgeT0iMjAiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOUM5Q0EzIj4KPHA+PGNpcmNsZSBjeD0iMTIiIGN5PSI4IiByPSIzIi8+CjxwYXRoIGQ9Im0xMiAxNGMtNC40IDAtOCAyLjctOCA2djJoMTZ2LTJjMC0zLjMtMy42LTYtOC02eiIvPgo8L3N2Zz4KPC9zdmc+';
+    event.target.src = AVATAR_FALLBACK;
   }
 
-  showWithdrawModal() {
-    if (this.virtualCoinData && this.virtualCoinData.data.balance > 0) {
+  openWithdraw() {
+    if (this.artist.balance > 0) {
       this.withdrawForm.reset();
-      // Use Bootstrap's modal method
-      const modal = new (window as any).bootstrap.Modal(document.getElementById('withdrawModal'));
-      modal.show();
+      this.withdrawOpen = true;
     }
+  }
+
+  closeWithdraw() {
+    this.withdrawOpen = false;
+  }
+
+  closeSuccess() {
+    this.successOpen = false;
+    this.loadWalletData();
   }
 
   submitWithdraw() {
-    if (this.withdrawForm.valid && !this.withdrawProcessing) {
-      this.withdrawProcessing = true;
-      this.errorMessage = '';
-
-      const amount = this.withdrawForm.value.amount;
-
-      this.http.post<WithdrawResponse>(`${this.API_BASE_URL}/transactions/withDraw`, { amount })
-        .subscribe({
-          next: (response) => {
-            this.withdrawResponse = response;
-            this.withdrawProcessing = false;
-
-            // Hide withdraw modal
-            const withdrawModal = (window as any).bootstrap.Modal.getInstance(document.getElementById('withdrawModal'));
-            withdrawModal.hide();
-
-            // Show success modal
-            const successModal = new (window as any).bootstrap.Modal(document.getElementById('successModal'));
-            successModal.show();
-          },
-          error: (error) => {
-            console.error('Error submitting withdrawal:', error);
-            this.errorMessage = error.error?.message || 'Failed to submit withdrawal request. Please try again.';
-            this.withdrawProcessing = false;
-          }
-        });
+    if (this.withdrawForm.invalid || this.withdrawProcessing) {
+      this.withdrawForm.markAllAsTouched();
+      return;
     }
+
+    this.withdrawProcessing = true;
+    this.errorMessage = '';
+
+    const amount = this.withdrawForm.value.amount;
+
+    this.http.post<WithdrawResponse>(`${this.apiBaseUrl}/transactions/withDraw`, { amount })
+      .subscribe({
+        next: (response) => {
+          this.withdrawResponse = response;
+          this.withdrawProcessing = false;
+          this.withdrawOpen = false;
+          this.successOpen = true;
+        },
+        error: (error) => {
+          console.error('Error submitting withdrawal:', error);
+          this.errorMessage = error.error?.message || 'Failed to submit withdrawal request. Please try again.';
+          this.withdrawProcessing = false;
+          this.withdrawOpen = false;
+        }
+      });
   }
 }

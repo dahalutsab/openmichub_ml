@@ -1,54 +1,102 @@
+<!-- Icon rail. Always present from lg up. -->
+<aside class="omh-rail" aria-label="Primary">
 
-<div class="d-flex" style="min-height: 150vh; 
-  position: sticky; top: 0;">
-  <!-- Sidebar -->
-  <div class="d-flex flex-column p-3 text-white bg-dark" style="width: 280px; box-shadow: 2px 0 10px rgba(0,0,0,0.1);">
-    <!-- Header -->
-    <a href="/" class="d-flex align-items-center mb-4 text-white text-decoration-none">
-      <span class="fs-4 fw-semibold">OpenMicHub Panel</span>
+  <a [routerLink]="dashboardRoute" class="omh-rail-mark" aria-label="OpenMicHub">
+    <i class="bi bi-soundwave"></i>
+  </a>
+
+  <nav class="flex flex-1 flex-col items-center gap-1">
+    <a *ngFor="let item of railItems"
+       [routerLink]="item.route"
+       routerLinkActive="is-active"
+       class="omh-rail-btn group"
+       [attr.aria-label]="item.title.trim()">
+      <i [ngClass]="item.icon"></i>
+      <span class="omh-rail-tip">{{ item.title.trim() }}</span>
     </a>
-    
-    <hr class="border-secondary my-3">
-    
-    <!-- Navigation -->
-    <ul class="nav nav-pills flex-column mb-auto gap-1">
-      <li *ngFor="let item of navigationItems" class="mb-1">
-        <!-- Navigation Item without children -->
-        <ng-container *ngIf="!item.children || item.children.length === 0; else hasChildren">
-          <a [routerLink]="item.route" class="nav-link text-light d-flex align-items-center rounded px-3 py-2 hover-highlight" 
-             [routerLinkActive]="'active bg-primary'">
-            <i class="bi me-3 fs-5" [ngClass]="item.icon"></i>
-            <span>{{item.title}}</span>
-          </a>
-        </ng-container>
-        
-        <!-- Navigation Item with children -->
-        <ng-template #hasChildren>
-          <div class="mb-2">
-            <a class="nav-link text-light d-flex align-items-center justify-content-between rounded px-3 py-2 hover-highlight" 
-               (click)="toggleExpanded(item)"
-               [class.active]="item.expanded">
-              <span class="d-flex align-items-center">
-                <i class="bi me-3 fs-5" [ngClass]="item.icon"></i>
-                <span>{{item.title}}</span>
-              </span>
-              <i class="bi transition-icon" [ngClass]="item.expanded ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-            </a>
-            <div class="submenu-transition" [ngClass]="{'submenu-expanded': item.expanded}">
-              <ul class="nav flex-column ms-4 mt-1" *ngIf="item.expanded">
-                <li *ngFor="let child of item.children" class="mb-1">
-                  <a [routerLink]="child.route" class="nav-link text-light-emphasis d-flex align-items-center rounded px-3 py-2 hover-highlight" 
-                     [routerLinkActive]="'active bg-primary-subtle text-primary'">
-                    <i class="bi me-2" [ngClass]="child.icon"></i>
-                    <span class="smaller-text">{{child.title}}</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </ng-template>
-      </li>
-    </ul>
-    
+  </nav>
+
+  <!-- Drawer handle, so the labelled list is always one click away. -->
+  <button type="button"
+          class="omh-rail-btn group"
+          [attr.aria-expanded]="layout.sidebarOpen()"
+          aria-label="Open navigation"
+          (click)="layout.toggleSidebar()">
+    <i class="bi bi-list"></i>
+    <span class="omh-rail-tip">All pages</span>
+  </button>
+</aside>
+
+<!-- Scrim, only while the drawer is open. -->
+<div class="omh-scrim" *ngIf="layout.sidebarOpen()" (click)="layout.closeSidebar()"></div>
+
+<!-- Labelled drawer -->
+<aside class="omh-drawer" [class.is-open]="layout.sidebarOpen()" aria-label="All pages">
+
+  <div class="omh-drawer-head">
+    <a [routerLink]="dashboardRoute"
+       class="flex items-center gap-2 font-display text-md font-extrabold tracking-[-0.02em] text-ink"
+       (click)="layout.closeSidebar()">
+      <span class="flex h-7 w-7 items-center justify-center rounded-[8px] bg-accent text-accent-ink">
+        <i class="bi bi-soundwave text-sm"></i>
+      </span>
+      OpenMicHub
+    </a>
+    <button type="button" class="omh-icon-btn" aria-label="Close navigation" (click)="layout.closeSidebar()">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
-</div>
+
+  <nav class="flex flex-1 flex-col gap-0.5 px-2 pb-6">
+    <p class="omh-nav-section">Dashboard</p>
+
+    <a [routerLink]="dashboardRoute"
+       routerLinkActive="is-active"
+       (click)="layout.closeSidebar()"
+       class="omh-nav-link">
+      <i class="bi bi-grid-1x2"></i>
+      <span>Overview</span>
+    </a>
+
+    <p class="omh-nav-section">Manage</p>
+
+    <ng-container *ngFor="let item of navigationItems">
+
+      <a *ngIf="!item.children?.length"
+         [routerLink]="item.route"
+         routerLinkActive="is-active"
+         (click)="layout.closeSidebar()"
+         class="omh-nav-link">
+        <i [ngClass]="item.icon"></i>
+        <span>{{ item.title.trim() }}</span>
+      </a>
+
+      <div *ngIf="item.children?.length">
+        <button type="button"
+                class="omh-nav-link justify-between"
+                [class.is-active]="item.expanded"
+                [attr.aria-expanded]="item.expanded"
+                (click)="toggleExpanded(item)">
+          <span class="flex items-center gap-3">
+            <i [ngClass]="item.icon"></i>
+            <span>{{ item.title.trim() }}</span>
+          </span>
+          <i class="bi bi-chevron-down text-xs transition-transform duration-200"
+             [class.rotate-180]="item.expanded"></i>
+        </button>
+
+        <div class="ml-4 mt-1 flex flex-col gap-0.5 border-l border-line pl-2" *ngIf="item.expanded">
+          <a *ngFor="let child of item.children"
+             [routerLink]="child.route"
+             routerLinkActive="is-active"
+             (click)="layout.closeSidebar()"
+             class="omh-nav-link text-xs">
+            <i [ngClass]="child.icon"></i>
+            <span>{{ child.title.trim() }}</span>
+          </a>
+        </div>
+      </div>
+
+    </ng-container>
+  </nav>
+</aside>

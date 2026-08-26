@@ -8,7 +8,6 @@ import { ToastrService } from 'ngx-toastr';
   selector: 'app-otp',
   standalone:false,
   templateUrl: './otp.component.html',
-  styleUrls: ['./otp.component.scss']
 })
 export class OtpComponent implements OnInit {
   otpForm: FormGroup;

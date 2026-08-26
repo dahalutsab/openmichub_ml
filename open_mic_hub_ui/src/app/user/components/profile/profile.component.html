@@ -1,22 +1,51 @@
-<div *ngIf="isLoading">Loading profile...</div>
+<div class="mb-4">
+  <h1 class="omh-display text-2xl">Profile</h1>
+  <p class="mt-0.5 text-base text-muted">Your account details.</p>
+</div>
 
-<div *ngIf="!isLoading && userData" class="card p-4 shadow">
-  <div class="d-flex align-items-center">
-    <img
-      [src]="userData.profilePicture || 'assets/profile.jpg'"
-      alt="Profile"
-      class="rounded-circle me-3"
-      width="100"
-      height="100"
-    />
-    <div>
-      <h4 class="mb-1">{{ userData.fullName }}</h4>
-      <p class="mb-0 text-muted">{{ userData.userEmail }}</p>
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="isLoading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading profile…</span>
+</div>
 
-      
+<div class="omh-empty" *ngIf="!isLoading && !userData">
+  <i class="bi bi-person-x omh-empty-icon"></i>
+  <p class="omh-empty-title">Profile not found</p>
+  <p class="omh-empty-text">We could not load this account.</p>
+</div>
+
+<section class="omh-tile max-w-2xl" *ngIf="!isLoading && userData">
+  <div class="flex flex-wrap items-center gap-4">
+    <img [src]="userData.profilePicture || fallbackAvatar"
+         [alt]="userData.fullName"
+         class="omh-avatar-xl">
+
+    <div class="min-w-0">
+      <h2 class="omh-display text-xl">{{ userData.fullName }}</h2>
+      <p class="truncate text-base text-muted">{{ userData.userEmail || userData.email }}</p>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        <span class="omh-chip-brand" *ngFor="let role of userData.userRole">{{ role.role }}</span>
+      </div>
     </div>
   </div>
-  <hr />
-  <p><strong>Phone:</strong> {{ userData.phoneNumber || 'N/A' }}</p>
-  <p><strong>Location:</strong> {{ userData.location || 'N/A' }}</p>
-</div>
+
+  <dl class="omh-deflist mt-5 border-t border-line pt-3">
+    <div class="omh-defrow">
+      <dt class="omh-defterm">Phone</dt>
+      <dd class="omh-defvalue">{{ userData.phoneNumber || 'Not set' }}</dd>
+    </div>
+    <div class="omh-defrow">
+      <dt class="omh-defterm">Location</dt>
+      <dd class="omh-defvalue">{{ userData.location || 'Not set' }}</dd>
+    </div>
+  </dl>
+
+  <div class="mt-5 flex flex-wrap gap-2">
+    <a routerLink="/user/bookings" class="omh-btn-secondary">
+      <i class="bi bi-journal-bookmark"></i> My bookings
+    </a>
+    <a routerLink="/user/payment-history" class="omh-btn-secondary">
+      <i class="bi bi-clock-history"></i> Payment history
+    </a>
+  </div>
+</section>
