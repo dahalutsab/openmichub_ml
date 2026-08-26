@@ -31,14 +31,119 @@ SEED_DOMAIN = "seed.openmichub.local"
 # verified so they appear in listings, and they all share this password.
 SEED_PASSWORD_HASH = "$2a$10$54gPf2W4sUQAMD8nr8Moqe8ylugwB/AXanMm2vbPUlGLaBCsCTNm6"
 
-BIO_TEMPLATES = [
-    "{sub} performer with {years} years on stage. Known for {mood} sets that keep a room moving.",
-    "{city}-based {sub} act. Plays weddings, corporate evenings and festivals across Nepal.",
-    "{mood} {sub} music, live. {years} years of gigs, from small rooms to main stages.",
-    "Award-nominated {sub} artist from {city}. Sets built around {mood} arrangements.",
-    "{sub} specialist. {years} years performing; comfortable with crowds of any size.",
+# --- name and bio generation -------------------------------------------------
+#
+# The catalogue is demo data, but it has to read as a real roster: a UI reviewed
+# against "Sound of Bebop 104" tells you nothing about how it handles an actual
+# artist name. These pieces combine into names of realistic shape and length,
+# mixing Nepali and English the way working bands in Kathmandu actually do.
+
+NAME_PREFIX = [
+    "The", "The", "The", "", "", "", "Kollektiv", "Project", "Trio", "Duo",
 ]
-MOODS = ["warm", "high-energy", "intimate", "soulful", "upbeat", "mellow", "atmospheric", "raucous"]
+
+NEPALI_WORDS = [
+    "Himal", "Bagmati", "Machhapuchhre", "Annapurna", "Newa", "Sarangi", "Madal",
+    "Bansuri", "Jhyaure", "Dohori", "Rato", "Kalo", "Sunkoshi", "Trishuli",
+    "Chautari", "Bhairav", "Malashree", "Gandaki", "Tamang", "Sherpa",
+]
+
+ENGLISH_WORDS = [
+    "Velvet", "Neon", "Paper", "Copper", "Midnight", "Static", "Amber", "Slow",
+    "Northern", "Wild", "Quiet", "Golden", "Electric", "Hollow", "Crimson",
+    "Wandering", "Silver", "Broken", "Rising", "Distant", "Lantern", "Ember",
+]
+
+NOUNS = [
+    "Kings", "Collective", "Sessions", "Orchestra", "Society", "Company",
+    "Union", "Brothers", "Sisters", "Assembly", "Ensemble", "Club", "Riot",
+    "Choir", "Hearts", "Lights", "Rooms", "Radio", "Avenue", "Line", "Circle",
+    "Tapes", "Hour", "Affair", "Habit", "Machine",
+]
+
+SOLO_FIRST = [
+    "Aayush", "Bibek", "Sujata", "Nirajan", "Prasiddha", "Anmol", "Sadiksha",
+    "Rohit", "Simran", "Kiran", "Manish", "Prakriti", "Sujan", "Aastha",
+    "Dipesh", "Nabin", "Riya", "Sanjay", "Muna", "Deepak",
+]
+SOLO_LAST = [
+    "Gurung", "Shrestha", "Tamang", "Rai", "Magar", "Thapa", "Karki", "Lama",
+    "Bhattarai", "Adhikari", "Maharjan", "Limbu", "Sherpa", "Pradhan",
+]
+
+# Bios differ in shape, not just in the words slotted into one shape. A list
+# where every entry is "{sub} performer with {years} years" produces a wall of
+# identical-looking cards and makes a layout impossible to judge.
+BIO_SHAPES = [
+    "{opener} {sub} act out of {city}. {credit} {closer}",
+    "{sub} and {sub2}, played live. {credit} Based in {city}.",
+    "{opener} We play {sub}. {years} years of it, mostly around {city}. {closer}",
+    "{sub} for rooms that want {mood}. {credit}",
+    "{city}. {sub}. {years} years. {closer}",
+    "{opener} {sub} with {mood} arrangements — weddings, corporate evenings, "
+    "festivals. {credit}",
+    "Started in {city} in {start_year}. {sub}, {mood}, loud enough to matter. {closer}",
+]
+
+OPENERS = [
+    "", "", "", "Six-piece.", "Four-piece.", "Just the two of us.",
+    "Solo, with a loop pedal.",
+]
+
+CREDITS = [
+    "Regulars at Jazzmandu.", "Played Sattya, Purple Haze and the Lakeside circuit.",
+    "House band at a Thamel bar for two seasons.", "{count} bookings through this platform.",
+    "Toured Pokhara, Chitwan and Dharan last winter.", "Backed three album launches.",
+    "", "", "Wedding season regulars.",
+]
+
+CLOSERS = [
+    "We bring our own PA.", "Sets from 45 minutes to three hours.",
+    "Happy to learn a first-dance song.", "Travel anywhere in the valley.",
+    "", "", "Ask us about the acoustic set.", "We do requests, within reason.",
+]
+
+MOODS = [
+    "warm", "high-energy", "intimate", "soulful", "upbeat", "mellow",
+    "atmospheric", "raucous", "stripped-back", "cinematic",
+]
+
+
+def _make_stage_name(rng, sub_genre: str, index: int) -> str:
+    """A believable act name. Roughly a third are solo artists."""
+    roll = rng.random()
+
+    if roll < 0.3:
+        return f"{rng.choice(SOLO_FIRST)} {rng.choice(SOLO_LAST)}"
+
+    if roll < 0.55:
+        word = rng.choice(NEPALI_WORDS)
+        return f"{word} {rng.choice(NOUNS)}".strip()
+
+    prefix = rng.choice(NAME_PREFIX)
+    word = rng.choice(ENGLISH_WORDS)
+    noun = rng.choice(NOUNS)
+    return " ".join(part for part in (prefix, word, noun) if part)
+
+
+def _make_bio(rng, record: dict, sub_genre: str) -> str:
+    years = int(min(max(record["completed_bookings"] // 6 + 1, 1), 22))
+    subs = record["sub_genres"]
+    shape = rng.choice(BIO_SHAPES)
+    credit = rng.choice(CREDITS).format(count=record["completed_bookings"])
+
+    text = shape.format(
+        opener=rng.choice(OPENERS),
+        sub=sub_genre,
+        sub2=subs[1] if len(subs) > 1 else record["parent_genre"],
+        city=record["city"],
+        years=years,
+        start_year=2026 - years,
+        mood=rng.choice(MOODS),
+        credit=credit,
+        closer=rng.choice(CLOSERS),
+    )
+    return " ".join(text.split())
 
 
 def _ensure_genre_rows(conn) -> dict[str, int]:
@@ -125,6 +230,7 @@ def seed(n_artists: int, seed_value: int = 42) -> int:
         conn.commit()
 
         created = 0
+        used_names: set[str] = set()
         with conn.cursor() as cur:
             for record in catalogue.to_dict("records"):
                 index = record["artist_id"]
@@ -135,11 +241,18 @@ def seed(n_artists: int, seed_value: int = 42) -> int:
                     continue
 
                 sub = record["sub_genres"][0]
-                years = int(np.clip(record["completed_bookings"] // 6 + 1, 1, 20))
-                bio = rng.choice(BIO_TEMPLATES).format(
-                    sub=sub, city=record["city"], years=years, mood=rng.choice(MOODS),
-                )
-                stage_name = f"{rng.choice(['The', 'Kollektiv', 'Sound of', 'Echoes of', ''])} {sub} {index}".strip()
+                bio = _make_bio(rng, record, sub)
+
+                # Real rosters have the odd near-duplicate, but not fifty, so
+                # retry a handful of times before falling back to a suffix.
+                stage_name = _make_stage_name(rng, sub, index)
+                for _ in range(6):
+                    if stage_name not in used_names:
+                        break
+                    stage_name = _make_stage_name(rng, sub, index)
+                if stage_name in used_names:
+                    stage_name = f"{stage_name} II"
+                used_names.add(stage_name)
 
                 cur.execute(
                     """
