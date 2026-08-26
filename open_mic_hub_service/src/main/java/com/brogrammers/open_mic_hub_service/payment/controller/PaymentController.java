@@ -47,15 +47,13 @@ public class PaymentController extends BaseController {
 
     @Operation(
             summary = "Handle callback from payment gateway",
-            description = "Processes the callback from the payment gateway after a booking is made."
+            description = "Settles a booking payment. The payment is verified server-to-server with Khalti; query parameters other than pidx are ignored."
     )
     @PostMapping("/callback")
-    public ResponseEntity<String> khaltiCallback(
-            @RequestParam String pidx,
-            @RequestParam String status,
-            @RequestParam double amount,
-            @RequestParam double totalAmount) {
-        return paymentService.handleCallback(pidx, status, amount, totalAmount);
+    public ResponseEntity<String> khaltiCallback(@RequestParam String pidx) {
+        // Only pidx is read. Any status/amount the browser carries back is ignored - the service
+        // verifies the payment directly with Khalti.
+        return paymentService.handleCallback(pidx);
     }
 
 }

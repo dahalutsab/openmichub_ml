@@ -5,6 +5,7 @@ package com.brogrammers.open_mic_hub_service.exception;
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalErrorResponse;
 import com.brogrammers.open_mic_hub_service.exception.custom.*;
+import com.brogrammers.open_mic_hub_service.payment.gateway.PaymentVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.mail.AuthenticationFailedException;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -174,13 +175,25 @@ public class GlobalExceptionHandler extends BaseController {
         handleException(response, e, HttpStatus.UNAUTHORIZED.value());
     }
 
+    @ExceptionHandler(PaymentVerificationException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ResponseEntity<GlobalErrorResponse> handlePaymentVerification(PaymentVerificationException exception) {
+        log.error(EXCEPTION, exception);
+        return errorResponse(HttpStatus.BAD_GATEWAY, exception.getMessage(), exception);
+    }
+
+    /**
+     * Last-resort handler. Deliberately does not echo {@code e.getMessage()} to the caller — it
+     * used to, which leaked stack-level detail (SQL fragments, upstream URLs) to anyone who could
+     * trigger an error. The full exception still goes to the log.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GlobalErrorResponse> handleException(Exception e) {
         log.error(EXCEPTION, e);
         GlobalErrorResponse errorResponse = new GlobalErrorResponse(
                 LocalDateTime.now(),
                 "An unexpected error occurred",
-                e.getMessage(),
+                "Please try again. If the problem persists, contact support.",
                 String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

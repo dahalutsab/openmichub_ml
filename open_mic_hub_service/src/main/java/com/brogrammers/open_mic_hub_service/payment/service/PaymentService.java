@@ -13,5 +13,5 @@ public interface PaymentService {
 
     Mono<String> bookArtist(Long bookingId, String paymentType);
 
-    ResponseEntity<String> handleCallback(String pidx, String status, double amount, double totalAmount);
+    ResponseEntity<String> handleCallback(String pidx);
 }

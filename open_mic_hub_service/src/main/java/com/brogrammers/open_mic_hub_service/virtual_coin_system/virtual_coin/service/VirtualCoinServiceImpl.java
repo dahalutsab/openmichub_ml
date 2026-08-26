@@ -9,6 +9,7 @@ import com.brogrammers.open_mic_hub_service.virtual_coin_system.virtual_coin.ent
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.virtual_coin.repository.VirtualCoinRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,31 +21,32 @@ public class VirtualCoinServiceImpl implements VirtualCoinService {
     private final ArtistRepository artistRepository;
     private final VirtualCoinRepository virtualCoinRepository;
     private final LoggedInUserUtil loggedInUserUtil;
+    /**
+     * Returns the artist's wallet, creating an empty one if they don't have one yet.
+     *
+     * <p>This deliberately does <em>not</em> set the balance. It used to assign the caller-supplied
+     * amount, which meant a single booking payment overwrote everything the artist had earned to
+     * date — and because the caller then also recorded a credit transaction, the same amount landed
+     * twice. Balances now move in exactly one place: {@code TransactionServiceImpl.createTransaction}.
+     */
     @Override
     public VirtualCoinResponse createOrUpdateVirtualCoin(VirtualCoinRequest virtualCoinRequest) {
-        log.info("Creating or updating virtual coin for artist with ID: {}", virtualCoinRequest.getArtistId());
-
-        // Fetch the artist or throw an exception if not found
         Artist artist = artistRepository.findById(virtualCoinRequest.getArtistId()).orElseThrow(
-                () -> new RuntimeException("Artist not found with ID: " + virtualCoinRequest.getArtistId())
+                () -> new EntityNotFoundException("Artist not found with ID: " + virtualCoinRequest.getArtistId())
         );
+        return new VirtualCoinResponse(getOrCreateWallet(artist));
+    }
 
-        // Check if a virtual coin exists for the artist
-        VirtualCoin virtualCoin = virtualCoinRepository.findVirtualCoinByArtist(artist)
+    @Override
+    public VirtualCoin getOrCreateWallet(Artist artist) {
+        return virtualCoinRepository.findVirtualCoinByArtist(artist)
                 .orElseGet(() -> {
-                    log.info("No virtual coin found for artist with ID: {}. Creating a new one.", artist.getId());
-                    return new VirtualCoin();
+                    log.info("Creating wallet for artist {}", artist.getId());
+                    VirtualCoin wallet = new VirtualCoin();
+                    wallet.setArtist(artist);
+                    wallet.setBalance(0.0);
+                    return virtualCoinRepository.save(wallet);
                 });
-
-        // Set the balance and associate the artist
-        virtualCoin.setBalance(virtualCoinRequest.getBalance());
-        virtualCoin.setArtist(artist);
-
-        // Save the virtual coin (create or update)
-        virtualCoinRepository.save(virtualCoin);
-
-        // Return the response
-        return new VirtualCoinResponse(virtualCoin);
     }
 
     @Override
