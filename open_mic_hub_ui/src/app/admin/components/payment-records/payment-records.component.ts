@@ -88,4 +88,18 @@ export class PaymentRecordsComponent implements OnInit {
         return 'omh-status-neutral';
     }
   }
+
+  /**
+   * `paymentTime` arrives as a bare LocalTime ("18:30:00"), so it cannot go
+   * through the `date` pipe — that throws InvalidPipeArgument.
+   */
+  formatTime(time: string | null | undefined): string {
+    if (!time) return '';
+    const [hourStr, minute] = time.split(':');
+    const hour = parseInt(hourStr, 10);
+    if (Number.isNaN(hour)) return time;
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    const display = hour % 12 === 0 ? 12 : hour % 12;
+    return `${display}:${minute ?? '00'} ${suffix}`;
+  }
 }

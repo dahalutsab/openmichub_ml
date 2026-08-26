@@ -11,6 +11,7 @@ interface PaymentResponse {
     id?: number;
     eventName?: string;
     venue?: string;
+    eventDate?: string;
   };
 }
 

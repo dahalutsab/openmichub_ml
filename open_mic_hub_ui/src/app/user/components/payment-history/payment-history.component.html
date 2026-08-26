@@ -50,8 +50,8 @@
         <tbody>
           <tr *ngFor="let payment of payments">
             <td>
-              <div class="font-medium">{{ payment.paymentTime | date:'mediumDate' }}</div>
-              <div class="text-xs text-muted">{{ payment.paymentTime | date:'shortTime' }}</div>
+              <div class="font-medium">{{ payment.booking?.eventDate | date:'mediumDate' }}</div>
+              <div class="text-xs text-muted">{{ formatTime(payment.paymentTime) }}</div>
             </td>
 
             <td>

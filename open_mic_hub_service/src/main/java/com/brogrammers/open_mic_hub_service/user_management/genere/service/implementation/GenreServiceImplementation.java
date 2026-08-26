@@ -48,19 +48,26 @@ public class GenreServiceImplementation implements GenreService {
         return toGenreResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public GenreResponse getGenreById(Long id) {
-        Optional<Genre> genreOpt = genreRepository.findById(id);
+        Optional<Genre> genreOpt = genreRepository.findWithCategoriesById(id);
         if (genreOpt.isEmpty() || !genreOpt.get().isActive()) {
             throw new RuntimeException("Genre not found or inactive");
         }
         return toGenreResponse(genreOpt.get());
     }
 
+    /**
+     * Active genres, categories included.
+     *
+     * <p>The active filter is a query predicate rather than a Java stream so the database does not
+     * hand back rows that are immediately discarded.
+     */
+    @Transactional(readOnly = true)
     @Override
     public List<GenreResponse> getAllGenres() {
-        return genreRepository.findAll().stream()
-                .filter(Genre::isActive)
+        return genreRepository.findByActiveTrue().stream()
                 .map(this::toGenreResponse)
                 .collect(Collectors.toList());
     }

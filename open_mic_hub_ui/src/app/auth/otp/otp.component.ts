@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ToastrService } from 'ngx-toastr';
+import { environment } from '../../environment/environment';
 
 @Component({
   selector: 'app-otp',
@@ -50,7 +51,7 @@ export class OtpComponent implements OnInit {
   const otpValue = this.otpForm.get('otp')?.value;
 
   // Append email and token (otp) as query params
-  const url = `http://localhost:8181/api/v1/auth/verify-email?email=${encodeURIComponent(this.email)}&token=${encodeURIComponent(otpValue)}`;
+  const url = `${environment.baseUrl}/auth/verify-email?email=${encodeURIComponent(this.email)}&token=${encodeURIComponent(otpValue)}`;
 
   // Since all params are in URL, body can be empty or null
   this.http.post(url, null).subscribe({
