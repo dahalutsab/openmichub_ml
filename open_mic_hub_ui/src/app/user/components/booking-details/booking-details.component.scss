@@ -7,11 +7,11 @@ table {
     padding: 12px 15px;
     text-align: center;
     vertical-align: middle;
-    border: 1px solid #dee2e6;
+    border: 1px solid rgb(var(--omh-line));
   }
 
   thead {
-    background-color: #343a40;
+    background-color: rgb(var(--omh-ink));
     color: #fff;
 
     th {
@@ -23,7 +23,7 @@ table {
 
   tbody {
     tr:hover {
-      background-color: #f8f9fa;
+      background-color: rgb(var(--omh-surface-2));
     }
 
     td {
@@ -40,17 +40,17 @@ table {
   }
 
   .bg-warning {
-    background-color: #ffc107 !important;
-    color: #212529;
+    background-color: rgb(var(--omh-stage)) !important;
+    color: rgb(var(--omh-ink));
   }
 
   .bg-success {
-    background-color: #28a745 !important;
+    background-color: rgb(var(--omh-positive)) !important;
     color: white;
   }
 
   .bg-danger {
-    background-color: #dc3545 !important;
+    background-color: rgb(var(--omh-critical)) !important;
     color: white;
   }
 }
@@ -85,9 +85,9 @@ table {
 }
 
 .table .badge.bg-warning {
-  background-color: #ffc107 !important;
+  background-color: rgb(var(--omh-stage)) !important;
 }
 
 .table .badge.bg-danger {
-  background-color: #dc3545 !important;
+  background-color: rgb(var(--omh-critical)) !important;
 }

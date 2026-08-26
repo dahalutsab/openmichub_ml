@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../environment/environment';
 import {HttpClient, HttpParams} from '@angular/common/http';
-import { Role } from '../shared/role';
+import { Role, ADMIN_ROLES, BOOKER_ROLES } from '../shared/role';
 import {Observable} from 'rxjs';
 import {UserResponse} from './components/users-list/users-list.component';
 
@@ -33,28 +33,28 @@ export class AdminService {
       title: 'Artist Feeds',
       icon: 'bi bi-house',
       route: '/user/feeds',
-      role: [Role.USER]
+      role: BOOKER_ROLES
     },
     {
       id: 'browse-artists',
       title: 'Browse Artists',
       icon: 'bi bi-music-note-list',
       route: '/user/artists',
-      role: [Role.USER]
+      role: BOOKER_ROLES
     },
     // {
     //   id: 'my-bookings',
     //   title: 'My Bookings',
     //   icon: 'bi bi-journal-bookmark',
     //   route: '/user/bookings',
-    //   role: [Role.USER]
+    //   role: BOOKER_ROLES
     // },
      {
       id: 'bookings-details',
       title: ' Booking-Details',
       icon: 'bi bi-journal-bookmark',
       route: '/user/book-details',
-      role: [Role.USER]
+      role: BOOKER_ROLES
     },
 
     {
@@ -62,7 +62,7 @@ export class AdminService {
       title: 'Payment History',
       icon: 'bi bi-clock-history',
       route: '/user/payment-history',
-      role: [Role.USER]
+      role: BOOKER_ROLES
     },
 
     // ---------- Admin Role ----------
@@ -71,21 +71,21 @@ export class AdminService {
       title: 'User Management',
       icon: 'bi bi-people',
       route: '/admin/users',
-      role: [Role.ADMIN]
+      role: ADMIN_ROLES
     },
     {
       id: 'coin-transactions',
       title: 'All Coin Transactions',
       icon: 'bi bi-arrow-left-right',
       route: '/admin/transactions',
-      role: [Role.ADMIN]
+      role: ADMIN_ROLES
     },
     {
       id: 'admin-payments',
       title: 'Payment Records',
       icon: 'bi bi-journal-text',
       route: '/admin/payments',
-      role: [Role.ADMIN]
+      role: ADMIN_ROLES
     },
 
     // ---------- Artist Role ----------

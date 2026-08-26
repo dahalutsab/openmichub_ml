@@ -2,7 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, rgb(var(--omh-brand)) 0%, rgb(var(--omh-brand-strong)) 100%);
   min-height: 100vh;
 }
 
@@ -36,7 +36,7 @@
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #667eea;
+  border: 4px solid rgb(var(--omh-brand));
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -69,7 +69,7 @@
 }
 
 .balance-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, rgb(var(--omh-brand)) 0%, rgb(var(--omh-brand-strong)) 100%);
   color: white;
   padding: 30px;
   border-radius: 15px;
@@ -172,17 +172,17 @@
 }
 
 .info-card {
-  background: #f8f9fa;
+  background: rgb(var(--omh-surface-2));
   padding: 20px;
   border-radius: 10px;
   display: flex;
   align-items: flex-start;
   gap: 15px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid rgb(var(--omh-brand));
 }
 
 .info-card i {
-  color: #667eea;
+  color: rgb(var(--omh-brand));
   font-size: 20px;
   margin-top: 2px;
 }
@@ -205,13 +205,13 @@
 }
 
 .modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, rgb(var(--omh-brand)) 0%, rgb(var(--omh-brand-strong)) 100%);
   color: white;
   border: none;
 }
 
 .current-balance-info {
-  background: #f8f9fa;
+  background: rgb(var(--omh-surface-2));
   padding: 15px;
   border-radius: 10px;
   margin-bottom: 20px;
@@ -231,7 +231,7 @@
 .balance-display .amount {
   font-size: 18px;
   font-weight: 700;
-  color: #667eea;
+  color: rgb(var(--omh-brand));
 }
 
 .withdrawal-info .alert {
@@ -241,12 +241,12 @@
 
 .success-icon {
   font-size: 64px;
-  color: #28a745;
+  color: rgb(var(--omh-positive));
   margin-bottom: 20px;
 }
 
 .transaction-details {
-  background: #f8f9fa;
+  background: rgb(var(--omh-surface-2));
   padding: 20px;
   border-radius: 10px;
   margin: 20px 0;

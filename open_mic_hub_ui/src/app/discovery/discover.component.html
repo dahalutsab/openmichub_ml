@@ -109,7 +109,7 @@
       <omh-artist-card *ngFor="let artist of featured; let i = index; trackBy: trackByArtist"
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i * 55"
-                       [artist]="artist" layout="grid" />
+                       [artist]="artist" layout="grid" (open)="openArtist($event)" />
     </div>
   </section>
 
@@ -209,7 +209,8 @@
       <omh-artist-card *ngFor="let artist of results; let i = index; trackBy: trackByArtist"
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i < 12 ? i * 45 : 0"
-                       [artist]="artist" [rank]="i + 1" layout="grid" />
+                       [artist]="artist" [rank]="i + 1" layout="grid"
+                       (open)="openArtist($event)" />
     </div>
 
     <!-- list -->
@@ -217,7 +218,8 @@
       <omh-artist-card *ngFor="let artist of results; let i = index; trackBy: trackByArtist"
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i < 14 ? i * 28 : 0"
-                       [artist]="artist" [rank]="i + 1" layout="list" />
+                       [artist]="artist" [rank]="i + 1" layout="list"
+                       (open)="openArtist($event)" />
     </div>
 
     <!-- empty -->

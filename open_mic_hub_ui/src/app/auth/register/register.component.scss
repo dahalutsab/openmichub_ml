@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* Variables */
-$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$primary-gradient: linear-gradient(135deg, rgb(var(--omh-brand)) 0%, rgb(var(--omh-brand-strong)) 100%);
 $secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 $success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 $shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -431,7 +431,7 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     &:hover {
-      border-color: #667eea;
+      border-color: rgb(var(--omh-brand));
       background: #edf2f7;
       transform: translateY(-2px);
 
@@ -483,7 +483,7 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
       transform: scale(1.05);
-      border-color: #667eea;
+      border-color: rgb(var(--omh-brand));
     }
   }
 

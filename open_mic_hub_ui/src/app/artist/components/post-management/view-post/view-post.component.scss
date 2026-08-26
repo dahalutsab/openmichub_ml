@@ -4,8 +4,8 @@
 }
 
 .card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background-color: rgb(var(--omh-surface-2));
+  border-bottom: 1px solid rgb(var(--omh-line));
 }
 
 .spinner-border {
@@ -37,16 +37,16 @@
 }
 
 .alert-danger {
-  border-left-color: #dc3545;
+  border-left-color: rgb(var(--omh-critical));
   background-color: #f8d7da;
 }
 
 .bg-light {
-  background-color: #f8f9fa !important;
+  background-color: rgb(var(--omh-surface-2)) !important;
 }
 
 .text-muted {
-  color: #6c757d !important;
+  color: rgb(var(--omh-muted)) !important;
 }
 
 .modal-body img {

@@ -267,6 +267,26 @@
     &:hover:not(:disabled) { @apply bg-surface-2 text-ink; }
   }
 
+  /* Bare navigation control.
+     Tailwind's preflight is off, so a <button> still inherits Bootstrap's and
+     the browser's default chrome — a border and a grey fill. Anything that
+     should read as a link rather than a button needs that cleared explicitly. */
+  .omh-navlink {
+    @apply inline-flex items-center gap-1.5 rounded-[5px] border-0 bg-transparent
+           px-3 py-2 font-display text-[13px] font-semibold no-underline cursor-pointer;
+    color: rgb(var(--omh-on-stage-dim));
+    transition: color 0.16s var(--omh-ease), background-color 0.16s var(--omh-ease);
+
+    &:hover { color: rgb(var(--omh-on-stage)); background-color: rgb(255 255 255 / 0.07); }
+
+    &.is-active { color: rgb(var(--omh-on-stage)); }
+
+    &:focus-visible {
+      @apply outline-none;
+      box-shadow: 0 0 0 3px rgb(var(--omh-hot) / 0.4);
+    }
+  }
+
   /* --- chips --- */
 
   .omh-chip {

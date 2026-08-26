@@ -3,7 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { AdminBaseComponent } from './components/admin-base/admin-base.component';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
 import { authGuard } from '../auth/auth.guard';
-import { Role } from '../shared/role';
+import { ADMIN_ROLES } from '../shared/role';
 import {UsersListComponent} from './components/users-list/users-list.component';
 import {TransactionsListComponent} from './components/coin-transaction/transactions-list.component';
 import {PaymentRecordsComponent} from './components/payment-records/payment-records.component';
@@ -15,7 +15,7 @@ const routes: Routes = [
     path: '',
     component: AdminBaseComponent,
     canActivate: [authGuard],
-    data: { roles: [Role.ADMIN] },
+    data: { roles: ADMIN_ROLES },
     children: [
       {
         path: 'dashboard',

@@ -9,12 +9,12 @@
     }
     
     .page-link {
-      color: #007bff;
+      color: rgb(var(--omh-brand));
       cursor: pointer;
     }
     
     .page-link:hover {
-      color: #0056b3;
+      color: rgb(var(--omh-brand-strong));
     }
     
     .page-item.disabled .page-link {

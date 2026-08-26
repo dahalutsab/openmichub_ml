@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { ArtistHit } from '../discovery.service';
 
@@ -23,6 +23,19 @@ export class ArtistCardComponent {
 
   /** 'grid' shows artwork; 'list' is a dense row for scanning many at once. */
   @Input() layout: 'grid' | 'list' = 'grid';
+
+  /** Raised when the card is clicked or activated from the keyboard. */
+  @Output() open = new EventEmitter<ArtistHit>();
+
+  /**
+   * The card is a control, so it answers to Enter and Space as well as a click.
+   * It carries tabindex already; without this the keyboard could focus it and
+   * then do nothing with it.
+   */
+  activate(event?: Event): void {
+    event?.preventDefault();
+    this.open.emit(this.artist);
+  }
 
   get initials(): string {
     return (this.artist.stageName || '?')

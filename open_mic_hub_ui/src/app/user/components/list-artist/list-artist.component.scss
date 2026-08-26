@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 300px; /* Smaller width for perfect 3-per-row alignment */
   border-radius: 12px;
-  background-color: #f8f9fa;
+  background-color: rgb(var(--omh-surface-2));
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -45,7 +45,7 @@
 
 .card-subtitle {
   font-size: 0.85rem;
-  color: #6c757d;
+  color: rgb(var(--omh-muted));
 }
 
 .bio-text {

@@ -24,6 +24,88 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   countSubscription?: Subscription;
   testimonialInterval?: Subscription;
 
+  /**
+   * The three rows in the hero mock-up.
+   *
+   * A worked example of a real search beats a stock photograph: it shows what
+   * the product does in the space a hero image would have occupied. Static on
+   * purpose — the hero must render instantly and identically every visit,
+   * rather than waiting on the ranking service.
+   */
+  heroSamples = [
+    {
+      name: 'Kalo Assembly',
+      meta: 'Kathmandu · Bebop, Fusion',
+      rate: '6,050',
+      match: 62,
+      sleeve: 'linear-gradient(145deg, #3E1D2C, #B04A57 165%)',
+    },
+    {
+      name: 'The Ember Affair',
+      meta: 'Kathmandu · Bebop, Swing',
+      rate: '1,590',
+      match: 60,
+      sleeve: 'linear-gradient(145deg, #14232E, #356F8C 165%)',
+    },
+    {
+      name: 'Trio Static Avenue',
+      meta: 'Kathmandu · Swing',
+      rate: '3,010',
+      match: 58,
+      sleeve: 'linear-gradient(145deg, #402E12, #C08A2E 165%)',
+    },
+  ];
+
+  /** What the platform actually does, in the order it matters to a newcomer. */
+  features = [
+    {
+      title: 'Search in plain language',
+      body: 'Describe the mood, the room and the occasion. No genre dropdowns, ' +
+            'no guessing what an act is called.',
+    },
+    {
+      title: 'Ranked for your brief',
+      body: 'Results are ordered by a trained model weighing relevance, budget, ' +
+            'location, rating and track record together.',
+    },
+    {
+      title: 'Real availability',
+      body: 'Artists keep their own calendar and blackout dates, so what you see ' +
+            'is what you can actually book.',
+    },
+    {
+      title: 'Money held safely',
+      body: 'Pay through Khalti. Earnings sit in the artist\'s wallet and are ' +
+            'released on withdrawal, with every movement on a ledger.',
+    },
+    {
+      title: 'Talk before you commit',
+      body: 'Message an act directly to agree set length, equipment and the ' +
+            'first-dance song.',
+    },
+    {
+      title: 'Reviews that mean something',
+      body: 'Only the organizer who made a booking can review it, once. ' +
+            'Ratings you can rely on.',
+    },
+  ];
+
+  /** Three steps, because that is genuinely how long it takes. */
+  steps = [
+    {
+      title: 'Describe the night',
+      body: 'Tell us the occasion, the city and roughly what you want to spend.',
+    },
+    {
+      title: 'Compare the shortlist',
+      body: 'See rates, ratings and past gigs side by side, ranked for your brief.',
+    },
+    {
+      title: 'Book and pay',
+      body: 'Confirm the date, pay in full or half up front, and get it in writing.',
+    },
+  ];
+
   // Sample recent performances data
   recentPerformances = [
     {

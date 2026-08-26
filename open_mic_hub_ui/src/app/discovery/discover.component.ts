@@ -243,6 +243,17 @@ export class DiscoverComponent implements OnInit {
     return artist.artistId;
   }
 
+  /**
+   * Opens an artist's profile.
+   *
+   * The detail screen lives inside the signed-in area, so an anonymous visitor
+   * is bounced to sign-in and returned here afterwards — booking needs an
+   * account anyway, and the route guard already carries the returnUrl.
+   */
+  openArtist(artist: ArtistHit): void {
+    this.router.navigate(['/user/view-artist', artist.artistId]);
+  }
+
   private syncUrl(): void {
     this.router.navigate([], {
       relativeTo: this.route,

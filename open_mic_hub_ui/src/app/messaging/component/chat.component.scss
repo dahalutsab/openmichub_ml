@@ -8,14 +8,14 @@
 .sidebar {
   width: 350px;
   background: white;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid rgb(var(--omh-line));
   display: flex;
   flex-direction: column;
 }
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgb(var(--omh-line));
 }
 
 .tab-button {
@@ -30,12 +30,12 @@
 }
 
 .tab-button.active {
-  color: #007bff;
-  border-bottom: 2px solid #007bff;
+  color: rgb(var(--omh-brand));
+  border-bottom: 2px solid rgb(var(--omh-brand));
 }
 
 .tab-button:hover {
-  background: #f8f9fa;
+  background: rgb(var(--omh-surface-2));
 }
 
 .user-list {
@@ -53,12 +53,12 @@
 }
 
 .user-item:hover {
-  background: #f8f9fa;
+  background: rgb(var(--omh-surface-2));
 }
 
 .user-item.selected {
   background: #e3f2fd;
-  border-right: 3px solid #007bff;
+  border-right: 3px solid rgb(var(--omh-brand));
 }
 
 .user-avatar {
@@ -113,7 +113,7 @@
 
 .chat-header {
   padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgb(var(--omh-line));
   background: white;
 }
 
@@ -209,7 +209,7 @@
 }
 
 .own-message .message-content {
-  background: #007bff;
+  background: rgb(var(--omh-brand));
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -248,7 +248,7 @@
 }
 .input-container {
   padding: 16px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid rgb(var(--omh-line));
   background: white;
   display: flex;
   align-items: center;
@@ -256,18 +256,18 @@
 .input-container input {
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgb(var(--omh-line));
   border-radius: 20px;
   font-size: 14px;
   outline: none;
 }
 .input-container input:focus {
-  border-color: #007bff;
+  border-color: rgb(var(--omh-brand));
 }
 .input-container button {
   margin-left: 12px;
   padding: 8px 16px;
-  background: #007bff;
+  background: rgb(var(--omh-brand));
   color: white;
   border: none;
   border-radius: 20px;

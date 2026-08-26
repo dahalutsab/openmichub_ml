@@ -1,0 +1,501 @@
+/* =========================================================================
+   Dashboard theme
+
+   The admin, artist and user dashboards share a Bootstrap vocabulary —
+   .card, .btn, .table, .badge, .modal, .form-control — inherited from the
+   SB Admin 2 template they were built on. Roughly 2,900 lines of template
+   across 33 components use those class names.
+
+   Rather than rewrite all of them, this restyles the vocabulary itself.
+   Every dashboard picks up the product's design language at once, and no
+   working screen has its markup disturbed.
+
+   Loaded after Bootstrap and after the SB Admin 2 theme, so it wins on
+   source order without needing !important everywhere. Where !important does
+   appear it is because Bootstrap's own utility API emitted it first.
+   ========================================================================= */
+
+/* ------------------------------------------------------- bootstrap vars -- */
+
+/* Bootstrap 5 resolves its utilities through CSS custom properties, so
+   redefining those retunes every .bg-primary, .text-primary, .btn-* and
+   .table-* in the application at once — including the ones written directly
+   into component templates, which no amount of selector work here would reach.
+   This is the single highest-leverage rule in the file. */
+:root {
+  --bs-primary:       rgb(var(--omh-brand));
+  --bs-primary-rgb:   var(--omh-brand);
+  --bs-secondary:     rgb(var(--omh-muted));
+  --bs-secondary-rgb: var(--omh-muted);
+  --bs-success:       rgb(var(--omh-positive));
+  --bs-success-rgb:   var(--omh-positive);
+  --bs-danger:        rgb(var(--omh-critical));
+  --bs-danger-rgb:    var(--omh-critical);
+  --bs-warning:       rgb(var(--omh-stage));
+  --bs-warning-rgb:   var(--omh-stage);
+  --bs-info:          rgb(var(--omh-brand));
+  --bs-info-rgb:      var(--omh-brand);
+  --bs-dark:          rgb(var(--omh-stage-ink));
+  --bs-dark-rgb:      var(--omh-stage-ink);
+  --bs-light:         rgb(var(--omh-surface-2));
+  --bs-light-rgb:     var(--omh-surface-2);
+
+  --bs-body-color:     rgb(var(--omh-ink));
+  --bs-body-bg:        rgb(var(--omh-ground));
+  --bs-border-color:   rgb(var(--omh-line));
+  --bs-border-radius:  var(--omh-radius);
+  --bs-emphasis-color: rgb(var(--omh-ink));
+
+  --bs-link-color:       rgb(var(--omh-brand));
+  --bs-link-hover-color: rgb(var(--omh-brand-strong));
+
+  --bs-font-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* A solid dark table head belongs to the template this was built from. Here the
+   head is quiet and the rows carry the weight, matching every other table. */
+.table-dark,
+.table > .table-dark {
+  --bs-table-bg: transparent !important;
+  --bs-table-color: rgb(var(--omh-muted)) !important;
+  background-color: transparent !important;
+  color: rgb(var(--omh-muted)) !important;
+
+  th, td {
+    background-color: transparent !important;
+    color: rgb(var(--omh-muted)) !important;
+    border-color: rgb(var(--omh-line)) !important;
+  }
+}
+
+/* Striping fights the hover state and adds noise at this row height. Bootstrap
+   5.3 applies it through a variable, so that is what has to be cleared. */
+.table {
+  --bs-table-striped-bg: transparent;
+  --bs-table-striped-color: inherit;
+  --bs-table-accent-bg: transparent;
+  --bs-table-hover-bg: rgb(var(--omh-surface-2) / 0.7);
+  --bs-table-hover-color: rgb(var(--omh-ink));
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* A card header filled with the brand colour reads as a banner. Cards here are
+   quiet containers, so the header is a hairline and a label. */
+.card-header.bg-primary,
+.card-header.bg-dark,
+.card-header[class*='bg-'] {
+  background-color: transparent !important;
+  border-bottom: 1px solid rgb(var(--omh-line)) !important;
+
+  &, .text-white, h1, h2, h3, h4, h5, h6 {
+    color: rgb(var(--omh-ink)) !important;
+  }
+}
+
+/* ---------------------------------------------------------------- shell -- */
+
+#wrapper,
+#content-wrapper,
+#content {
+  background-color: rgb(var(--omh-ground)) !important;
+}
+
+#content-wrapper > #content > .container-fluid { padding: 1.5rem 1.75rem; }
+
+/* Sidebar.
+   This is the app's own component, not the SB Admin markup — it is built from
+   Bootstrap utilities (.bg-dark, .nav-pills, .nav-link), so those are what the
+   theme has to reach for. It becomes the same dark room as the search page, so
+   the dashboards read as one product with it. */
+app-sidebar {
+  .bg-dark {
+    background-color: rgb(var(--omh-stage-ink)) !important;
+    border-right: 1px solid rgb(255 255 255 / 0.07);
+  }
+
+  a.text-decoration-none .fs-4 {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 16px !important;
+    letter-spacing: -0.02em;
+    color: rgb(var(--omh-on-stage));
+  }
+
+  hr { border-color: rgb(255 255 255 / 0.09) !important; opacity: 1; }
+
+  .nav-link {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgb(var(--omh-on-stage-dim)) !important;
+    border-radius: 5px !important;
+    transition: color 0.16s ease, background-color 0.16s ease;
+
+    i { opacity: 0.8; font-size: 1rem !important; }
+
+    &:hover {
+      color: rgb(var(--omh-on-stage)) !important;
+      background-color: rgb(255 255 255 / 0.07);
+    }
+
+    /* routerLinkActive adds `active bg-primary`; both are neutralised so the
+       active item is the product's red rather than Bootstrap blue. */
+    &.active,
+    &.active.bg-primary {
+      color: #fff !important;
+      background-color: rgb(var(--omh-hot)) !important;
+
+      i { opacity: 1; }
+    }
+
+    &.bg-primary-subtle.text-primary {
+      background-color: rgb(255 255 255 / 0.1) !important;
+      color: rgb(var(--omh-on-stage)) !important;
+    }
+  }
+}
+
+/* Topbar */
+app-header {
+  .navbar,
+  .topbar {
+    background-color: rgb(var(--omh-surface)) !important;
+    border-bottom: 1px solid rgb(var(--omh-line));
+    box-shadow: none !important;
+    min-height: 4rem;
+  }
+
+  .nav-link { color: rgb(var(--omh-ink-soft)) !important; }
+
+  .topbar-divider { border-right-color: rgb(var(--omh-line)); }
+}
+
+.sticky-footer {
+  background-color: transparent !important;
+  border-top: 1px solid rgb(var(--omh-line));
+  font-size: 12px;
+  color: rgb(var(--omh-muted));
+}
+
+/* Page heading: the dashboards set these as plain h1/h3 with no shared class. */
+.container-fluid > h1,
+.container-fluid > h2,
+.container-fluid > h3,
+.container-fluid > .h3 {
+  font-size: 22px !important;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: rgb(var(--omh-ink)) !important;
+  margin-bottom: 1.25rem;
+}
+
+/* ----------------------------------------------------------------- type -- */
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgb(var(--omh-ink));
+}
+
+.text-muted    { color: rgb(var(--omh-muted)) !important; }
+.text-primary  { color: rgb(var(--omh-brand)) !important; }
+.text-gray-800 { color: rgb(var(--omh-ink)) !important; }
+.text-gray-600,
+.text-gray-500 { color: rgb(var(--omh-ink-soft)) !important; }
+.text-gray-400,
+.text-gray-300 { color: rgb(var(--omh-muted)) !important; }
+
+/* ---------------------------------------------------------------- cards -- */
+
+.card {
+  background-color: rgb(var(--omh-surface));
+  border: 1px solid rgb(var(--omh-line)) !important;
+  border-radius: var(--omh-radius) !important;
+  box-shadow: none !important;
+
+  .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgb(var(--omh-line));
+    padding: 0.9rem 1.15rem;
+
+    h1, h2, h3, h4, h5, h6, .m-0 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: rgb(var(--omh-ink));
+    }
+  }
+
+  .card-body { padding: 1.15rem; }
+}
+
+/* SB Admin 2's stat cards. The coloured left rule becomes a top rule: a 4px
+   bar down the side of a 6px-radius card fights the corner. */
+[class*='border-left-'] {
+  border-left: 1px solid rgb(var(--omh-line)) !important;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+  }
+}
+
+.border-left-primary::before { background: rgb(var(--omh-brand)); }
+.border-left-success::before { background: rgb(var(--omh-positive)); }
+.border-left-info::before    { background: rgb(var(--omh-brand)); }
+.border-left-warning::before { background: rgb(var(--omh-stage)); }
+.border-left-danger::before  { background: rgb(var(--omh-hot)); }
+
+/* -------------------------------------------------------------- buttons -- */
+
+.btn {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--omh-radius);
+  padding: 0.5rem 0.95rem;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+
+  &:focus, &:active:focus { box-shadow: 0 0 0 3px rgb(var(--omh-ink) / 0.18) !important; }
+}
+
+.btn-sm { font-size: 12px; padding: 0.35rem 0.7rem; }
+
+.btn-primary {
+  background-color: rgb(var(--omh-hot));
+  border-color: rgb(var(--omh-hot));
+
+  &:hover, &:focus, &:active {
+    background-color: rgb(var(--omh-hot) / 0.86) !important;
+    border-color: rgb(var(--omh-hot) / 0.86) !important;
+  }
+}
+
+.btn-secondary {
+  background-color: rgb(var(--omh-surface));
+  border-color: rgb(var(--omh-line));
+  color: rgb(var(--omh-ink));
+
+  &:hover { background-color: rgb(var(--omh-surface-2)); color: rgb(var(--omh-ink)); }
+}
+
+.btn-success { background-color: rgb(var(--omh-positive)); border-color: rgb(var(--omh-positive)); }
+.btn-danger  { background-color: rgb(var(--omh-critical)); border-color: rgb(var(--omh-critical)); }
+.btn-warning { background-color: rgb(var(--omh-stage)); border-color: rgb(var(--omh-stage)); color: #fff; }
+.btn-info    { background-color: rgb(var(--omh-brand)); border-color: rgb(var(--omh-brand)); color: #fff; }
+
+.btn-outline-primary {
+  color: rgb(var(--omh-ink));
+  border-color: rgb(var(--omh-line));
+
+  &:hover {
+    background-color: rgb(var(--omh-ink));
+    border-color: rgb(var(--omh-ink));
+    color: #fff;
+  }
+}
+
+/* --------------------------------------------------------------- tables -- */
+
+.table {
+  --bs-table-bg: transparent;
+  color: rgb(var(--omh-ink));
+  border-color: rgb(var(--omh-line));
+
+  thead th {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--omh-muted));
+    background-color: transparent;
+    border-bottom: 1px solid rgb(var(--omh-line)) !important;
+    padding: 0.7rem 0.85rem;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    font-size: 13.5px;
+    vertical-align: middle;
+    padding: 0.75rem 0.85rem;
+    border-top: 1px solid rgb(var(--omh-line));
+    border-bottom: 0;
+  }
+
+  tbody tr { transition: background-color 0.12s ease; }
+  tbody tr:hover { background-color: rgb(var(--omh-surface-2) / 0.6); }
+}
+
+.table-bordered,
+.table-bordered td,
+.table-bordered th { border-color: rgb(var(--omh-line)) !important; }
+
+/* Figures line up column to column when they share a width. */
+td, th { font-variant-numeric: tabular-nums; }
+
+/* Wide tables scroll inside their own card rather than pushing the page
+   sideways. Several dashboards render a .table without wrapping it in
+   .table-responsive, so the card itself takes on the job. */
+.card > .table,
+.card-body > .table,
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card > .table > thead,
+.card > .table > tbody,
+.card-body > .table > thead,
+.card-body > .table > tbody { display: table; width: 100%; }
+
+.table-responsive > .table { display: table; width: 100%; }
+
+/* -------------------------------------------------------------- badges --- */
+
+.badge {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 0.3em 0.55em;
+}
+
+.badge.bg-primary, .badge-primary { background-color: rgb(var(--omh-brand)) !important; }
+.badge.bg-success, .badge-success { background-color: rgb(var(--omh-positive)) !important; }
+.badge.bg-danger,  .badge-danger  { background-color: rgb(var(--omh-critical)) !important; }
+.badge.bg-warning, .badge-warning { background-color: rgb(var(--omh-stage)) !important; color: #fff !important; }
+.badge.bg-info,    .badge-info    { background-color: rgb(var(--omh-brand)) !important; }
+.badge.bg-secondary               { background-color: rgb(var(--omh-muted)) !important; }
+
+/* --------------------------------------------------------------- forms --- */
+
+.form-control,
+.form-select {
+  font-size: 14px;
+  color: rgb(var(--omh-ink));
+  background-color: rgb(var(--omh-surface));
+  border: 1px solid rgb(var(--omh-line));
+  border-radius: var(--omh-radius);
+  padding: 0.55rem 0.8rem;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &::placeholder { color: rgb(var(--omh-muted)); }
+
+  &:focus {
+    border-color: rgb(var(--omh-ink));
+    box-shadow: 0 0 0 3px rgb(var(--omh-ink) / 0.1);
+  }
+}
+
+/* Native selects need room for their own line box. Several dashboards set a
+   fixed height on them, which clipped the text once the type scale changed. */
+select.form-control,
+select.form-select,
+.form-select {
+  min-height: 2.6rem;
+  line-height: 1.5;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  height: auto !important;
+}
+
+.form-label,
+label {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--omh-ink-soft));
+}
+
+/* -------------------------------------------------------------- modals --- */
+
+.modal-content {
+  border: 1px solid rgb(var(--omh-line));
+  border-radius: var(--omh-radius-lg);
+  box-shadow: var(--omh-shadow-lift);
+}
+
+.modal-header,
+.modal-footer { border-color: rgb(var(--omh-line)); }
+
+.modal-title {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.modal-backdrop.show { opacity: 0.5; background-color: rgb(var(--omh-stage-ink)); }
+
+/* ----------------------------------------------------------- pagination -- */
+
+.page-link {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--omh-ink-soft));
+  border-color: rgb(var(--omh-line));
+
+  &:hover { background-color: rgb(var(--omh-surface-2)); color: rgb(var(--omh-ink)); }
+}
+
+.page-item.active .page-link {
+  background-color: rgb(var(--omh-ink));
+  border-color: rgb(var(--omh-ink));
+  color: #fff;
+}
+
+.page-item.disabled .page-link { color: rgb(var(--omh-muted)); background-color: transparent; }
+
+/* ------------------------------------------------------------- dropdown -- */
+
+.dropdown-menu {
+  border: 1px solid rgb(var(--omh-line));
+  border-radius: var(--omh-radius);
+  box-shadow: var(--omh-shadow-lift);
+  padding: 0.3rem;
+}
+
+.dropdown-item {
+  font-size: 13.5px;
+  border-radius: 4px;
+  padding: 0.45rem 0.6rem;
+
+  &:hover, &:focus { background-color: rgb(var(--omh-surface-2)); color: rgb(var(--omh-ink)); }
+}
+
+.dropdown-divider { border-top-color: rgb(var(--omh-line)); }
+
+/* --------------------------------------------------------------- misc ---- */
+
+.bg-light  { background-color: rgb(var(--omh-surface-2)) !important; }
+.bg-white  { background-color: rgb(var(--omh-surface)) !important; }
+.bg-gradient-primary { background: rgb(var(--omh-stage-ink)) !important; }
+
+.shadow, .shadow-sm, .shadow-lg { box-shadow: none !important; }
+
+hr { border-top-color: rgb(var(--omh-line)); opacity: 1; }
+
+.progress { background-color: rgb(var(--omh-surface-2)); border-radius: var(--omh-radius-pill); height: 6px; }
+.progress-bar { background-color: rgb(var(--omh-hot)); }
+
+.alert {
+  border-radius: var(--omh-radius);
+  border-width: 1px;
+  font-size: 13.5px;
+}

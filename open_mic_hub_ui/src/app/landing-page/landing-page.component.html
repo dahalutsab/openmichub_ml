@@ -1,285 +1,208 @@
+<div class="omh-page">
 
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="nav-container">
-      <div class="nav-brand">
-        <h2 class="brand-text">🎤 OpenMicHubNepal</h2>
+  <!-- ============================ nav ============================ -->
+  <nav class="sticky top-0 z-50 border-b border-white/10 bg-stage-ink/90 backdrop-blur-md">
+    <div class="omh-container flex h-16 items-center justify-between gap-6">
+      <a routerLink="/" class="flex items-center gap-2.5 no-underline">
+        <span class="grid h-8 w-8 place-items-center rounded-[5px] bg-hot font-display text-[15px] font-extrabold text-white">O</span>
+        <span class="font-display text-[15px] font-bold tracking-tight text-on-stage">OpenMicHub</span>
+      </a>
+
+      <div class="hidden items-center gap-1 md:flex">
+        <a routerLink="/discover" class="omh-navlink is-active">Find artists</a>
+        <button type="button" class="omh-navlink" (click)="scrollToSection('features')">Features</button>
+        <button type="button" class="omh-navlink" (click)="scrollToSection('how-it-works')">How it works</button>
+        <button type="button" class="omh-navlink" (click)="scrollToSection('testimonials')">Reviews</button>
       </div>
-      <div class="nav-menu">
 
-        <a routerLink="/discover" class="nav-link">Find artists</a>
-        <a href="#features" class="nav-link" (click)="scrollToSection('features')">Features</a>
-        <a href="#artists" class="nav-link" (click)="scrollToSection('artists')">Artists</a>
-        <a href="#how-it-works" class="nav-link" (click)="scrollToSection('how-it-works')">How It Works</a>
-        <a href="#testimonials" class="nav-link" (click)="scrollToSection('testimonials')">Reviews</a>
-        <button class="btn-login" (click)="navigateTo('auth/')">Login</button>
-        <button class="btn-signup" (click)="navigateTo('auth/register')">Sign Up</button>
+      <div class="flex items-center gap-2">
+        <button type="button" class="omh-navlink" (click)="navigateTo('auth/')">Log in</button>
+        <button type="button" class="omh-btn-primary !py-2" (click)="navigateTo('auth/register')">
+          Join free
+        </button>
       </div>
     </div>
   </nav>
 
-  <!-- Hero Section -->
-  <section class="hero" id="hero">
-    <div class="hero-background"></div>
-    <div class="hero-content">
-      <div class="hero-text">
-        <h1 class="hero-title">
-          Discover Nepal’s Best Talent with
-          <span class="gradient-text">OpenMicHubNepal</span>
+  <!-- ============================ hero ============================ -->
+  <header class="omh-stage overflow-hidden">
+    <div class="omh-container relative grid gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-24">
+
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="omh-eyebrow text-hot">Live music, booked properly</span>
+          <span class="h-px w-8 bg-white/25"></span>
+          <span class="text-[11px] uppercase tracking-[0.2em] text-on-stage-dim">Nepal</span>
+        </div>
+
+        <h1 class="mt-6 max-w-[14ch] font-display text-[40px] font-extrabold leading-[0.95] tracking-[-0.04em] text-on-stage md:text-[64px]">
+          Every room needs<br><span class="text-hot">the right act.</span>
         </h1>
-        <p class="hero-subtitle">
-          Nepal’s leading platform connecting artists, event organizers, and venues.
-          Book live performances, manage schedules, and pay securely with virtual coins.
+
+        <p class="mt-6 max-w-[46ch] text-[16px] leading-relaxed text-on-stage-dim">
+          Search performers the way you'd describe them to a friend. Check real
+          availability, agree a price, and pay securely — without a single phone call.
         </p>
-        <div class="hero-buttons">
-          <button class="btn-primary" (click)="navigateTo('auth/register')">
-            Request a Demo
+
+        <div class="mt-9 flex flex-wrap gap-3">
+          <button type="button" class="omh-btn-primary !px-7 !py-3.5 !text-[15px]" (click)="navigateTo('discover')">
+            Find an artist →
           </button>
-          <button class="btn-secondary" (click)="navigateTo('discover')">
-            Find an artist
+          <button type="button"
+                  class="omh-btn !border-white/25 !bg-white/5 !px-7 !py-3.5 !text-[15px] !text-on-stage hover:!bg-white/10"
+                  (click)="navigateTo('auth/register')">
+            List your act
           </button>
         </div>
-        <div class="hero-stats">
-          <div class="stat">
-            <span class="stat-number">{{ counts.artists | number }}</span>
-            <span class="stat-label">Artists</span>
+
+        <!-- live counts -->
+        <div class="mt-12 flex flex-wrap gap-x-10 gap-y-5 border-t border-white/10 pt-7">
+          <div>
+            <div class="font-display text-[30px] font-extrabold leading-none tabular-nums text-on-stage">
+              {{ animatedCounts.artists | number }}
+            </div>
+            <div class="mt-2 text-[10px] uppercase tracking-[0.16em] text-on-stage-dim">Artists</div>
           </div>
-          <div class="stat">
-            <span class="stat-number">{{ counts.users | number }}</span>
-            <span class="stat-label">Users</span>
+          <div>
+            <div class="font-display text-[30px] font-extrabold leading-none tabular-nums text-on-stage">
+              {{ animatedCounts.bookings | number }}
+            </div>
+            <div class="mt-2 text-[10px] uppercase tracking-[0.16em] text-on-stage-dim">Bookings</div>
           </div>
-          <div class="stat">
-            <span class="stat-number">{{ counts.bookings | number }}</span>
-            <span class="stat-label">Bookings</span>
+          <div>
+            <div class="font-display text-[30px] font-extrabold leading-none tabular-nums text-on-stage">
+              {{ animatedCounts.users | number }}
+            </div>
+            <div class="mt-2 text-[10px] uppercase tracking-[0.16em] text-on-stage-dim">Organizers</div>
           </div>
         </div>
       </div>
-      <div class="hero-visual">
-  <div
-    class="floating-card artist-card"
-    *ngFor="let artist of artists.slice(0, 3)"
-  >
-    <div class="card-header">
-      <div
-        class="avatar"
-        [style.backgroundImage]="'url(' + (artist.profilePictureUrl || 'assets/placeholder.jpg') + ')'"
-      ></div>
+
+      <!-- A worked example of the product, rather than a stock photograph. -->
+      <div class="relative hidden lg:block">
+        <div class="rounded-lg border border-white/12 bg-white/[0.04] p-5 backdrop-blur-sm">
+          <div class="flex items-center gap-2 border-b border-white/10 pb-3.5">
+            <span class="h-2 w-2 rounded-full bg-hot"></span>
+            <span class="font-display text-[11px] font-bold uppercase tracking-[0.14em] text-on-stage-dim">
+              “jazz trio for a corporate dinner”
+            </span>
+          </div>
+
+          <div class="mt-4 flex flex-col gap-2.5">
+            <div *ngFor="let sample of heroSamples; let i = index"
+                 class="flex items-center gap-3 rounded-[5px] border border-white/10 bg-white/[0.03] p-2.5
+                        animate-rise-in"
+                 [style.animation-delay.ms]="200 + i * 130">
+              <span class="h-11 w-11 shrink-0 rounded-[4px]" [style.background]="sample.sleeve"></span>
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-display text-[13px] font-bold text-on-stage">{{ sample.name }}</div>
+                <div class="mt-0.5 text-[11px] text-on-stage-dim">{{ sample.meta }}</div>
+              </div>
+              <div class="shrink-0 text-right">
+                <div class="font-display text-[13px] font-bold tabular-nums text-on-stage">Rs {{ sample.rate }}</div>
+                <div class="mt-0.5 text-[10px] text-on-stage-dim">{{ sample.match }}% match</div>
+              </div>
+            </div>
+          </div>
+
+          <p class="mt-4 text-[11px] leading-relaxed text-on-stage-dim">
+            Ranked by a model trained on relevance, budget, location and track record.
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================ features ============================ -->
+  <section id="features" class="omh-container py-20">
+    <div class="omh-rule mb-10">
+      <h2 class="omh-display shrink-0 text-[13px] uppercase tracking-[0.16em]">What you get</h2>
+    </div>
+
+    <div class="grid gap-px overflow-hidden rounded-card border border-line bg-line md:grid-cols-2 lg:grid-cols-3">
+      <div *ngFor="let feature of features; let i = index"
+           class="group bg-surface p-7 transition-colors hover:bg-surface-2">
+        <div class="font-display text-[11px] font-extrabold tabular-nums text-hot">
+          {{ (i + 1) | number: '2.0-0' }}
+        </div>
+        <h3 class="omh-display mt-4 text-[17px]">{{ feature.title }}</h3>
+        <p class="mt-2.5 max-w-[40ch] text-[14px] leading-relaxed text-ink-soft">{{ feature.body }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ how it works ============================ -->
+  <section id="how-it-works" class="border-y border-line bg-surface py-20">
+    <div class="omh-container">
+      <div class="omh-rule mb-10">
+        <h2 class="omh-display shrink-0 text-[13px] uppercase tracking-[0.16em]">How it works</h2>
+      </div>
+
+      <div class="grid gap-10 md:grid-cols-3">
+        <div *ngFor="let step of steps; let i = index" class="relative">
+          <div class="omh-rank text-[52px] text-line">{{ i + 1 }}</div>
+          <h3 class="omh-display mt-1 text-[18px]">{{ step.title }}</h3>
+          <p class="mt-2.5 max-w-[36ch] text-[14px] leading-relaxed text-ink-soft">{{ step.body }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ testimonials ============================ -->
+  <section id="testimonials" class="omh-container py-20">
+    <div class="omh-rule mb-10">
+      <h2 class="omh-display shrink-0 text-[13px] uppercase tracking-[0.16em]">From the circuit</h2>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <figure *ngFor="let testimonial of testimonials" class="omh-card flex flex-col p-6">
+        <div class="flex gap-0.5">
+          <svg *ngFor="let s of [1,2,3,4,5]" class="h-3.5 w-3.5" viewBox="0 0 16 16"
+               fill="rgb(var(--omh-stage))" aria-hidden="true">
+            <path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3 4.2 13.3l.7-4.3L1.8 6l4.3-.6z"/>
+          </svg>
+        </div>
+        <blockquote class="mt-4 flex-1 text-[14px] leading-relaxed text-ink">“{{ testimonial.text }}”</blockquote>
+        <figcaption class="mt-5 border-t border-line pt-4">
+          <div class="font-display text-[13px] font-bold text-ink">{{ testimonial.name }}</div>
+          <div class="mt-0.5 text-[12px] text-muted">{{ testimonial.role }} · {{ testimonial.venue }}</div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============================ cta ============================ -->
+  <section id="cta" class="omh-stage">
+    <div class="omh-container flex flex-col items-start gap-8 py-20 md:flex-row md:items-center md:justify-between">
       <div>
-        <h4>{{ artist.stageName }}</h4>
-        <p>{{ artist.genre?.[0]?.name || 'Artist' }}</p>
+        <h2 class="max-w-[18ch] font-display text-[30px] font-extrabold leading-[1.05] tracking-[-0.03em] text-on-stage md:text-[40px]">
+          Book your next act tonight.
+        </h2>
+        <p class="mt-3 max-w-[44ch] text-[15px] text-on-stage-dim">
+          Free to browse. No commission on your first booking.
+        </p>
       </div>
-    </div>
-    <div class="availability">Hire Now</div>
-  </div>
-  <div class="hero-visual">
-  <div
-    class="floating-card artist-card"
-    *ngFor="let artist of artists.slice(0, 2)"
-  >
-    <div class="card-header">
-      <div
-        class="avatar"
-        [style.backgroundImage]="'url(' + (artist.profilePictureUrl || 'assets/placeholder.jpg') + ')'"
-      ></div>
-      <div>
-        <h4>{{ artist.stageName }}</h4>
-        <p>{{ artist.genre?.[0]?.name || 'Artist' }}</p>
-      </div>
-    </div>
-    <div class="availability">Hire Now</div>
-  </div>
-</div>
-
-</div>
-
-
-
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features" id="features">
-    <div class="section-container">
-      <h2 class="section-title">Why Choose OpenMicHub?</h2>
-      <p class="section-subtitle">Powerful features to streamline your performance bookings</p>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🎤</div>
-          <h3>Artist Profiles</h3>
-          <p>Showcase your talent with detailed profiles, ratings, and video performances.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📅</div>
-          <h3>Smart Scheduling</h3>
-          <p>Manage availability with real-time updates and avoid double bookings.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">💸</div>
-          <h3>Coin-Based Booking</h3>
-          <p>Secure partial payments with our virtual coin system for hassle-free transactions.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">⭐</div>
-          <h3>Post-Event Reviews</h3>
-          <p>Build trust with verified reviews from organizers and venues.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <h3>Secure Admin Panel</h3>
-          <p>Manage bookings, payments, and profiles with our robust admin tools.</p>
-        </div>
+      <div class="flex shrink-0 flex-wrap gap-3">
+        <button type="button" class="omh-btn-primary !px-7 !py-3.5 !text-[15px]" (click)="navigateTo('discover')">
+          Find an artist →
+        </button>
+        <button type="button"
+                class="omh-btn !border-white/25 !bg-white/5 !px-7 !py-3.5 !text-[15px] !text-on-stage hover:!bg-white/10"
+                (click)="navigateTo('auth/register')">
+          List your act
+        </button>
       </div>
     </div>
   </section>
 
-  <!-- Featured Artists Section -->
-  <section class="artists" id="artists">
-  <div class="section-container">
-    <h2 class="section-title mt-5">Meet Our Talented Artists</h2>
-    <p class="section-subtitle">Discover singers, comedians, and performers ready to bring your event to life</p>
-
-    <!-- Add this before the artists-grid div -->
-    <div class="search-filter-container">
-      <div class="search-box">
-        <input
-          type="text"
-          placeholder="Search artists..."
-          (input)="onSearch($event)"
-          class="search-input"
-        >
+  <!-- ============================ footer ============================ -->
+  <footer class="border-t border-line bg-surface">
+    <div class="omh-container flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="grid h-7 w-7 place-items-center rounded-[4px] bg-ink font-display text-[13px] font-extrabold text-white">O</span>
+        <span class="font-display text-[13px] font-bold text-ink">OpenMicHub</span>
       </div>
-      <div class="filter-box">
-        <select
-          (change)="onGenreChange($event)"
-          class="genre-select"
-        >
-          <option value="">All Genres</option>
-          <option *ngFor="let genre of genres" [value]="genre.name">
-            {{genre.name}}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Existing artists-grid div -->
-
-    <div class="artists-grid">
-      <div class="artist-card" *ngFor="let artist of featuredArtists">
-        <div class="avatar-container">
-          <img class="avatar-img" [src]="artist.profilePictureUrl || 'assets/placeholder.jpg'" alt="{{ artist.stageName }}">
-        </div>
-        <div class="artist-details">
-          <h3 class="artist-name">{{ artist.stageName }}</h3>
-          <p class="artist-genre">{{ artist.genre[0]?.name || 'Artist' }}</p>
-          <p class="artist-bio">{{ artist.bio | slice:0:100 }}{{ artist.bio.length > 100 ? '...' : '' }}</p>
-          <button class="btn-view-profile" (click)="navigateTo('artists/' + artist.stageName)">View Profile</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button class="btn-secondary" (click)="prevPage()" [disabled]="currentPage === 0">Previous</button>
-      <span>Page {{ currentPage + 1 }} of {{ totalPages }}</span>
-      <button class="btn-secondary" (click)="nextPage()" [disabled]="currentPage === totalPages - 1">Next</button>
-    </div>
-  </div>
-</section>
-
-
-  <!-- How It Works Section -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="section-container">
-      <h2 class="section-title">How It Works</h2>
-      <p class="section-subtitle">Get started in just a few simple steps</p>
-      <div class="steps-grid">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3>Create Your Profile</h3>
-          <p>Artists and venues set up profiles with portfolios, availability, and rates.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3>Book or Be Booked</h3>
-          <p>Browse artists, check availability, and secure bookings with virtual coins.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3>Perform & Review</h3>
-          <p>Host amazing events and leave reviews to build your reputation.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Testimonials Section -->
-  <section class="testimonials" id="testimonials">
-    <div class="section-container">
-      <h2 class="section-title">What Our Users Say</h2>
-      <p class="section-subtitle">Hear from artists and organizers who love OpenMicHub</p>
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <div class="testimonial-avatar"></div>
-          <p class="testimonial-text">"OpenMicHub made booking performers for our venue so easy! The coin system is a game-changer."</p>
-          <h4 class="testimonial-name">Sita R., Venue Owner</h4>
-        </div>
-        <div class="testimonial-card">
-          <div class="testimonial-avatar"></div>
-          <p class="testimonial-text">"As a comedian, I love how I can showcase my videos and manage my gigs all in one place."</p>
-          <h4 class="testimonial-name">Ram K., Comedian</h4>
-        </div>
-        <div class="testimonial-card">
-          <div class="testimonial-avatar"></div>
-          <p class="testimonial-text">"The scheduling tools helped me avoid conflicts and focus on performing."</p>
-          <h4 class="testimonial-name">Lila M., Singer</h4>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA Section -->
-  <section class="cta" id="cta">
-    <div class="section-container">
-      <h2 class="section-title">Join OpenMicHub Today</h2>
-      <p class="section-subtitle">Whether you're an artist or an organizer, start connecting now!</p>
-      <div class="cta-buttons">
-        <button class="btn-primary" (click)="navigateTo('auth/register/artist')">Join as an Artist</button>
-        <button class="btn-secondary" (click)="navigateTo('auth/register/organizer')">Join as an Organizer</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="section-container">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <h2 class="brand-text">🎤 OpenMicHubNepal</h2>
-          <p>Connecting Nepal’s talent with the world.</p>
-        </div>
-        <div class="footer-links">
-          <div class="footer-column">
-            <h4>Platform</h4>
-            <a href="#features" (click)="scrollToSection('features')">Features</a>
-            <a href="#artists" (click)="scrollToSection('artists')">Artists</a>
-            <a href="#how-it-works" (click)="scrollToSection('how-it-works')">How It Works</a>
-            <a href="#pricing" (click)="scrollToSection('pricing')">Pricing</a>
-          </div>
-          <div class="footer-column">
-            <h4>Company</h4>
-            <a href="/about">About Us</a>
-            <a href="/contact">Contact</a>
-            <a href="/terms">Terms of Service</a>
-          </div>
-          <div class="footer-column">
-            <h4>Follow Us</h4>
-            <a href="https://facebook.com">Facebook</a>
-            <a href="https://twitter.com">Twitter</a>
-            <a href="https://instagram.com">Instagram</a>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>© 2025 OpenMicHubNepal. All rights reserved.</p>
-      </div>
+      <p class="text-[12px] text-muted">Connecting Nepal's stages with the people who fill them.</p>
     </div>
   </footer>
+</div>

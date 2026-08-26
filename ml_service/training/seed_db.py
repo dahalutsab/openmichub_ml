@@ -27,8 +27,9 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)-5s %(message)s")
 
 SEED_DOMAIN = "seed.openmichub.local"
 
-# bcrypt hash of "SeedArtist@123". Seeded accounts are demo data; they are
-# verified so they appear in listings, and they all share this password.
+# bcrypt hash of "Admin@123". Every seeded account shares it — this is demo
+# data, and the accounts are marked verified so they appear in listings.
+SEED_PASSWORD = "Admin@123"
 SEED_PASSWORD_HASH = "$2a$10$54gPf2W4sUQAMD8nr8Moqe8ylugwB/AXanMm2vbPUlGLaBCsCTNm6"
 
 # --- name and bio generation -------------------------------------------------
@@ -207,7 +208,13 @@ def clear(conn) -> int:
         artist_ids = [row[0] for row in cur.fetchall()]
 
         if artist_ids:
-            cur.execute("DELETE FROM artist_embedding WHERE artist_id = ANY(%s)", (artist_ids,))
+            cur.execute("""
+                DELETE FROM transaction WHERE virtual_coin_virtual_coin_id IN (
+                    SELECT virtual_coin_id FROM virtual_coin WHERE artist_id = ANY(%s))
+            """, (artist_ids,))
+            cur.execute("DELETE FROM payment WHERE booking_id IN "
+                        "(SELECT id FROM booking WHERE artist_id = ANY(%s))", (artist_ids,))
+            cur.execute("DELETE FROM ml.artist_embedding WHERE artist_id = ANY(%s)", (artist_ids,))
             cur.execute("DELETE FROM booking WHERE artist_id = ANY(%s)", (artist_ids,))
             cur.execute("DELETE FROM artists_genres WHERE artist_id = ANY(%s)", (artist_ids,))
             cur.execute("DELETE FROM virtual_coin WHERE artist_id = ANY(%s)", (artist_ids,))
@@ -318,6 +325,107 @@ def seed(n_artists: int, seed_value: int = 42) -> int:
     return created
 
 
+def seed_financials(seed_value: int = 42) -> dict:
+    """Gives the money screens something to render.
+
+    Artists and bookings alone leave every financial dashboard empty, which
+    makes them impossible to review and impossible to demo. This settles a share
+    of the existing confirmed bookings: a payment, the matching credit on the
+    artist's ledger, and a wallet balance that agrees with it.
+
+    Amounts follow the same rules the application enforces — a 5% platform fee,
+    half up front on partial payments — so the totals on screen are consistent
+    with what the booking flow would actually have produced.
+    """
+    rng = np.random.default_rng(seed_value)
+    payments = transactions = 0
+
+    with connection() as conn, conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) FROM payment")
+        if cur.fetchone()[0] > 0:
+            log.info("Financial records already present; leaving them alone.")
+            return {"payments": 0, "transactions": 0}
+
+        cur.execute("""
+            SELECT b.id, b.artist_id, b.user_id, b.total_amount, v.virtual_coin_id
+            FROM booking b
+            JOIN virtual_coin v ON v.artist_id = b.artist_id
+            WHERE b.status = 'CONFIRMED'
+        """)
+        bookings = cur.fetchall()
+
+        balances: dict[int, float] = {}
+
+        for booking_id, artist_id, user_id, total, wallet_id in bookings:
+            # Not every confirmed booking has been paid for yet.
+            if rng.random() > 0.72:
+                continue
+
+            full = bool(rng.random() > 0.35)
+            total = float(total or 0)
+            if total <= 0:
+                continue
+
+            received = total if full else total / 2
+            system_charges = round(total * 0.05, 2)
+            earnings = round(received - system_charges, 2)
+            if earnings <= 0:
+                continue
+
+            cur.execute(
+                """
+                INSERT INTO payment (pidx, booking_id, user_info_entity_id, total_amount,
+                                     received_amount, system_charges, payment_status,
+                                     payment_type, payment_method, transaction_code,
+                                     product_code, payment_time, created_date)
+                VALUES (%s, %s, %s, %s, %s, %s, 'COMPLETED', %s, 'KHALTI', %s,
+                        'artist_booking', CURRENT_TIME, NOW() - (random() * 240)::int * INTERVAL '1 day')
+                """,
+                (f"seed-{booking_id}", booking_id, user_id, total, received, system_charges,
+                 "FULL" if full else "PARTIAL", f"seed-tc-{booking_id}"),
+            )
+            payments += 1
+
+            cur.execute(
+                """
+                INSERT INTO transaction (virtual_coin_virtual_coin_id, booking_id, amount,
+                                         transaction_type, transaction_purpose, status, created_date)
+                VALUES (%s, %s, %s, 'CREDIT', 'BOOKING_PAYMENT', 'APPROVED',
+                        NOW() - (random() * 240)::int * INTERVAL '1 day')
+                """,
+                (wallet_id, booking_id, earnings),
+            )
+            transactions += 1
+            balances[wallet_id] = balances.get(wallet_id, 0.0) + earnings
+
+        # A handful of artists have already withdrawn some of it.
+        for wallet_id, balance in list(balances.items()):
+            if rng.random() > 0.25 or balance < 2000:
+                continue
+            amount = round(balance * float(rng.uniform(0.2, 0.6)), 2)
+            cur.execute(
+                """
+                INSERT INTO transaction (virtual_coin_virtual_coin_id, amount, transaction_type,
+                                         transaction_purpose, status, created_date)
+                VALUES (%s, %s, 'DEBIT', 'WITHDRAWAL_REQUEST', %s,
+                        NOW() - (random() * 90)::int * INTERVAL '1 day')
+                """,
+                (wallet_id, amount, "APPROVED" if rng.random() > 0.4 else "PENDING"),
+            )
+            transactions += 1
+            balances[wallet_id] = balance - amount
+
+        # The wallet must agree with its ledger.
+        for wallet_id, balance in balances.items():
+            cur.execute("UPDATE virtual_coin SET balance = %s WHERE virtual_coin_id = %s",
+                        (round(balance, 2), wallet_id))
+
+        conn.commit()
+
+    log.info("Seeded %d payments and %d transactions", payments, transactions)
+    return {"payments": payments, "transactions": transactions}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed a demo artist catalogue.")
     parser.add_argument("--artists", type=int, default=200)
@@ -333,7 +441,12 @@ def main() -> None:
         return
 
     created = seed(args.artists, args.seed)
-    print(f"Seeded {created} artists. Rebuild embeddings next:")
+    ledger = seed_financials(args.seed)
+
+    print(f"Seeded {created} artists (password: {SEED_PASSWORD}).")
+    print(f"Seeded {ledger['payments']} payments and {ledger['transactions']} "
+          f"transactions so the admin and artist dashboards have something to show.")
+    print("\nRebuild embeddings next:")
     print("  curl -X POST http://localhost:8000/embeddings/rebuild")
 
 

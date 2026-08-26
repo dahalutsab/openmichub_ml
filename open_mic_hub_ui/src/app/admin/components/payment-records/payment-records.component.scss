@@ -12,7 +12,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
   th {
-    background-color: #f8f9fa;
+    background-color: rgb(var(--omh-surface-2));
     font-weight: 600;
     border-bottom-width: 2px;
   }
@@ -33,10 +33,10 @@ td:nth-child(4) { // Status column
     padding: 0.5em 0.75em;
     font-weight: 500;
 
-    &.pending { background-color: #ffc107; }
+    &.pending { background-color: rgb(var(--omh-stage)); }
     &.completed, &.complete { background-color: #198754; }
-    &.failed { background-color: #dc3545; }
-    &.cancelled, &.aborted { background-color: #6c757d; }
+    &.failed { background-color: rgb(var(--omh-critical)); }
+    &.cancelled, &.aborted { background-color: rgb(var(--omh-muted)); }
   }
 }
 
@@ -66,7 +66,7 @@ td:nth-child(4) { // Status column
 }
 
 .text-muted {
-  color: #6c757d;
+  color: rgb(var(--omh-muted));
 }
 
 // Responsive adjustments

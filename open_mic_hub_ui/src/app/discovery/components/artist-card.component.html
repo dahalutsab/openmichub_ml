@@ -1,7 +1,11 @@
 <!-- ============================ grid ============================ -->
 <article *ngIf="layout === 'grid'"
          class="omh-card-interactive group flex h-full flex-col overflow-hidden"
-         tabindex="0">
+         tabindex="0" role="link"
+         [attr.aria-label]="'View ' + artist.stageName"
+         (click)="activate()"
+         (keydown.enter)="activate($event)"
+         (keydown.space)="activate($event)">
 
   <!-- sleeve -->
   <div class="relative aspect-[16/10] overflow-hidden bg-ink">
@@ -111,7 +115,12 @@
 
 <!-- ============================ list ============================ -->
 <article *ngIf="layout === 'list'"
-         class="omh-card-interactive group flex items-center gap-4 p-3" tabindex="0">
+         class="omh-card-interactive group flex items-center gap-4 p-3"
+         tabindex="0" role="link"
+         [attr.aria-label]="'View ' + artist.stageName"
+         (click)="activate()"
+         (keydown.enter)="activate($event)"
+         (keydown.space)="activate($event)">
 
   <div class="relative h-14 w-14 shrink-0 overflow-hidden rounded-[4px] bg-ink">
     <div class="absolute inset-0 transition-transform duration-500 group-hover:scale-110"

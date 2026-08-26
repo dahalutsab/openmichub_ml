@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* Variables */
-$primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$primary-gradient: linear-gradient(135deg, rgb(var(--omh-brand)) 0%, rgb(var(--omh-brand-strong)) 100%);
 $shadow-light: 0 4px 20px rgba(0, 0, 0, 0.1);
 $shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.15);
 $border-radius: 16px;

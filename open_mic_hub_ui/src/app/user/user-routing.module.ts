@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { UserBaseComponent } from './components/user-base/user-base.component';
-import { Role } from '../shared/role';
+import { BOOKER_ROLES } from '../shared/role';
 import { UserDashboardComponent } from './components/user-dashboard/user-dashboard.component';
 import { authGuard } from '../auth/auth.guard';
 import { ListArtistComponent } from './components/list-artist/list-artist.component';
@@ -18,7 +18,7 @@ const routes: Routes = [
     path: '',
     component: UserBaseComponent,
     canActivate: [authGuard],
-    data: { roles: [Role.USER] },
+    data: { roles: BOOKER_ROLES },
     
     
     children: [
