@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -65,8 +67,7 @@ public class PostServiceImpl implements PostService{
     @Override
     public PostResponse updatePost(Long postId, PostRequest postRequest) throws IOException {
         log.info("Updating post with ID: {}", postId);
-        Posts post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException(POST_NOT_FOUND + postId));
+        Posts post = requireOwnPost(postId);
         post.setTitle(postRequest.getTitle());
         post.setContent(postRequest.getContent());
         if (postRequest.getImages() != null && !postRequest.getImages().isEmpty()) {
@@ -88,9 +89,24 @@ public class PostServiceImpl implements PostService{
     @Override
     public void deletePost(Long postId) {
         log.info("Deleting post with ID: {}", postId);
+        postRepository.delete(requireOwnPost(postId));
+    }
+
+    /**
+     * Loads a post and confirms the logged-in artist wrote it.
+     *
+     * <p>update and delete previously took only an id, so any authenticated caller could edit or
+     * delete anyone's post.
+     */
+    private Posts requireOwnPost(Long postId) {
         Posts post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException(POST_NOT_FOUND + postId));
-        postRepository.delete(post);
+                .orElseThrow(() -> new EntityNotFoundException(POST_NOT_FOUND + postId));
+
+        Artist loggedInArtist = loggedInUserUtil.getLoggedInArtist();
+        if (!post.getArtist().getId().equals(loggedInArtist.getId())) {
+            throw new AccessDeniedException("This post is not yours.");
+        }
+        return post;
     }
 
     @Override

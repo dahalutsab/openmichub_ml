@@ -20,6 +20,7 @@ import com.brogrammers.open_mic_hub_service.user_management.artist.artist.entity
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.repository.ArtistRepository;
 import com.brogrammers.open_mic_hub_service.user_management.artist.availability.entity.ArtistAvailability;
 import com.brogrammers.open_mic_hub_service.user_management.artist.availability.repository.ArtistAvailabilityRepository;
+import com.brogrammers.open_mic_hub_service.user_management.artist.unavailability.repository.ArtistUnavailabilityRepository;
 import com.brogrammers.open_mic_hub_service.user_management.user.entity.UserEntity;
 import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.TransactionRequest;
@@ -44,6 +45,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -56,6 +58,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -66,6 +69,7 @@ public class BookingServiceImpl implements BookingService {
     private final LoggedInUserUtil loggedInUserUtil;
     private final ArtistRepository artistRepository;
     private final ArtistAvailabilityRepository artistAvailabilityRepository;
+    private final ArtistUnavailabilityRepository artistUnavailabilityRepository;
     private final MailService mailService;
     private final KhaltiClient khaltiClient;
 
@@ -127,6 +131,22 @@ public class BookingServiceImpl implements BookingService {
             BookingServiceImpl.log.error("Artist is not available at the requested time: {} to {}", startTime, endTime);
             throw new IllegalArgumentException("Artist is not available at the requested time.");
         }
+
+        // Blackout dates. The unavailability feature was fully built - entity, repository,
+        // controller - and the booking path never consulted it, so artists could mark themselves
+        // unavailable and still be booked.
+        if (artistUnavailabilityRepository.existsByArtistAndDate(artist, bookingRequest.getEventDate())) {
+            throw new IllegalArgumentException("Artist is unavailable on " + bookingRequest.getEventDate() + ".");
+        }
+
+        // Nothing previously stopped the same artist being booked by several organizers for the
+        // same slot.
+        boolean clashes = bookingRepository.existsOverlapping(
+                artist, bookingRequest.getEventDate(), startTime, endTime,
+                List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED));
+        if (clashes) {
+            throw new IllegalArgumentException("Artist is already booked during that time.");
+        }
         // Create and save the booking entity
         Booking booking = new Booking();
         booking.setArtistId(artist);
@@ -149,6 +169,23 @@ public class BookingServiceImpl implements BookingService {
         return new BookingResponse(savedBooking);
     }
 
+    /**
+     * Loads a booking and confirms it belongs to the logged-in artist.
+     *
+     * <p>approve and decline previously took only an id, so any authenticated caller could accept
+     * or reject any booking on the platform.
+     */
+    private Booking requireOwnBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
+
+        Artist loggedInArtist = loggedInUserUtil.getLoggedInArtist();
+        if (!booking.getArtistId().getId().equals(loggedInArtist.getId())) {
+            throw new AccessDeniedException("This booking was not made with you.");
+        }
+        return booking;
+    }
+
     @Override
     public Page<BookingResponse> getAllBookingsOfUsers(Pageable pageable) {
         BookingServiceImpl.log.info("Fetching all bookings for the logged-in user");
@@ -163,10 +200,10 @@ public class BookingServiceImpl implements BookingService {
         return Page.empty(pageable);
     }
 
+    /** Only the artist the booking was made with may approve it. */
     @Override
     public void approveBooking(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
+        Booking booking = requireOwnBooking(bookingId);
 
         Artist artist = booking.getArtistId();
         UserEntity user = booking.getUserId();
@@ -180,10 +217,10 @@ public class BookingServiceImpl implements BookingService {
         mailService.sendBookingApprovalEmail(user, artist, booking);
     }
 
+    /** Only the artist the booking was made with may decline it. */
     @Override
     public void declineBooking(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found with ID: " + bookingId));
+        Booking booking = requireOwnBooking(bookingId);
 
         UserEntity user = booking.getUserId();
 
