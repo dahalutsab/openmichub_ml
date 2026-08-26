@@ -17,6 +17,9 @@ import org.springframework.data.domain.Pageable;
 import com.brogrammers.open_mic_hub_service.booking.entity.BookingStatus;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -115,6 +118,16 @@ public class ReviewServiceImpl implements ReviewService{
      * <p>update and delete previously took only an id, so any authenticated caller could rewrite or
      * remove anyone's review — and update also let them repoint it at a different artist.
      */
+    private boolean isPlatformStaff() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_SUPER_ADMIN") || a.equals("ROLE_ADMIN"));
+    }
+
     private Review requireOwnReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("Review not found"));
@@ -126,10 +139,14 @@ public class ReviewServiceImpl implements ReviewService{
         return review;
     }
 
+    /** The author may remove their own review; platform staff may remove any, for moderation. */
     @Override
     public void deleteReview(Long reviewId) {
         log.info("Deleting review with ID: {}", reviewId);
-        Review review = requireOwnReview(reviewId);
+        Review review = isPlatformStaff()
+                ? reviewRepository.findById(reviewId)
+                        .orElseThrow(() -> new EntityNotFoundException("Review not found"))
+                : requireOwnReview(reviewId);
         Artist artist = review.getArtist();
 
         reviewRepository.delete(review);
@@ -145,31 +162,30 @@ public class ReviewServiceImpl implements ReviewService{
                 .map(ReviewResponse::new);
     }
 
+    /** An artist having no reviews yet is an empty page, not an error. */
     @Override
     public Page<ReviewResponse> getReviewsByArtistId(Long artistId, Pageable pageable) {
         log.info("Fetching reviews for artist with ID: {}", artistId);
         Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
 
-        Page<Review> reviews = reviewRepository.findAllByArtist(artist, pageable)
-                .orElseThrow(
-                        () -> new IllegalArgumentException("No reviews found for this artist")
-                );
-        return reviews.map(ReviewResponse::new);
+        return reviewRepository.findAllByArtistOrderByCreatedDateDesc(artist, pageable)
+                .map(ReviewResponse::new);
     }
 
     @Override
     public Page<ReviewResponse> getAllCurrentArtistReviews(Pageable pageable) {
         log.info("Fetching all reviews for the current artist");
-        UserEntity currentUser = loggedInUserUtil.getLoggedInUser();
-        Artist currentArtist = artistRepository.findByUser(currentUser)
-                .orElseThrow(() -> new IllegalArgumentException("Current user is not an artist"));
+        Artist currentArtist = loggedInUserUtil.getLoggedInArtist();
+        return reviewRepository.findAllByArtistOrderByCreatedDateDesc(currentArtist, pageable)
+                .map(ReviewResponse::new);
+    }
 
-        Page<Review> reviews = reviewRepository.findAllByArtist(currentArtist, pageable)
-                .orElseThrow(
-                        () -> new IllegalArgumentException("No reviews found for the current artist")
-                );
-        return reviews.map(ReviewResponse::new);
+    @Override
+    public Page<ReviewResponse> getMyReviews(Pageable pageable) {
+        UserEntity reviewer = loggedInUserUtil.getLoggedInUser();
+        return reviewRepository.findAllByReviewerOrderByCreatedDateDesc(reviewer, pageable)
+                .map(ReviewResponse::new);
     }
 
     // Calculate the average rating for an artist

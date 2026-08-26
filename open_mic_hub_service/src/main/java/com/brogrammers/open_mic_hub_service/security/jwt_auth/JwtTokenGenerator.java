@@ -76,15 +76,18 @@ public class JwtTokenGenerator {
     /**
      * Coarse permissions derived from the caller's roles.
      *
-     * <p>This used to look for {@code ROLE_SCHOOL_ADMIN}, a role that does not exist in this
-     * application, so the scope claim came out empty for everyone.
+     * <p>This once looked for {@code ROLE_SCHOOL_ADMIN}, a role from an unrelated project, so the
+     * scope claim came out empty for everyone.
      */
     private String getPermissionsFromRoles(String roles) {
         Set<String> permissions = new LinkedHashSet<>();
-        if (roles.contains("ROLE_ADMIN")) {
-            permissions.addAll(List.of("READ", "WRITE", "DELETE"));
+        if (roles.contains("ROLE_SUPER_ADMIN")) {
+            permissions.addAll(List.of("READ", "WRITE", "DELETE", "DISBURSE"));
         }
-        if (roles.contains("ROLE_ARTIST")) {
+        if (roles.contains("ROLE_ADMIN")) {
+            permissions.addAll(List.of("READ", "WRITE"));
+        }
+        if (roles.contains("ROLE_ARTIST") || roles.contains("ROLE_ORGANIZER")) {
             permissions.addAll(List.of("READ", "WRITE"));
         }
         if (roles.contains("ROLE_USER")) {

@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -62,6 +63,10 @@ public class SecurityConfig {
                             auth.requestMatchers(method, entry.getUrl()).permitAll();
                         }
                     }
+                    // A single review by numeric id is public; /reviews and /reviews/me are not,
+                    // so this is matched by shape rather than with a path wildcard.
+                    auth.requestMatchers(RegexRequestMatcher.regexMatcher(
+                            HttpMethod.GET, "/api/v1/reviews/\\d+")).permitAll();
                     auth.requestMatchers("/ws/**").permitAll(); // Ensure WebSocket bypasses HTTP filters
                     auth.anyRequest().authenticated();
                 })

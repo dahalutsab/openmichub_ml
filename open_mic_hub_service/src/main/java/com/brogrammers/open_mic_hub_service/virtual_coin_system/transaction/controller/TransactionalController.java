@@ -7,6 +7,7 @@ import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.enti
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionType;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
+import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.UserRole;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class TransactionalController extends BaseController {
     private final TransactionService transactionService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(UserRole.ANY_ADMIN)
     @GetMapping
     public ResponseEntity<GlobalApiResponse> getAllTransactions(Pageable pageable) {
         return successResponse(

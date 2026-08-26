@@ -20,4 +20,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Double findAverageRatingByArtist(@Param("artist") Artist artist);
 
     boolean existsByBookingAndReviewer(Booking booking, UserEntity reviewer);
+
+    Page<Review> findAllByArtistOrderByCreatedDateDesc(Artist artist, Pageable pageable);
+
+    Page<Review> findAllByReviewerOrderByCreatedDateDesc(UserEntity reviewer, Pageable pageable);
 }

@@ -179,7 +179,11 @@ public class AuthServiceImpl implements AuthService {
         userEntity.setPassword(passwordEncoder.encode(registration.password()));
         userEntity.setPhoneNumber(registration.phoneNumber());
         userEntity.setLocation(registration.location());
-        Roles role = rolesRepository.findByName(UserRole.USER.name()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
+        // Self-registration creates an ORGANIZER: on this platform the person signing up is the
+        // one who books and pays for artists. USER exists as a lower audience tier that staff can
+        // assign, but nothing self-registers into it.
+        Roles role = rolesRepository.findByName(UserRole.ORGANIZER.name())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
         userEntity.getRoles().add(role);
         userEntity.setVerified(false);
         OTP otp = otpService.saveOTP(userEntity, OTPPurpose.REGISTER);

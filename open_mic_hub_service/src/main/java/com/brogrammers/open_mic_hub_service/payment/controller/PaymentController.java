@@ -6,6 +6,7 @@ import com.brogrammers.open_mic_hub_service.payment.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.UserRole;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ import reactor.core.publisher.Mono;
 public class PaymentController extends BaseController {
     private final PaymentService paymentService;
 
-     @PreAuthorize("hasRole('ADMIN')")
+     @PreAuthorize(UserRole.ANY_ADMIN)
      @GetMapping
     public ResponseEntity<GlobalApiResponse> getAllPayments(Pageable pageable) {
         return successResponse(
@@ -37,7 +38,7 @@ public class PaymentController extends BaseController {
         );
     }
 
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize(UserRole.ANY_BOOKER)
     @PostMapping("/booking")
     public Mono<ResponseEntity<String>> bookArtist(@RequestParam Long bookingId, String paymentType) {
         return paymentService.bookArtist(bookingId, paymentType)

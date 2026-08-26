@@ -47,8 +47,8 @@ public class InsertInitialUserInfo implements CommandLineRunner {
             admin.setFullName(ADMIN_NAME);
             admin.setPassword(passwordEncoder.encode(adminPassword));
             admin.setRoles(List.of(
-                    rolesRepository.findByName(UserRole.ADMIN.toString())
-                            .orElseThrow(() -> new RuntimeException("ADMIN Role not found"))
+                    rolesRepository.findByName(UserRole.SUPER_ADMIN.name())
+                            .orElseThrow(() -> new RuntimeException("SUPER_ADMIN role not found"))
             ));
             admin.setEmailId(adminEmail);
             admin.setVerified(true);

@@ -43,13 +43,13 @@ public class UserController extends BaseController {
             summary = UserSwaggerDocumentationMessage.GET_USER_BY_ID_SUMMARY,
             description = UserSwaggerDocumentationMessage.GET_USER_BY_ID_DESCRIPTION
     )
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(UserRole.ANY_ADMIN)
     @GetMapping("/{userId}")
     public ResponseEntity<GlobalApiResponse> getUserById(@PathVariable Long userId){
         return successResponse(userService.getUserById(userId), ResponseMessageUtil.fetchedSuccessfully(USER));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(UserRole.ANY_ADMIN)
     @GetMapping("/all")
     public ResponseEntity<GlobalApiResponse> getAllUsers(
             @Parameter(

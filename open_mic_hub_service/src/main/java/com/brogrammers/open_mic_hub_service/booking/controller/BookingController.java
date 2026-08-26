@@ -7,6 +7,7 @@ import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.UserRole;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,7 +21,7 @@ import reactor.core.publisher.Mono;
 public class BookingController extends BaseController {
     private final BookingService bookingService;
 
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize(UserRole.ANY_BOOKER)
     @PostMapping("/booking")
     public ResponseEntity<GlobalApiResponse> bookArtist(@RequestBody BookingRequest bookingRequest) {
         log.info("Received booking request: {}", bookingRequest);
@@ -107,7 +108,7 @@ public class BookingController extends BaseController {
 //    }
 //
     /** Disburses a pending withdrawal request. Admin only - this moves money out of the platform. */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping("/withdraw")
     public Mono<ResponseEntity<String>> withdraw(@RequestBody WithDrawRequest withDrawRequest) {
         return bookingService.withdraw(withDrawRequest)

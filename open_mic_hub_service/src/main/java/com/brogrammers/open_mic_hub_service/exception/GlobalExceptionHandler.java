@@ -74,7 +74,7 @@ public class GlobalExceptionHandler extends BaseController {
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResponseEntity<GlobalErrorResponse> handlingAccessDeniedException(AccessDeniedException exception){
-        log.error(EXCEPTION, exception);
+        log.warn("Access denied: {}", exception.getMessage());
         return errorResponse(HttpStatus.FORBIDDEN, "Access denied", exception);
     }
 
@@ -85,11 +85,16 @@ public class GlobalExceptionHandler extends BaseController {
         return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Input/output error", exception);
     }
 
+    /**
+     * Services raise this for rules the caller broke — "you have already reviewed this booking",
+     * "insufficient balance". The message is written for the user, so it is passed through rather
+     * than replaced with the word "Illegal argument", which told them nothing.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<GlobalErrorResponse> handlingIllegalArgumentException (IllegalArgumentException exception) {
-        log.error(EXCEPTION, exception);
-        return errorResponse(HttpStatus.BAD_REQUEST, "Illegal argument", exception);
+        log.warn("Rejected request: {}", exception.getMessage());
+        return errorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }
 
     @ExceptionHandler(NullPointerException.class)

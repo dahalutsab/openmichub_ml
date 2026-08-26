@@ -13,4 +13,7 @@ public interface ReviewService {
     Page<ReviewResponse> getAllReviews(Pageable pageable);
     Page<ReviewResponse> getReviewsByArtistId(Long artistId, Pageable pageable);
     Page<ReviewResponse> getAllCurrentArtistReviews(Pageable pageable);
+
+    /** Reviews written by the logged-in user. */
+    Page<ReviewResponse> getMyReviews(Pageable pageable);
 }
