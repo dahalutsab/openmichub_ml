@@ -2,17 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { ArtistService } from '../../artist.service';
 import { ToastrService } from 'ngx-toastr';
 
-
 @Component({
   selector: 'app-bookings',
-  standalone:false,
+  standalone: false,
   templateUrl: './bookings.component.html',
-  styleUrls: ['./bookings.component.scss']
 })
 export class BookingsComponent implements OnInit {
   bookings: any[] = [];
   isLoading = true;
   error: string | null = null;
+
+  /** Booking currently being approved or declined, so its row can be disabled. */
+  busyId: number | null = null;
 
   constructor(private service: ArtistService, private toast: ToastrService) {}
 
@@ -20,7 +21,13 @@ export class BookingsComponent implements OnInit {
     this.fetchBookings();
   }
 
+  get pendingCount(): number {
+    return this.bookings.filter(b => b.bookingStatus === 'PENDING').length;
+  }
+
   fetchBookings(): void {
+    this.isLoading = true;
+    this.error = null;
     this.service.getAllBookings().subscribe({
       next: (res: any) => {
         this.bookings = res?.data?.content || [];
@@ -35,32 +42,46 @@ export class BookingsComponent implements OnInit {
   }
 
   approveBooking(bookingId: number): void {
-  this.service.approvedBookings(bookingId).subscribe({
-    next: () => {
-   
-      this.fetchBookings();
-         this.toast.success('Booking approved successfully');
-             alert('Booking approve successfully')
-    },
-    error: () => {
-      
-    }
-  });
-}
+    this.busyId = bookingId;
+    this.service.approvedBookings(bookingId).subscribe({
+      next: () => {
+        this.busyId = null;
+        // Previously this fired a toast *and* a native alert() for the same
+        // event, and the error branch was empty — a failed approval looked
+        // exactly like nothing happening.
+        this.toast.success('Booking approved');
+        this.fetchBookings();
+      },
+      error: () => {
+        this.busyId = null;
+        this.toast.error('Failed to approve booking');
+      }
+    });
+  }
 
-rejectBooking(bookingId: number): void {
-  this.service.rejectedBookings(bookingId).subscribe({
-    next: () => {
-  
-      this.toast.success('Booking rejected successfully');
-      this.fetchBookings();
-    },
-    error: () => {
-      this.toast.error('Failed to reject booking');
-    }
-  });
-}
+  rejectBooking(bookingId: number): void {
+    this.busyId = bookingId;
+    this.service.rejectedBookings(bookingId).subscribe({
+      next: () => {
+        this.busyId = null;
+        this.toast.success('Booking declined');
+        this.fetchBookings();
+      },
+      error: () => {
+        this.busyId = null;
+        this.toast.error('Failed to decline booking');
+      }
+    });
+  }
 
+  statusClass(status: string): string {
+    switch (status) {
+      case 'APPROVED': return 'omh-status-positive';
+      case 'PENDING': return 'omh-status-pending';
+      case 'REJECTED': return 'omh-status-critical';
+      default: return 'omh-status-neutral';
+    }
+  }
 
   formatTime(time: string): string {
     if (!time) return '';
@@ -70,16 +91,4 @@ rejectBooking(bookingId: number): void {
     const formattedHour = h % 12 === 0 ? 12 : h % 12;
     return `${formattedHour}:${minute} ${ampm}`;
   }
-
-  // updateStatus(bookingId: number, newStatus: 'APPROVED' | 'REJECTED') {
-  //   this.service.updateBookingStatus(bookingId, newStatus).subscribe({
-  //     next: () => {
-  //       this.toastr.success(`Booking ${newStatus.toLowerCase()} successfully`);
-  //       this.fetchBookings(); // reload the list
-  //     },
-  //     error: () => {
-  //       this.toastr.error('Failed to update status');
-  //     }
-  //   });
-  }
-
+}

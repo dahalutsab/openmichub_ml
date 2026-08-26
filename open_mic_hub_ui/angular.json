@@ -37,15 +37,10 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "src/app/shared/css/admin.scss",
               "node_modules/ngx-toastr/toastr.css",
-              "node_modules/bootstrap-icons/font/bootstrap-icons.css",
-              "src/app/shared/css/dashboard-theme.scss"
+              "node_modules/bootstrap-icons/font/bootstrap-icons.css"
             ],
-            "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
-            ]
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -100,14 +95,10 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/bootstrap/dist/css/bootstrap.min.css",
-              "src/app/shared/css/admin.scss",
               "node_modules/ngx-toastr/toastr.css",
-              "src/app/shared/css/dashboard-theme.scss"
+              "node_modules/bootstrap-icons/font/bootstrap-icons.css"
             ],
-            "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
-            ]
+            "scripts": []
           }
         }
       }

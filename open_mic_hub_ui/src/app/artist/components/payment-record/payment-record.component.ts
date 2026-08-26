@@ -7,8 +7,7 @@ interface PaymentResponse {
   paymentMethod: string;
   paymentStatus: string;
   productCode: string;
-  booking: {
-    // Add booking properties as needed
+  booking?: {
     id?: number;
     eventName?: string;
     venue?: string;
@@ -29,7 +28,6 @@ interface PaginatedResponse {
   selector: 'app-payment-record',
   standalone: false,
   templateUrl: './payment-record.component.html',
-  styleUrl: './payment-record.component.scss'
 })
 export class PaymentRecordComponent implements OnInit {
   payments: PaymentResponse[] = [];
@@ -42,8 +40,6 @@ export class PaymentRecordComponent implements OnInit {
   
   selectedStatus = 'ALL';
   selectedMethod = 'ALL';
-  
-  Math = Math;
 
   constructor(private artistService: ArtistService) {} // Inject your service here
 
@@ -55,14 +51,14 @@ export class PaymentRecordComponent implements OnInit {
     this.loading = true;
     this.error = null;
     
-    this.artistService.getAllArtistPaymentRecords()
+    this.artistService.getAllArtistPaymentRecords(this.currentPage, this.pageSize)
       .subscribe({
         next: (response: any) => {
           const data: PaginatedResponse = response.data;
-          this.payments = data.content;
-          this.totalElements = data.totalElements;
-          this.totalPages = data.totalPages;
-          this.currentPage = data.number;
+          this.payments = data?.content ?? [];
+          this.totalElements = data?.totalElements ?? 0;
+          this.totalPages = data?.totalPages ?? 0;
+          this.currentPage = data?.number ?? 0;
           this.loading = false;
         },
         error: (error: any) => {
@@ -139,5 +135,30 @@ export class PaymentRecordComponent implements OnInit {
     return method.replace(/_/g, ' ')
                  .toLowerCase()
                  .replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  get startIndex(): number {
+    return this.totalElements === 0 ? 0 : this.currentPage * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
+  statusClass(status: string): string {
+    switch ((status || '').toUpperCase()) {
+      case 'COMPLETE':
+      case 'COMPLETED':
+      case 'SUCCESS':
+        return 'omh-status-positive';
+      case 'PENDING':
+        return 'omh-status-pending';
+      case 'FAILED':
+      case 'CANCELLED':
+      case 'ABORTED':
+        return 'omh-status-critical';
+      default:
+        return 'omh-status-neutral';
+    }
   }
 }

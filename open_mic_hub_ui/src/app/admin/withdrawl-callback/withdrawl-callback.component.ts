@@ -1,14 +1,12 @@
-import {Component, NgZone, OnInit} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
-import {UserService} from '../../user/user.service';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {AdminService} from '../admin.service';
+import { Component, NgZone, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AdminService } from '../admin.service';
+import { ToastService } from '../../auth/toastr.service';
 
 @Component({
   selector: 'app-withdrawl-callback',
   standalone: false,
   templateUrl: './withdrawl-callback.component.html',
-  styleUrl: './withdrawl-callback.component.scss'
 })
 export class WithdrawlCallbackComponent implements OnInit {
   queryParams: any;
@@ -16,8 +14,8 @@ export class WithdrawlCallbackComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private adminService: AdminService,
-    private snackBar: MatSnackBar,
-    private router: Router  ,
+    private toast: ToastService,
+    private router: Router,
     private ngZone: NgZone
   ) {}
 
@@ -25,31 +23,29 @@ export class WithdrawlCallbackComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       this.queryParams = params;
 
-      console.log('Callback Params:', params); // Debug
-
-      if (params['status']?.toLowerCase() === 'completed') {
+      if (this.isComplete) {
         this.adminService.confirmPaymentViaPost(params).subscribe({
-          next: (res) => {
-            this.snackBar.open('Payment Successful!', 'Close', { duration: 3000 });
-
+          next: () => {
+            this.toast.showSuccess('Withdrawal processed successfully.');
             this.ngZone.run(() => {
-              this.router.navigate(['/user/bookings']);
+              this.router.navigate(['/admin/transactions']);
             });
           },
           error: (err) => {
-            console.error('Payment Callback Failed', err);
-            this.snackBar.open('Payment processing failed on server.', 'Close', { duration: 3000 });
+            console.error('Withdrawal Callback Failed', err);
+            this.toast.showError('Withdrawal processing failed on the server.');
           }
         });
       }
     });
   }
 
-
-  goToBookings() {
-    this.ngZone.run(() => {
-      this.router.navigate(['/user/bookings']);
-    });
+  get isComplete(): boolean {
+    return this.queryParams?.['status']?.toLowerCase() === 'completed';
   }
 
+  /** The gateway reports paisa; the UI shows rupees. */
+  get amount(): number {
+    return Number(this.queryParams?.['amount'] ?? 0) / 100;
+  }
 }

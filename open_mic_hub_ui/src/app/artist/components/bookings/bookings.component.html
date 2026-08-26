@@ -1,46 +1,89 @@
-<table *ngIf="!isLoading && bookings.length > 0" class="table table-bordered table-hover align-middle">
-  <thead class="table-dark">
-    <tr>
-      <th>Artist Name</th>
-      <th>Venue</th>
-      <th>Date</th>
-      <th>Start Time</th>
-      <th>End Time</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr *ngFor="let booking of bookings">
-      <td>
-        <strong>{{ booking.artistResponse?.artistName }}</strong><br />
-        <small class="text-muted">{{ booking.artistResponse?.stageName }}</small>
-      </td>
-      <td>{{ booking.venue }}</td>
-      <td>{{ booking.bookingDate }}</td>
-      <td>{{ formatTime(booking.startTime) }}</td>
-      <td>{{ formatTime(booking.endTime) }}</td>
-      <td>
-        <span class="badge" [ngClass]="{
-          'bg-warning': booking.bookingStatus === 'PENDING',
-          'bg-success': booking.bookingStatus === 'APPROVED',
-          'bg-danger': booking.bookingStatus === 'REJECTED'
-        }">
-          {{ booking.bookingStatus }}
-        </span>
-      </td>
-      <td>
-  <ng-container *ngIf="booking.bookingStatus === 'PENDING'">
-    <button class="btn btn-sm btn-success me-1" (click)="approveBooking(booking.bookingId)">
-      Approve
-    </button>
-    <button class="btn btn-sm btn-danger" (click)="rejectBooking(booking.bookingId)">
-      Reject
-    </button>
-  </ng-container>
-  <span *ngIf="booking.bookingStatus !== 'PENDING'" class="text-muted">No action</span>
-</td>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Bookings</h1>
+    <p class="omh-page-sub">Requests from venues and bookers waiting on your answer.</p>
+  </div>
+  <span class="omh-chip" *ngIf="pendingCount">{{ pendingCount }} awaiting reply</span>
+</div>
 
-    </tr>
-  </tbody>
-</table>
+<!-- Loading -->
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="isLoading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading bookings…</span>
+</div>
+
+<!-- Error -->
+<div class="omh-alert-critical mb-4" *ngIf="error && !isLoading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="fetchBookings()">Try again</button>
+</div>
+
+<section class="omh-panel" *ngIf="!isLoading && !error">
+  <div class="omh-table-wrap" *ngIf="bookings.length; else noBookings">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Booker</th>
+          <th>Venue</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let booking of bookings">
+          <td>
+            <div class="font-medium">{{ booking.artistResponse?.artistName || '—' }}</div>
+            <div class="text-xs text-muted">{{ booking.artistResponse?.stageName }}</div>
+          </td>
+
+          <td>{{ booking.venue || '—' }}</td>
+
+          <td>{{ booking.bookingDate | date:'mediumDate' }}</td>
+
+          <td class="whitespace-nowrap">
+            {{ formatTime(booking.startTime) }}
+            <span class="text-muted">–</span>
+            {{ formatTime(booking.endTime) }}
+          </td>
+
+          <td><span [class]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus }}</span></td>
+
+          <td class="text-right">
+            <div class="flex justify-end gap-2" *ngIf="booking.bookingStatus === 'PENDING'; else noAction">
+              <button type="button"
+                      class="omh-btn-secondary omh-btn-sm"
+                      [disabled]="busyId === booking.bookingId"
+                      (click)="approveBooking(booking.bookingId)">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+              <button type="button"
+                      class="omh-btn-danger omh-btn-sm"
+                      [disabled]="busyId === booking.bookingId"
+                      (click)="rejectBooking(booking.bookingId)">
+                <i class="bi bi-x-lg"></i> Decline
+              </button>
+            </div>
+            <ng-template #noAction>
+              <span class="text-xs text-muted">No action needed</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noBookings>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-calendar-check omh-empty-icon"></i>
+        <p class="omh-empty-title">No bookings yet</p>
+        <p class="omh-empty-text">
+          When a booker requests you for a date, the request lands here.
+        </p>
+      </div>
+    </div>
+  </ng-template>
+</section>

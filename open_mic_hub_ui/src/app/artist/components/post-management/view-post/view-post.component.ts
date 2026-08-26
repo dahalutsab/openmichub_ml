@@ -2,22 +2,29 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Post } from '../model/post.model';
 import { PostsService } from '../service/posts.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-view-post',
   standalone: false,
   templateUrl: './view-post.component.html',
-  styleUrl: './view-post.component.scss'
 })
 export class ViewPostComponent implements OnInit {
   post: Post | null = null;
   postId: number;
   loading = false;
 
+  /** Lightbox source, or null when closed. */
+  activeImage: string | null = null;
+
+  confirmingDelete = false;
+  deleting = false;
+
   constructor(
     private postService: PostsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private toast: ToastrService
   ) {
     this.postId = +this.route.snapshot.params['id'];
   }
@@ -36,26 +43,42 @@ export class ViewPostComponent implements OnInit {
       error: (error) => {
         console.error('Error loading post:', error);
         this.loading = false;
-        this.router.navigate(['artist/posts']);
+        this.post = null;
       }
     });
+  }
+
+  openImage(image: string): void {
+    this.activeImage = image;
   }
 
   editPost(): void {
     this.router.navigate(['artist/posts/update', this.postId]);
   }
 
+  askDelete(): void {
+    this.confirmingDelete = true;
+  }
+
   deletePost(): void {
-    if (confirm('Are you sure you want to delete this post?')) {
-      this.postService.deletePost(this.postId).subscribe({
-        next: () => {
-          this.router.navigate(['artist/posts']);
-        },
-        error: (error) => {
-          console.error('Error deleting post:', error);
-        }
-      });
+    if (this.deleting) {
+      return;
     }
+    this.deleting = true;
+    this.postService.deletePost(this.postId).subscribe({
+      next: () => {
+        this.deleting = false;
+        this.confirmingDelete = false;
+        this.toast.success('Post deleted');
+        this.router.navigate(['artist/posts']);
+      },
+      error: (error) => {
+        this.deleting = false;
+        this.confirmingDelete = false;
+        this.toast.error('Could not delete the post');
+        console.error('Error deleting post:', error);
+      }
+    });
   }
 
   goBack(): void {
@@ -63,17 +86,18 @@ export class ViewPostComponent implements OnInit {
   }
 
   likePost(): void {
-    if (this.post) {
-      this.postService.likePost(this.postId).subscribe({
-        next: (response) => {
-          if (this.post) {
-            this.post.likesCount = response.data.likesCount;
-          }
-        },
-        error: (error) => {
-          console.error('Error liking post:', error);
-        }
-      });
+    if (!this.post) {
+      return;
     }
+    this.postService.likePost(this.postId).subscribe({
+      next: (response) => {
+        if (this.post) {
+          this.post.likesCount = response.data.likesCount;
+        }
+      },
+      error: (error) => {
+        console.error('Error liking post:', error);
+      }
+    });
   }
 }

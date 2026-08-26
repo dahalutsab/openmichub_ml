@@ -1,7 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import {AdminService} from '../../admin.service';
+import { AdminService } from '../../admin.service';
 
 // Interfaces
 interface Role {
@@ -58,17 +56,14 @@ export interface UserResponse {
   selector: 'app-users-list',
   standalone: false,
   templateUrl: 'users-list.component.html',
-  styleUrls: ['./users-list.component.scss']
 })
 export class UsersListComponent implements OnInit {
   users: User[] = [];
-  filteredUsers: User[] = [];
-  paginatedUsers: User[] = [];
   selectedRole: string = '';
 
   // Pagination
   currentPage: number = 0;
-  pageSize: number = 6;
+  pageSize: number = 10;
   totalPages: number = 0;
   totalUsers: number = 0;
 
@@ -76,58 +71,49 @@ export class UsersListComponent implements OnInit {
 
   constructor(private adminService: AdminService) {}
 
-
   ngOnInit() {
     this.fetchUsers();
   }
 
+  /**
+   * The server paginates and filters; this only asks it for a page.
+   *
+   * Previously the component did both again on the client, slicing the six
+   * rows the server had already returned — so every page past the first came
+   * back empty, and the role filter only searched the page you were looking at.
+   */
   fetchUsers() {
     this.loading = true;
-    this.adminService.getAllUsers(this.selectedRole, this.currentPage, this.pageSize)
+    this.adminService
+      .getAllUsers(this.selectedRole || undefined, this.currentPage, this.pageSize)
       .subscribe({
-        next: (response) => {
-          this.users = response.data.content;
+        next: response => {
+          this.users = response.data.content ?? [];
           this.totalUsers = response.data.totalElements;
           this.totalPages = response.data.totalPages;
-          this.filteredUsers = this.users;
-          this.paginatedUsers = this.users; // Already paginated from backend
           this.loading = false;
         },
         error: () => {
+          this.users = [];
           this.loading = false;
-        }
+        },
       });
   }
 
-
   onRoleFilterChange() {
     this.currentPage = 0;
-    this.applyFilters();
+    this.fetchUsers();
   }
 
-  applyFilters() {
-    if (this.selectedRole) {
-      this.filteredUsers = this.users.filter(user =>
-        user.roles.some(role => role.role === this.selectedRole)
-      );
-    } else {
-      this.filteredUsers = [...this.users];
-    }
-
-    this.updatePagination();
-  }
-
-  updatePagination() {
-    this.totalPages = Math.ceil(this.filteredUsers.length / this.pageSize);
-    const startIndex = this.currentPage * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    this.paginatedUsers = this.filteredUsers.slice(startIndex, endIndex);
+  clearFilter() {
+    this.selectedRole = '';
+    this.onRoleFilterChange();
   }
 
   goToPage(page: number) {
-    if (page >= 0 && page < this.totalPages) {
+    if (page >= 0 && page < this.totalPages && page !== this.currentPage) {
       this.currentPage = page;
-      this.updatePagination();
+      this.fetchUsers();
     }
   }
 
@@ -135,7 +121,7 @@ export class UsersListComponent implements OnInit {
     const pages: number[] = [];
     const maxVisible = 5;
     let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages - 1, start + maxVisible - 1);
+    const end = Math.min(this.totalPages - 1, start + maxVisible - 1);
 
     if (end - start + 1 < maxVisible) {
       start = Math.max(0, end - maxVisible + 1);
@@ -149,15 +135,15 @@ export class UsersListComponent implements OnInit {
   }
 
   get startIndex(): number {
-    return this.currentPage * this.pageSize + 1;
+    return this.totalUsers === 0 ? 0 : this.currentPage * this.pageSize + 1;
   }
 
   get endIndex(): number {
-    return Math.min((this.currentPage + 1) * this.pageSize, this.filteredUsers.length);
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalUsers);
   }
 
   getInitials(fullName: string): string {
-    return fullName
+    return (fullName || '')
       .split(' ')
       .map(name => name.charAt(0))
       .join('')
@@ -165,8 +151,23 @@ export class UsersListComponent implements OnInit {
       .substring(0, 2);
   }
 
-  onImageError(event: any) {
-    event.target.style.display = 'none';
-    event.target.parentElement.querySelector('.avatar-placeholder').style.display = 'flex';
+  roleClass(role: string): string {
+    switch (role) {
+      case 'ADMIN':
+        return 'omh-status-critical';
+      case 'ARTIST':
+        return 'omh-status-pending';
+      default:
+        return 'omh-status-brand';
+    }
+  }
+
+  /**
+   * Falls back to initials by clearing the model rather than reaching into the
+   * DOM to hide the broken <img> — the template already renders initials when
+   * `profileImage` is empty.
+   */
+  onImageError(user: User) {
+    user.profileImage = null;
   }
 }

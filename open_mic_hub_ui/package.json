@@ -23,7 +23,6 @@
     "@danielmoncada/angular-datetime-picker": "^19.1.2",
     "@stomp/ng2-stompjs": "^8.0.0",
     "@stomp/stompjs": "^7.1.1",
-    "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",

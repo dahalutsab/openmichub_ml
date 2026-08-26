@@ -1,31 +1,28 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { LayoutService } from '../../../shared/layout.service';
 
 @Component({
   selector: 'app-header',
   standalone: false,
   templateUrl: './header.component.html',
-  styleUrl: './header.component.scss'
 })
 export class HeaderComponent {
+  menuOpen = false;
+
   constructor(
-    private router: Router
+    private router: Router,
+    public layout: LayoutService
   ) { }
 
-  toggleSidebar(): void {
-    document.body.classList.toggle('sidebar-toggled');
-    document.querySelector('.sidebar')?.classList.toggle('toggled');
-  }
-
   logout(): void {
-    console.log('Admin logged out');
+    this.menuOpen = false;
     localStorage.clear();
-    this.router.navigate(['../']);
+    this.router.navigate(['/']);
   }
 
   viewProfile(): void {
-    console.log('Viewing profile');
-    // Navigate to profile page or show profile modal
+    this.menuOpen = false;
     this.router.navigate(['admin/profile']);
   }
 }

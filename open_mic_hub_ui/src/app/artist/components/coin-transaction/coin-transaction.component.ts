@@ -4,7 +4,6 @@ import { ArtistService } from '../../artist.service';
 interface TransactionResponse {
   transactionId: number;
   artist: {
-    // Add artist properties as needed
     name?: string;
     id?: number;
   };
@@ -28,7 +27,6 @@ interface PaginatedResponse {
   selector: 'app-coin-transaction',
   standalone: false,
   templateUrl: './coin-transaction.component.html',
-  styleUrl: './coin-transaction.component.scss'
 })
 export class CoinTransactionComponent implements OnInit {
   transactions: TransactionResponse[] = [];
@@ -38,13 +36,11 @@ export class CoinTransactionComponent implements OnInit {
   totalPages = 0;
   loading = false;
   error: string | null = null;
-  
+
   selectedType = 'ALL';
   selectedPurpose = 'ALL';
-  
-  Math = Math;
 
-  constructor(private artistService: ArtistService) {} // Inject your service here
+  constructor(private artistService: ArtistService) {}
 
   ngOnInit() {
     this.loadTransactions();
@@ -53,15 +49,16 @@ export class CoinTransactionComponent implements OnInit {
   loadTransactions() {
     this.loading = true;
     this.error = null;
-    
-    this.artistService.getAllArtistCoinTransactions(this.selectedType, this.selectedPurpose)
+
+    this.artistService
+      .getAllArtistCoinTransactions(this.selectedType, this.selectedPurpose, this.currentPage, this.pageSize)
       .subscribe({
         next: (response: any) => {
           const data: PaginatedResponse = response.data;
-          this.transactions = data.content;
-          this.totalElements = data.totalElements;
-          this.totalPages = data.totalPages;
-          this.currentPage = data.number;
+          this.transactions = data?.content ?? [];
+          this.totalElements = data?.totalElements ?? 0;
+          this.totalPages = data?.totalPages ?? 0;
+          this.currentPage = data?.number ?? 0;
           this.loading = false;
         },
         error: (error: any) => {
@@ -96,21 +93,34 @@ export class CoinTransactionComponent implements OnInit {
     this.loadTransactions();
   }
 
+  get startIndex(): number {
+    return this.totalElements === 0 ? 0 : this.currentPage * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
+  formatPurpose(purpose: string): string {
+    return (purpose || '').replace(/_/g, ' ').toLowerCase()
+      .replace(/\b\w/g, l => l.toUpperCase());
+  }
+
   getVisiblePages(): number[] {
     const visiblePages: number[] = [];
     const maxVisible = 5;
-    
+
     let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages, start + maxVisible);
-    
+    const end = Math.min(this.totalPages, start + maxVisible);
+
     if (end - start < maxVisible) {
       start = Math.max(0, end - maxVisible);
     }
-    
+
     for (let i = start; i < end; i++) {
       visiblePages.push(i);
     }
-    
+
     return visiblePages;
   }
 }

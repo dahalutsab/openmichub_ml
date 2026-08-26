@@ -22,6 +22,9 @@ const routes: Routes = [
     
     
     children: [
+      // Login lands on /user with no child path. Without this the shell
+      // rendered around an empty router-outlet.
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'feeds',
         component: ArtistFeedComponent

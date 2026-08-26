@@ -23,6 +23,9 @@ const routes: Routes = [
     canActivate: [authGuard],
     data: { roles: [Role.ARTIST] },
     children: [
+      // Login lands on /admin or /artist with no child path. Without this
+      // the shell rendered around an empty router-outlet.
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
         component: ArtistDashboardComponent

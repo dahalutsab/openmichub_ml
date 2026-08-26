@@ -43,11 +43,16 @@ rejectedBookings(bookingId: number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/user`);
   }
 
-  getAllArtistCoinTransactions(type:string, purpose:string) {
-    return this.http.get<any>(`${this.baseUrl}/transactions/artist?page=0&size=10&transactionType=${type}&transactionPurpose=${purpose}`);
+  // Page and size were pinned to 0/10 here, so the paging controls on the
+  // transactions screen moved a page number that never reached the server.
+  getAllArtistCoinTransactions(type: string, purpose: string, page = 0, size = 10) {
+    return this.http.get<any>(
+      `${this.baseUrl}/transactions/artist?page=${page}&size=${size}` +
+      `&transactionType=${type}&transactionPurpose=${purpose}`
+    );
   }
 
-  getAllArtistPaymentRecords(){
-    return this.http.get<any>(`${this.baseUrl}/payments/user?page=0&size=10`);
+  getAllArtistPaymentRecords(page = 0, size = 10) {
+    return this.http.get<any>(`${this.baseUrl}/payments/user?page=${page}&size=${size}`);
   }
 }

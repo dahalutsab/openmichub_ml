@@ -5,7 +5,6 @@ import { PaymentService, Payment } from './payment.service';
   selector: 'app-payment-records',
   standalone: false,
   templateUrl: './payment-records.component.html',
-  styleUrl: './payment-records.component.scss'
 })
 export class PaymentRecordsComponent implements OnInit {
   payments: Payment[] = [];
@@ -35,12 +34,12 @@ export class PaymentRecordsComponent implements OnInit {
     this.paymentService.getPayments(this.page, this.size, this.status, this.method)
       .subscribe({
         next: res => {
-          this.payments = res.data.content;
+          this.payments = res.data.content ?? [];
           this.totalPages = res.data.totalPages;
           this.totalElements = res.data.totalElements;
           this.loading = false;
         },
-        error: err => {
+        error: () => {
           this.error = 'Failed to load payments';
           this.loading = false;
         }
@@ -52,8 +51,41 @@ export class PaymentRecordsComponent implements OnInit {
     this.fetchPayments();
   }
 
+  clearFilters() {
+    this.status = '';
+    this.method = '';
+    this.onFilterChange();
+  }
+
   goToPage(page: number) {
+    if (page < 0 || page >= this.totalPages || page === this.page) {
+      return;
+    }
     this.page = page;
     this.fetchPayments();
+  }
+
+  /**
+   * Page buttons. Built here rather than with `[].constructor(totalPages)` in
+   * the template, which allocated a fresh array on every change-detection pass.
+   */
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i);
+  }
+
+  statusClass(status: string | undefined): string {
+    switch ((status ?? '').toUpperCase()) {
+      case 'COMPLETE':
+      case 'COMPLETED':
+        return 'omh-status-positive';
+      case 'PENDING':
+        return 'omh-status-pending';
+      case 'FAILED':
+      case 'CANCELLED':
+      case 'ABORTED':
+        return 'omh-status-critical';
+      default:
+        return 'omh-status-neutral';
+    }
   }
 }

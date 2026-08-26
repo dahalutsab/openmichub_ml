@@ -1,38 +1,43 @@
-<!-- topbar.component.html -->
-<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-  <!-- Sidebar Toggle (Topbar) -->
-  <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" (click)="toggleSidebar()">
-    <i class="fa fa-bars"></i>
+<header class="omh-topbar">
+
+  <button type="button"
+          class="omh-btn-icon lg:hidden"
+          aria-label="Toggle navigation"
+          (click)="layout.toggleSidebar()">
+    <i class="bi bi-list text-xl"></i>
   </button>
 
-  <!-- Topbar Navbar -->
-  <ul class="navbar-nav ml-auto">
+  <div class="flex-1"></div>
 
+  <div class="relative" (omhClickOutside)="menuOpen = false">
+    <button type="button"
+            class="flex items-center gap-2.5 rounded-card border-0 bg-transparent px-2 py-1.5 cursor-pointer hover:bg-surface-2"
+            [attr.aria-expanded]="menuOpen"
+            aria-haspopup="menu"
+            (click)="menuOpen = !menuOpen">
+      <span class="hidden max-w-[160px] truncate text-sm font-medium text-ink-soft sm:block">
+        {{ userProfile.name }}
+      </span>
+      <img [src]="userProfile.avatar" alt="" class="omh-avatar-sm">
+      <i class="bi bi-chevron-down text-xs text-muted transition-transform duration-200"
+         [class.rotate-180]="menuOpen"></i>
+    </button>
 
-
-    <!-- Nav Item - User Information -->
-    <li class="nav-item dropdown no-arrow">
-      <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown"
-        aria-haspopup="true" aria-expanded="false">
-        <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ userProfile.name }}</span>
-        <img class="img-profile rounded-circle" [src]="userProfile.avatar" alt="User Avatar">
+    <div class="omh-menu right-0 top-full mt-1.5 animate-menu-in" *ngIf="menuOpen" role="menu">
+      <a class="omh-menu-item"
+         role="menuitem"
+         *ngIf="loggedInUserId"
+         [routerLink]="['/user/profile', loggedInUserId]"
+         (click)="menuOpen = false">
+        <i class="bi bi-person-circle"></i>
+        <span>Profile</span>
       </a>
+      <div class="omh-menu-divider"></div>
+      <button type="button" class="omh-menu-item is-danger" role="menuitem" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
 
-      <!-- Dropdown - User Information -->
-      <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
-
-        <a class="dropdown-item" *ngIf="loggedInUserId" [routerLink]="['/user/profile', loggedInUserId]">
-          <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
-          Profile
-        </a>
-
-
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" routerLink="/">
-          <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-          Logout
-        </a>
-      </div>
-    </li>
-  </ul>
-</nav>
+</header>

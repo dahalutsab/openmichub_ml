@@ -1,1 +1,136 @@
-<h1>Admin Dashboard</h1>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Overview</h1>
+    <p class="omh-page-sub">Everything moving through OpenMicHub right now.</p>
+  </div>
+  <div class="flex gap-2">
+    <a routerLink="/admin/users" class="omh-btn-secondary">
+      <i class="bi bi-people"></i> Users
+    </a>
+    <a routerLink="/admin/transactions" class="omh-btn-primary">
+      <i class="bi bi-arrow-left-right"></i> Transactions
+    </a>
+  </div>
+</div>
+
+<!-- Figures -->
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="omh-stat omh-stat-brand">
+    <div class="omh-stat-label">Total users</div>
+    <div class="omh-stat-value">{{ totalUsers }}</div>
+    <div class="omh-stat-meta">Across every role</div>
+    <i class="bi bi-people omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-hot">
+    <div class="omh-stat-label">Artists</div>
+    <div class="omh-stat-value">{{ totalArtists }}</div>
+    <div class="omh-stat-meta">Registered performers</div>
+    <i class="bi bi-music-note-beamed omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-positive">
+    <div class="omh-stat-label">Payments</div>
+    <div class="omh-stat-value">{{ totalPayments }}</div>
+    <div class="omh-stat-meta">Recorded to date</div>
+    <i class="bi bi-credit-card omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-warning">
+    <div class="omh-stat-label">Coin transactions</div>
+    <div class="omh-stat-value">{{ totalTransactions }}</div>
+    <div class="omh-stat-meta">Credits and withdrawals</div>
+    <i class="bi bi-coin omh-stat-icon"></i>
+  </div>
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-2">
+
+  <!-- Recent coin transactions -->
+  <section class="omh-panel">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">Recent coin transactions</h2>
+      <a routerLink="/admin/transactions" class="omh-btn-ghost omh-btn-sm">
+        View all <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="omh-table-wrap" *ngIf="recentTransactions.length; else noTransactions">
+      <table class="omh-table omh-table-compact">
+        <thead>
+          <tr>
+            <th>Artist</th>
+            <th>Purpose</th>
+            <th>Type</th>
+            <th class="omh-num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of recentTransactions">
+            <td>
+              <div class="font-medium">{{ t.artist?.artistStageName || '—' }}</div>
+              <div class="text-xs text-muted">{{ t.artist?.email }}</div>
+            </td>
+            <td>{{ t.transactionPurpose | titlecase }}</td>
+            <td><span class="omh-chip">{{ t.transactionType }}</span></td>
+            <td class="omh-num font-display font-bold text-ink">{{ t.amount | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noTransactions>
+      <div class="p-4">
+        <div class="omh-empty">
+          <i class="bi bi-coin omh-empty-icon"></i>
+          <p class="omh-empty-title">No transactions yet</p>
+          <p class="omh-empty-text">Coin credits and withdrawals will appear here.</p>
+        </div>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- Recent payments -->
+  <section class="omh-panel">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">Recent payments</h2>
+      <a routerLink="/admin/payments" class="omh-btn-ghost omh-btn-sm">
+        View all <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="omh-table-wrap" *ngIf="recentPayments.length; else noPayments">
+      <table class="omh-table omh-table-compact">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Method</th>
+            <th>Status</th>
+            <th class="omh-num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of recentPayments">
+            <td>{{ p.paymentTime | date:'mediumDate' }}</td>
+            <td>{{ p.paymentMethod | titlecase }}</td>
+            <td><span [class]="statusClass(p.paymentStatus)">{{ p.paymentStatus }}</span></td>
+            <td class="omh-num font-display font-bold text-ink">
+              {{ p.receivedAmount | number:'1.2-2' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noPayments>
+      <div class="p-4">
+        <div class="omh-empty">
+          <i class="bi bi-credit-card omh-empty-icon"></i>
+          <p class="omh-empty-title">No payments yet</p>
+          <p class="omh-empty-text">Completed bookings will show their payments here.</p>
+        </div>
+      </div>
+    </ng-template>
+  </section>
+
+</div>

@@ -1,1 +1,129 @@
-<p>artist-dashboard works!</p>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Welcome back, {{ artistName }}</h1>
+    <p class="omh-page-sub">Your bookings and earnings at a glance.</p>
+  </div>
+  <div class="flex gap-2">
+    <a routerLink="/artist/posts/create" class="omh-btn-secondary">
+      <i class="bi bi-plus-lg"></i> New post
+    </a>
+    <a routerLink="/artist/bookings" class="omh-btn-primary">
+      <i class="bi bi-calendar-check"></i> Bookings
+    </a>
+  </div>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="omh-stat omh-stat-hot">
+    <div class="omh-stat-label">Wallet balance</div>
+    <div class="omh-stat-value">{{ balance | number:'1.2-2' }}</div>
+    <div class="omh-stat-meta">NPR available</div>
+    <i class="bi bi-wallet2 omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-warning">
+    <div class="omh-stat-label">Awaiting reply</div>
+    <div class="omh-stat-value">{{ pendingCount }}</div>
+    <div class="omh-stat-meta">Requests need an answer</div>
+    <i class="bi bi-hourglass-split omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-positive">
+    <div class="omh-stat-label">Approved</div>
+    <div class="omh-stat-value">{{ approvedCount }}</div>
+    <div class="omh-stat-meta">Gigs confirmed</div>
+    <i class="bi bi-check2-circle omh-stat-icon"></i>
+  </div>
+
+  <div class="omh-stat omh-stat-brand">
+    <div class="omh-stat-label">Total requests</div>
+    <div class="omh-stat-value">{{ bookings.length }}</div>
+    <div class="omh-stat-meta">All time</div>
+    <i class="bi bi-inboxes omh-stat-icon"></i>
+  </div>
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-3">
+
+  <!-- Requests needing an answer -->
+  <section class="omh-panel xl:col-span-2">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">Waiting on you</h2>
+      <a routerLink="/artist/bookings" class="omh-btn-ghost omh-btn-sm">
+        View all <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="flex items-center justify-center gap-3 py-12" *ngIf="loading">
+      <span class="omh-spinner-md"></span>
+      <span class="text-base text-muted">Loading…</span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <div class="omh-table-wrap" *ngIf="upcoming.length; else allCaughtUp">
+        <table class="omh-table omh-table-compact">
+          <thead>
+            <tr>
+              <th>Venue</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let booking of upcoming">
+              <td class="font-medium">{{ booking.venue || '—' }}</td>
+              <td>{{ booking.bookingDate | date:'mediumDate' }}</td>
+              <td class="whitespace-nowrap">
+                {{ formatTime(booking.startTime) }}
+                <span class="text-muted">–</span>
+                {{ formatTime(booking.endTime) }}
+              </td>
+              <td><span [class]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #allCaughtUp>
+        <div class="p-4">
+          <div class="omh-empty">
+            <i class="bi bi-check2-all omh-empty-icon"></i>
+            <p class="omh-empty-title">You're all caught up</p>
+            <p class="omh-empty-text">No booking requests are waiting on a reply.</p>
+          </div>
+        </div>
+      </ng-template>
+    </ng-container>
+  </section>
+
+  <!-- Shortcuts -->
+  <section class="omh-panel">
+    <div class="omh-panel-head">
+      <h2 class="omh-panel-title">Quick actions</h2>
+    </div>
+    <div class="flex flex-col gap-1 p-2">
+      <a routerLink="/artist/calender" class="omh-menu-item">
+        <i class="bi bi-person-lines-fill"></i>
+        <span>Set your availability</span>
+      </a>
+      <a routerLink="/artist/posts" class="omh-menu-item">
+        <i class="bi bi-images"></i>
+        <span>Manage posts</span>
+      </a>
+      <a routerLink="/artist/wallet" class="omh-menu-item">
+        <i class="bi bi-wallet2"></i>
+        <span>Withdraw earnings</span>
+      </a>
+      <a routerLink="/artist/coin-transactions" class="omh-menu-item">
+        <i class="bi bi-currency-exchange"></i>
+        <span>Coin transactions</span>
+      </a>
+      <a routerLink="/artist/profile" class="omh-menu-item">
+        <i class="bi bi-person-circle"></i>
+        <span>Edit your profile</span>
+      </a>
+    </div>
+  </section>
+
+</div>

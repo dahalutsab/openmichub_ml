@@ -1,210 +1,153 @@
-<div class="container-fluid">
-      <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0">
-            <i class="fas fa-coins me-2"></i>
-            Coin Transactions
-          </h4>
-        </div>
-        
-        <div class="card-body">
-          <!-- Filters -->
-          <div class="row mb-3">
-            <div class="col-md-4">
-              <label for="transactionType" class="form-label">Transaction Type</label>
-              <select 
-                id="transactionType" 
-                class="form-select" 
-                [(ngModel)]="selectedType" 
-                (change)="onFilterChange()">
-                <option value="ALL">All Types</option>
-                <option value="CREDIT">Credit</option>
-                <option value="DEBIT">Debit</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label for="transactionPurpose" class="form-label">Transaction Purpose</label>
-              <select 
-                id="transactionPurpose" 
-                class="form-select" 
-                [(ngModel)]="selectedPurpose" 
-                (change)="onFilterChange()">
-                <option value="ALL">All Purposes</option>
-                <option value="BOOKING_PAYMENT">BOOKING_PAYMENT</option>
-                <option value="WITHDRAWAL_REQUEST">WITHDRAWAL_REQUEST</option>
-                <option value="SERVICE_FEE">SERVICE_FEE</option>
-              </select>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-              <button 
-                class="btn btn-outline-secondary" 
-                (click)="resetFilters()">
-                <i class="fas fa-refresh me-1"></i>
-                Reset
-              </button>
-            </div>
-          </div>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Coin transactions</h1>
+    <p class="omh-page-sub">Everything that has moved in and out of your wallet.</p>
+  </div>
+  <a routerLink="/artist/wallet" class="omh-btn-secondary">
+    <i class="bi bi-wallet2"></i> Wallet
+  </a>
+</div>
 
-          <!-- Loading Spinner -->
-          <div *ngIf="loading" class="text-center py-4">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-          </div>
+<!-- Filters -->
+<section class="omh-card mb-4 p-4">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div class="omh-field">
+      <label for="transactionType" class="omh-label">Type</label>
+      <select id="transactionType" class="omh-select" [(ngModel)]="selectedType" (change)="onFilterChange()">
+        <option value="ALL">All types</option>
+        <option value="CREDIT">Credit</option>
+        <option value="DEBIT">Debit</option>
+      </select>
+    </div>
 
-          <!-- Error Message -->
-          <div *ngIf="error" class="alert alert-danger" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            {{ error }}
-          </div>
+    <div class="omh-field">
+      <label for="transactionPurpose" class="omh-label">Purpose</label>
+      <select id="transactionPurpose" class="omh-select" [(ngModel)]="selectedPurpose" (change)="onFilterChange()">
+        <option value="ALL">All purposes</option>
+        <option value="BOOKING_PAYMENT">Booking payment</option>
+        <option value="WITHDRAWAL_REQUEST">Withdrawal request</option>
+        <option value="SERVICE_FEE">Service fee</option>
+      </select>
+    </div>
 
-          <!-- Transactions Table -->
-          <div *ngIf="!loading && !error" class="table-responsive">
-            <table class="table table-striped table-hover">
-              <thead class="table-dark">
-                <tr>
-                  <th scope="col">
-                    <i class="fas fa-hashtag me-1"></i>
-                    Transaction ID
-                  </th>
-                  <th scope="col">
-                    <i class="fas fa-user me-1"></i>
-                    Artist
-                  </th>
-                  <th scope="col">
-                    <i class="fas fa-calendar me-1"></i>
-                    Booking ID
-                  </th>
-                  <th scope="col">
-                    <i class="fas fa-dollar-sign me-1"></i>
-                    Amount
-                  </th>
-                  <th scope="col">
-                    <i class="fas fa-exchange-alt me-1"></i>
-                    Type
-                  </th>
-                  <th scope="col">
-                    <i class="fas fa-tag me-1"></i>
-                    Purpose
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let transaction of transactions" class="align-middle">
-                  <td>
-                    <span class="badge bg-secondary">
-                      #{{ transaction.transactionId }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-user-circle me-2 text-muted"></i>
-                      {{ transaction?.artist?.name || 'N/A' }}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge bg-info">
-                      #{{ transaction.bookingId }}
-                    </span>
-                  </td>
-                  <td>
-                    <span 
-                      class="fw-bold" 
-                      [class.text-success]="transaction.transactionType === 'CREDIT'"
-                      [class.text-danger]="transaction.transactionType === 'DEBIT'">
-                      <i 
-                        class="fas me-1"
-                        [class.fa-plus]="transaction.transactionType === 'CREDIT'"
-                        [class.fa-minus]="transaction.transactionType === 'DEBIT'">
-                      </i>
-                      {{ transaction.amount | currency:'NPR':'symbol':'1.2-2' }}
-                    </span>
-                  </td>
-                  <td>
-                    <span 
-                      class="badge"
-                      [class.bg-success]="transaction.transactionType === 'CREDIT'"
-                      [class.bg-danger]="transaction.transactionType === 'DEBIT'">
-                      {{ transaction.transactionType }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge bg-primary">
-                      {{ transaction.transactionPurpose }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+    <div class="omh-field justify-end">
+      <button type="button" class="omh-btn-secondary" (click)="resetFilters()">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset
+      </button>
+    </div>
+  </div>
+</section>
 
-            <!-- No Data Message -->
-            <div *ngIf="transactions.length === 0" class="text-center py-4">
-              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-              <h5 class="text-muted">No transactions found</h5>
-              <p class="text-muted">Try adjusting your filters or check back later.</p>
-            </div>
-          </div>
+<!-- Loading -->
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading transactions…</span>
+</div>
 
-          <!-- Pagination -->
-          <nav *ngIf="totalPages > 1" aria-label="Transaction pagination">
-            <ul class="pagination justify-content-center">
-              <li class="page-item" [class.disabled]="currentPage === 0">
-                <a class="page-link" (click)="goToPage(0)" [attr.aria-disabled]="currentPage === 0">
-                  <i class="fas fa-angle-double-left"></i>
-                </a>
-              </li>
-              <li class="page-item" [class.disabled]="currentPage === 0">
-                <a class="page-link" (click)="goToPage(currentPage - 1)" [attr.aria-disabled]="currentPage === 0">
-                  <i class="fas fa-angle-left"></i>
-                </a>
-              </li>
-              
-              <li 
-                *ngFor="let page of getVisiblePages()" 
-                class="page-item" 
-                [class.active]="page === currentPage">
-                <a class="page-link" (click)="goToPage(page)">{{ page + 1 }}</a>
-              </li>
-              
-              <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                <a class="page-link" (click)="goToPage(currentPage + 1)" [attr.aria-disabled]="currentPage === totalPages - 1">
-                  <i class="fas fa-angle-right"></i>
-                </a>
-              </li>
-              <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                <a class="page-link" (click)="goToPage(totalPages - 1)" [attr.aria-disabled]="currentPage === totalPages - 1">
-                  <i class="fas fa-angle-double-right"></i>
-                </a>
-              </li>
-            </ul>
-          </nav>
+<!-- Error -->
+<div class="omh-alert-critical mb-4" *ngIf="error && !loading">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <div class="flex-1">{{ error }}</div>
+  <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="loadTransactions()">Try again</button>
+</div>
 
-          <!-- Pagination Info -->
-          <div *ngIf="totalElements > 0" class="row mt-3">
-            <div class="col-md-6">
-              <small class="text-muted">
-                Showing {{ (currentPage * pageSize) + 1 }} to 
-                {{ Math.min((currentPage + 1) * pageSize, totalElements) }} 
-                of {{ totalElements }} transactions
-              </small>
-            </div>
-            <div class="col-md-6 text-end">
-              <div class="d-flex align-items-center justify-content-end">
-                <label for="pageSize" class="form-label me-2 mb-0">Show:</label>
-                <select 
-                  id="pageSize" 
-                  class="form-select form-select-sm" 
-                  style="width: auto;" 
-                  [(ngModel)]="pageSize" 
-                  (change)="onPageSizeChange()">
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
+<section class="omh-panel" *ngIf="!loading && !error">
+  <div class="omh-table-wrap" *ngIf="transactions.length; else noTransactions">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Booking</th>
+          <th class="omh-num">Amount</th>
+          <th>Type</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let transaction of transactions">
+          <td class="font-display text-xs font-bold text-muted">#{{ transaction.transactionId }}</td>
+
+          <td>
+            <span class="omh-chip" *ngIf="transaction.bookingId">#{{ transaction.bookingId }}</span>
+            <span class="text-muted" *ngIf="!transaction.bookingId">—</span>
+          </td>
+
+          <td class="omh-num">
+            <span class="font-display font-bold"
+                  [class.text-positive]="transaction.transactionType === 'CREDIT'"
+                  [class.text-critical]="transaction.transactionType === 'DEBIT'">
+              {{ transaction.transactionType === 'CREDIT' ? '+' : '−' }}{{ transaction.amount | number:'1.2-2' }}
+            </span>
+          </td>
+
+          <td>
+            <span [class]="transaction.transactionType === 'CREDIT' ? 'omh-status-positive' : 'omh-status-critical'">
+              {{ transaction.transactionType }}
+            </span>
+          </td>
+
+          <td><span class="omh-chip">{{ formatPurpose(transaction.transactionPurpose) }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #noTransactions>
+    <div class="p-4">
+      <div class="omh-empty">
+        <i class="bi bi-inbox omh-empty-icon"></i>
+        <p class="omh-empty-title">No transactions found</p>
+        <p class="omh-empty-text">Try adjusting the filters, or check back after your next gig.</p>
       </div>
     </div>
+  </ng-template>
+
+  <!-- Pagination -->
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3"
+       *ngIf="totalElements > 0">
+    <p class="text-xs text-muted">
+      Showing {{ startIndex }}–{{ endIndex }} of {{ totalElements }}
+    </p>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <nav class="omh-pagination" aria-label="Transaction pagination" *ngIf="totalPages > 1">
+        <button type="button" class="omh-page-btn" [disabled]="currentPage === 0"
+                (click)="goToPage(0)" aria-label="First page">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="currentPage === 0"
+                (click)="goToPage(currentPage - 1)" aria-label="Previous page">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <button type="button"
+                *ngFor="let page of getVisiblePages()"
+                class="omh-page-btn"
+                [class.is-active]="page === currentPage"
+                [attr.aria-current]="page === currentPage ? 'page' : null"
+                (click)="goToPage(page)">
+          {{ page + 1 }}
+        </button>
+
+        <button type="button" class="omh-page-btn" [disabled]="currentPage >= totalPages - 1"
+                (click)="goToPage(currentPage + 1)" aria-label="Next page">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="currentPage >= totalPages - 1"
+                (click)="goToPage(totalPages - 1)" aria-label="Last page">
+          <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </nav>
+
+      <select class="omh-select w-auto py-1.5 text-xs"
+              [(ngModel)]="pageSize"
+              (change)="onPageSizeChange()"
+              aria-label="Rows per page">
+        <option [ngValue]="5">5 per page</option>
+        <option [ngValue]="10">10 per page</option>
+        <option [ngValue]="20">20 per page</option>
+        <option [ngValue]="50">50 per page</option>
+      </select>
+    </div>
+  </div>
+</section>

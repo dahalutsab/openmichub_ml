@@ -1,25 +1,46 @@
-<!-- payment-callback.component.html -->
-<div class="callback-wrapper" *ngIf="queryParams">
-  <mat-card class="callback-card" [ngClass]="queryParams['status']?.toLowerCase()">
-    <mat-card-header>
-      <div mat-card-avatar class="status-avatar">
-        <mat-icon>{{ queryParams['status']?.toLowerCase() === 'completed' ? 'check_circle' : 'error' }}</mat-icon>
+<div class="omh-page flex items-center justify-center p-6">
+  <div class="omh-card w-full max-w-md p-8 text-center animate-rise-in" *ngIf="queryParams">
+
+    <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full"
+         [class.bg-positive-soft]="isComplete"
+         [class.bg-critical-soft]="!isComplete">
+      <i class="bi text-3xl"
+         [class.bi-check-circle-fill]="isComplete"
+         [class.text-positive]="isComplete"
+         [class.bi-x-circle-fill]="!isComplete"
+         [class.text-critical]="!isComplete"></i>
+    </div>
+
+    <h1 class="omh-display text-2xl">
+      Withdrawal {{ isComplete ? 'complete' : 'unsuccessful' }}
+    </h1>
+    <p class="omh-page-sub">
+      {{ isComplete
+          ? 'The payout has been released to the artist.'
+          : 'The withdrawal failed or was cancelled. No funds have moved.' }}
+    </p>
+
+    <dl class="omh-deflist mt-6 text-left">
+      <div class="omh-defrow">
+        <dt class="omh-defterm">Transaction</dt>
+        <dd class="omh-defvalue font-mono text-sm">{{ queryParams['txnId'] || '—' }}</dd>
       </div>
-      <mat-card-title>
-        Payment {{ queryParams['status'] }}
-      </mat-card-title>
-      <mat-card-subtitle>
-        {{ queryParams['status']?.toLowerCase() === 'completed' ? 'Your payment was successful.' : 'Payment failed or was cancelled.' }}
-      </mat-card-subtitle>
-    </mat-card-header>
+      <div class="omh-defrow">
+        <dt class="omh-defterm">Amount</dt>
+        <dd class="omh-defvalue omh-figure">NPR {{ amount | number:'1.2-2' }}</dd>
+      </div>
+      <div class="omh-defrow">
+        <dt class="omh-defterm">Status</dt>
+        <dd><span [class]="isComplete ? 'omh-status-positive' : 'omh-status-critical'">
+          {{ queryParams['status'] }}
+        </span></dd>
+      </div>
+    </dl>
 
-    <mat-card-content>
-      <p><strong>Transaction ID:</strong> {{ queryParams['txnId'] }}</p>
-      <p><strong>Amount:</strong> NPR {{ queryParams['amount'] /100 }}</p>
-    </mat-card-content>
+    <div class="mt-6 flex flex-col gap-2">
+      <a routerLink="/admin/transactions" class="omh-btn-primary">Back to transactions</a>
+      <a routerLink="/admin/dashboard" class="omh-btn-ghost">Go to overview</a>
+    </div>
 
-    <mat-card-actions *ngIf="queryParams['status']?.toLowerCase() === 'completed'">
-      <button mat-raised-button color="primary" (click)="goToBookings()">View My Bookings</button>
-    </mat-card-actions>
-  </mat-card>
+  </div>
 </div>

@@ -9,7 +9,6 @@ import { ToastService } from '../../../../auth/toastr.service';
   selector: 'app-edit-post',
   standalone: false,
   templateUrl: './edit-post.component.html',
-  styleUrl: './edit-post.component.scss'
 })
 export class EditPostComponent implements OnInit {
   postForm: FormGroup;
@@ -63,19 +62,20 @@ export class EditPostComponent implements OnInit {
     this.selectedFiles = [];
     this.imagePreviews = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.type.startsWith('image/')) {
-        this.selectedFiles.push(file);
-        
-        // Create image preview
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          this.imagePreviews.push(e.target.result);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
+    const images = Array.from(files).filter(file => file.type.startsWith('image/'));
+    this.selectedFiles = images;
+
+    // Each preview is written to the slot matching its file, so removing one
+    // cannot drop a different image when the reads finish out of order.
+    this.imagePreviews = new Array(images.length).fill('');
+
+    images.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imagePreviews[index] = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   removeNewImage(index: number): void {
@@ -84,31 +84,24 @@ export class EditPostComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.postForm.valid) {
-      this.loading = true;
-      const post: Post = this.postForm.value;
-
-      this.postService.updatePost(this.postId, post, this.selectedFiles).subscribe({
-        next: (response) => {
-          console.log('Post updated successfully:', response);
-          this.toastr.showSuccess('Post updated successfully');
-          this.router.navigate(['artist/posts']);
-        },
-        error: (error) => {
-          console.error('Error updating post:', error);
-          this.toastr.showError('Failed to update post');
-          this.loading = false;
-        }
-      });
-    } else {
-      this.markFormGroupTouched();
+    if (this.postForm.invalid) {
+      this.postForm.markAllAsTouched();
+      return;
     }
-  }
 
-  private markFormGroupTouched(): void {
-    Object.keys(this.postForm.controls).forEach(key => {
-      const control = this.postForm.get(key);
-      control?.markAsTouched();
+    this.loading = true;
+    const post: Post = this.postForm.value;
+
+    this.postService.updatePost(this.postId, post, this.selectedFiles).subscribe({
+      next: () => {
+        this.toastr.showSuccess('Post updated successfully');
+        this.router.navigate(['artist/posts']);
+      },
+      error: (error) => {
+        console.error('Error updating post:', error);
+        this.toastr.showError('Failed to update post');
+        this.loading = false;
+      }
     });
   }
 

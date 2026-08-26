@@ -1,1 +1,49 @@
-<p>profile works!</p>
+<div class="omh-page-head">
+  <div>
+    <h1 class="omh-page-title">Your profile</h1>
+    <p class="omh-page-sub">The account you are signed in with.</p>
+  </div>
+</div>
+
+<div class="flex items-center justify-center gap-3 py-16" *ngIf="loading">
+  <span class="omh-spinner-md"></span>
+  <span class="text-base text-muted">Loading profile…</span>
+</div>
+
+<div class="omh-alert-critical" *ngIf="error">
+  <i class="bi bi-exclamation-triangle mt-0.5"></i>
+  <span>{{ error }}</span>
+</div>
+
+<section class="omh-card max-w-2xl p-6" *ngIf="!loading && user">
+  <div class="flex flex-wrap items-center gap-4">
+    <img *ngIf="user.profilePicture; else initials"
+         [src]="user.profilePicture"
+         alt=""
+         class="omh-avatar-xl">
+    <ng-template #initials>
+      <span class="omh-avatar-fallback h-20 w-20 text-xl">{{ getInitials(user.fullName) }}</span>
+    </ng-template>
+
+    <div class="min-w-0">
+      <h2 class="omh-display text-xl">{{ user.fullName }}</h2>
+      <p class="text-base text-muted">{{ user.userEmail || user.email }}</p>
+      <span class="omh-status-critical mt-2">Administrator</span>
+    </div>
+  </div>
+
+  <dl class="omh-deflist mt-6 border-t border-line pt-2">
+    <div class="omh-defrow">
+      <dt class="omh-defterm">Phone</dt>
+      <dd class="omh-defvalue">{{ user.phoneNumber || 'Not set' }}</dd>
+    </div>
+    <div class="omh-defrow">
+      <dt class="omh-defterm">Location</dt>
+      <dd class="omh-defvalue">{{ user.location || 'Not set' }}</dd>
+    </div>
+    <div class="omh-defrow">
+      <dt class="omh-defterm">Status</dt>
+      <dd><span class="omh-status-positive">{{ user.status || 'Active' }}</span></dd>
+    </div>
+  </dl>
+</section>

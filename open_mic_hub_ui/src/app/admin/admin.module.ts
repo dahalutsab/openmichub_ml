@@ -10,7 +10,6 @@ import { SharedModule } from '../shared/shared.module';
 import { UsersListComponent } from './components/users-list/users-list.component';
 import { TransactionsListComponent } from './components/coin-transaction/transactions-list.component';
 import { PaymentRecordsComponent } from './components/payment-records/payment-records.component';
-import { BookingRecordsComponent } from './components/booking-records/booking-records.component';
 import {FormsModule} from "@angular/forms";
 import { WithdrawlCallbackComponent } from './withdrawl-callback/withdrawl-callback.component';
 import {MatButton, MatButtonModule} from '@angular/material/button';
@@ -38,7 +37,6 @@ import {MatSnackBarModule} from '@angular/material/snack-bar';
     UsersListComponent,
     TransactionsListComponent,
     PaymentRecordsComponent,
-    BookingRecordsComponent,
     WithdrawlCallbackComponent
   ],
   imports: [
