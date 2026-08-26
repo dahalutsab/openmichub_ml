@@ -24,7 +24,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import org.springframework.security.access.AccessDeniedException;
@@ -173,6 +175,24 @@ public class GlobalExceptionHandler extends BaseController {
     @ExceptionHandler(ExpiredJwtException.class)
     public void handleExpiredJwtException(ExpiredJwtException e, HttpServletResponse response) throws IOException {
         handleException(response, e, HttpStatus.UNAUTHORIZED.value());
+    }
+
+    /**
+     * Preserves the status a service deliberately chose. Without this these fell through to the
+     * catch-all below, so a rejected login answered 500 instead of 401.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<GlobalErrorResponse> handleResponseStatus(ResponseStatusException exception) {
+        log.warn("{} - {}", exception.getStatusCode(), exception.getReason());
+        HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
+        return errorResponse(status, exception.getReason(), exception);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResponseEntity<GlobalErrorResponse> handleAuthentication(AuthenticationException exception) {
+        log.warn("Authentication failed: {}", exception.getMessage());
+        return errorResponse(HttpStatus.UNAUTHORIZED, "Invalid credentials", exception);
     }
 
     @ExceptionHandler(PaymentVerificationException.class)

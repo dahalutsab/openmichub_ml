@@ -5,6 +5,7 @@ import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.social_feed.dto.PostRequest;
 import com.brogrammers.open_mic_hub_service.social_feed.service.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.io.IOException;
 public class PostController extends BaseController {
     private final PostService postService;
 
+    @PreAuthorize("hasRole('ARTIST')")
     @PostMapping
     public ResponseEntity<GlobalApiResponse> createPost(@ModelAttribute PostRequest postRequest) throws IOException {
         return successResponse(postService.createPost(postRequest), "Post created successfully");

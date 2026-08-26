@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,11 +43,13 @@ public class UserController extends BaseController {
             summary = UserSwaggerDocumentationMessage.GET_USER_BY_ID_SUMMARY,
             description = UserSwaggerDocumentationMessage.GET_USER_BY_ID_DESCRIPTION
     )
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{userId}")
     public ResponseEntity<GlobalApiResponse> getUserById(@PathVariable Long userId){
         return successResponse(userService.getUserById(userId), ResponseMessageUtil.fetchedSuccessfully(USER));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<GlobalApiResponse> getAllUsers(
             @Parameter(

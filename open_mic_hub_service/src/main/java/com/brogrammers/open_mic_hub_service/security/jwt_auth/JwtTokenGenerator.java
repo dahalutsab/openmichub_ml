@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -63,10 +63,19 @@ public class JwtTokenGenerator {
                 .collect(Collectors.joining(" "));
     }
 
+    /**
+     * Coarse permissions derived from the caller's roles.
+     *
+     * <p>This used to look for {@code ROLE_SCHOOL_ADMIN}, a role that does not exist in this
+     * application, so the scope claim came out empty for everyone.
+     */
     private String getPermissionsFromRoles(String roles) {
-        Set<String> permissions = new HashSet<>();
-        if (roles.contains("ROLE_SCHOOL_ADMIN")) {
+        Set<String> permissions = new LinkedHashSet<>();
+        if (roles.contains("ROLE_ADMIN")) {
             permissions.addAll(List.of("READ", "WRITE", "DELETE"));
+        }
+        if (roles.contains("ROLE_ARTIST")) {
+            permissions.addAll(List.of("READ", "WRITE"));
         }
         if (roles.contains("ROLE_USER")) {
             permissions.add("READ");

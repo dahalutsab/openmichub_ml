@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class ArtistAvailabilityController extends BaseController {
     // --- AVAILABILITY ---
 
     @Operation(summary = "Add availability", description = "Add a new availability slot for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @PostMapping("/availability")
     public ResponseEntity<GlobalApiResponse> addAvailability(
             @RequestBody AvailabilityRequest request) {
@@ -39,6 +41,7 @@ public class ArtistAvailabilityController extends BaseController {
     }
 
     @Operation(summary = "Update availability", description = "Update an existing availability slot for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @PutMapping("/availability/{availabilityId}")
     public ResponseEntity<GlobalApiResponse> updateAvailability(
             @Parameter(description = "Availability ID", required = true) @PathVariable Long availabilityId,
@@ -48,6 +51,7 @@ public class ArtistAvailabilityController extends BaseController {
     }
 
     @Operation(summary = "Delete availability", description = "Delete an availability slot for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @DeleteMapping("/availability/{availabilityId}")
     public ResponseEntity<GlobalApiResponse> deleteAvailability(
             @Parameter(description = "Availability ID", required = true) @PathVariable Long availabilityId) {
@@ -56,6 +60,7 @@ public class ArtistAvailabilityController extends BaseController {
     }
 
     @Operation(summary = "Get all availabilities", description = "Get all availability slots for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @GetMapping("/availability")
     public ResponseEntity<GlobalApiResponse> getAvailabilities() {
         List<AvailabilityResponse> result = artistAvailabilityService.getAvailabilities();
@@ -65,6 +70,7 @@ public class ArtistAvailabilityController extends BaseController {
     // --- UNAVAILABILITY ---
 
     @Operation(summary = "Add unavailability", description = "Add a new unavailability period for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @PostMapping("/unavailability")
     public ResponseEntity<GlobalApiResponse> addUnavailability(
             @RequestBody ArtistUnavailability request) {
@@ -73,6 +79,7 @@ public class ArtistAvailabilityController extends BaseController {
     }
 
     @Operation(summary = "Delete unavailability", description = "Delete an unavailability period for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @DeleteMapping("/unavailability/{unavailabilityId}")
     public ResponseEntity<GlobalApiResponse> deleteUnavailability(
             @Parameter(description = "Unavailability ID", required = true) @PathVariable Long unavailabilityId) {
@@ -81,6 +88,7 @@ public class ArtistAvailabilityController extends BaseController {
     }
 
     @Operation(summary = "Get all unavailabilities", description = "Get all unavailability periods for the logged-in artist.")
+    @PreAuthorize("hasRole('ARTIST')")
     @GetMapping("/unavailability")
     public ResponseEntity<GlobalApiResponse> getUnavailabilities() {
         List<UnAvailabilityResponse> result = artistAvailabilityService.getUnavailabilities();

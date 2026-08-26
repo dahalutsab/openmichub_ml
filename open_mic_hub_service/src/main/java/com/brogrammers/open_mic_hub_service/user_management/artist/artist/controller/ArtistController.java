@@ -4,6 +4,7 @@ import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import static com.brogrammers.open_mic_hub_service.common.constants.APIConstants
 public class ArtistController extends BaseController {
     private final ArtistService artistService;
 
+    @PreAuthorize("hasRole('ARTIST')")
     @GetMapping
     public ResponseEntity<GlobalApiResponse> getLoggedInArtist() {
         return successResponse(
@@ -24,6 +26,7 @@ public class ArtistController extends BaseController {
     }
 
     //update hourly rate of artist
+    @PreAuthorize("hasRole('ARTIST')")
     @PatchMapping("/hourly-rate")
     public ResponseEntity<GlobalApiResponse> updateArtistHourlyRate(@RequestParam double hourlyRate) {
         return successResponse(

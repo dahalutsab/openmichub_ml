@@ -20,30 +20,35 @@ import reactor.core.publisher.Mono;
 public class BookingController extends BaseController {
     private final BookingService bookingService;
 
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @PostMapping("/booking")
     public ResponseEntity<GlobalApiResponse> bookArtist(@RequestBody BookingRequest bookingRequest) {
         log.info("Received booking request: {}", bookingRequest);
         return successResponse(bookingService.bookArtist(bookingRequest), "Artist booked successfully");
     }
 
+    @PreAuthorize("hasRole('ARTIST')")
     @GetMapping("/getBookings")
     public ResponseEntity<GlobalApiResponse> getAllBookingsOfUsers(Pageable pageable) {
         log.info("Fetching all bookings for users with pageable: {}", pageable);
         return successResponse(bookingService.getAllBookingsOfUsers(pageable), "All bookings fetched successfully");
     }
 
+    @PreAuthorize("hasRole('ARTIST')")
     @PutMapping("/approve")
     public ResponseEntity<String> approveBooking(@RequestParam Long bookingId) {
         bookingService.approveBooking(bookingId);
         return ResponseEntity.ok("Booking approved successfully");
     }
 
+    @PreAuthorize("hasRole('ARTIST')")
     @PutMapping("/decline")
     public ResponseEntity<String> declineBooking(@RequestParam Long bookingId) {
         bookingService.declineBooking(bookingId);
         return ResponseEntity.ok("Booking declined successfully");
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/getAllBooking/user")
     public ResponseEntity<GlobalApiResponse> getAllBookings(Pageable pageable) {
         log.info("Fetching all bookings for artists with pageable: {}", pageable);

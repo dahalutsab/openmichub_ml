@@ -7,6 +7,7 @@ import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.enti
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionType;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class TransactionalController extends BaseController {
     private final TransactionService transactionService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<GlobalApiResponse> getAllTransactions(Pageable pageable) {
         return successResponse(
@@ -25,6 +27,7 @@ public class TransactionalController extends BaseController {
         );
     }
 
+    @PreAuthorize("hasRole('ARTIST')")
     @GetMapping("/artist")
     public ResponseEntity<GlobalApiResponse> getAllLoggedInArtistTransaction(Pageable pageable, @RequestParam(defaultValue = "ALL") TransactionType transactionType, @RequestParam(defaultValue = "ALL") TransactionPurpose transactionPurpose) {
         return successResponse(
@@ -33,6 +36,7 @@ public class TransactionalController extends BaseController {
         );
     }
 
+    @PreAuthorize("hasRole('ARTIST')")
     @PostMapping("/withDraw")
     public ResponseEntity<GlobalApiResponse> withDraw(@RequestBody WithDrawRequest withDrawRequest) {
         return successResponse(

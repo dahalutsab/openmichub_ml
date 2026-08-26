@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class GenreController extends BaseController {
             summary = "Create a new genre",
             description = "Creates a new genre with its categories."
     )
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<GlobalApiResponse> createGenre(
             @RequestBody GenreRequest genreRequest) {
@@ -60,6 +62,7 @@ public class GenreController extends BaseController {
             summary = "Update a genre",
             description = "Updates an existing genre and its categories."
     )
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<GlobalApiResponse> updateGenre(
             @Parameter(description = "ID of the genre to update", required = true)
@@ -73,6 +76,7 @@ public class GenreController extends BaseController {
             summary = "Delete a genre (soft delete)",
             description = "Soft deletes a genre by setting its active flag to false."
     )
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<GlobalApiResponse> deleteGenre(
             @Parameter(description = "ID of the genre to delete", required = true)

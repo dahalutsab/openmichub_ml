@@ -13,10 +13,14 @@ import java.util.Collection;
 public class UserInfoConfig implements UserDetails {
 
     private final UserEntity userEntity;
+    /**
+     * Roles are stored bare ("ADMIN") but Spring's {@code hasRole()} looks for a {@code ROLE_}
+     * prefix. Without it every {@code hasRole} check silently evaluates false.
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return userEntity.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
                 .toList();
     }
 
