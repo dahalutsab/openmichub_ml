@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
+import { environment } from '../../environment/environment';
 
 interface Genre {
   id: number;
@@ -60,7 +61,7 @@ export class RegisterComponent implements OnInit {
   }
 
   fetchGenres() {
-    this.http.get<{ data: Genre[] }>('http://localhost:8181/api/v1/genre').subscribe({
+    this.http.get<{ data: Genre[] }>(`${environment.baseUrl}/genre`).subscribe({
       next: (response) => {
         this.genres = response.data;
       },

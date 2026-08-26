@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from './environment/environment';
 
 export interface GenreResponse {
   timestamp: string;
@@ -80,7 +81,7 @@ interface CountResponse {
   providedIn: 'root'
 })
 export class LandingService {
-  private apiUrl = 'http://localhost:8181/api/v1/public';
+  private apiUrl = `${environment.baseUrl}/public`;
 
   constructor(private http: HttpClient) {}
 

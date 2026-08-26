@@ -9,6 +9,7 @@ import com.brogrammers.open_mic_hub_service.user_management.user.repository.User
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -34,10 +35,18 @@ public class PublicServiceImplementation implements PublicService {
         return new CountsResponse(userCount, artistCount, bookingCount);
     }
 
+    /**
+     * Active genres with their categories.
+     *
+     * <p>{@code GenreResponse} reads {@code genre.getCategories()}, which is lazy. Without a
+     * transaction and an eager fetch this threw {@code LazyInitializationException} and the
+     * endpoint answered 500, leaving the landing page without its genre list.
+     */
+    @Transactional(readOnly = true)
     @Override
     public List<GenreResponse> getAllGenres() {
         log.info("Fetching all genres");
-        List<GenreResponse> genres = genreRepository.findAll().stream()
+        List<GenreResponse> genres = genreRepository.findByActiveTrue().stream()
                 .map(GenreResponse::new)
                 .toList();
         log.info("Fetched {} genres", genres.size());
