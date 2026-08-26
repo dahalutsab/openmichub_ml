@@ -6,8 +6,9 @@ and earnings. Spring Boot 3.3 API + Angular 19 client.
 ```
 open_mic_hub_service/   Spring Boot API (Java 21)
 open_mic_hub_ui/        Angular 19 client
+ml_service/             FastAPI: semantic search + LightGBM ranker
 scripts/                developer helpers
-docker-compose.yml      Postgres + API, one command
+docker-compose.yml      Postgres + API + ML, one command
 ```
 
 ## Running the backend
@@ -19,9 +20,9 @@ cp .env.example .env          # set ADMIN_PASSWORD at minimum
 docker compose up -d --build
 ```
 
-That builds the API image, starts Postgres, waits for it to accept connections, generates the
-token-signing keypair on first run, creates the schema and seeds roles. The API is healthy in
-about fifteen seconds.
+That builds both service images, starts Postgres with pgvector, waits for it to accept
+connections, generates the token-signing keypair on first run, creates the schema and seeds
+roles. Everything is healthy in about twenty seconds.
 
 ```bash
 docker compose logs -f api    # follow
@@ -55,7 +56,33 @@ cd open_mic_hub_service && ./mvnw spring-boot:run
 | API | http://localhost:8181 |
 | Swagger | http://localhost:8181/v1/swagger |
 | Health | http://localhost:8181/actuator/health |
+| ML service | http://localhost:8000/docs |
 | Client | http://localhost:4200 |
+
+## Artist discovery
+
+Search runs meaning-based retrieval over artist profiles, then a trained ranker orders the
+results by fit for the request. Both endpoints are public.
+
+```
+GET /api/v1/discover/search?q=jazz trio for a corporate dinner&city=Kathmandu&budgetPerHour=8000
+GET /api/v1/discover/recommendations?city=Pokhara&eventType=Wedding
+```
+
+They fall back to the plain artist listing if the ML service is unreachable, so discovery
+degrades rather than breaking. The response `strategy` field says which ranker produced the
+ordering.
+
+To get a demo catalogue and a trained model on a fresh install:
+
+```bash
+docker compose exec ml python -m training.seed_db --artists 200
+curl -X POST localhost:8000/embeddings/rebuild
+curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
+```
+
+See [ml_service/README.md](ml_service/README.md) for the model, its features and how it is
+evaluated.
 
 ## Roles
 

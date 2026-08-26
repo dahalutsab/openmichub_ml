@@ -2,12 +2,21 @@
 #
 #     docker compose up -d --build
 #
-# Postgres and the API start in order, the API waits for the database to be
-# accepting connections, and the signing keypair is generated on first run.
+#   postgres  pgvector-enabled Postgres 16
+#   api       Spring Boot, waits for the database, generates its signing keypair
+#   ml        FastAPI: semantic search and the LightGBM ranker
+#
+# First run, to get a demo catalogue and a trained model:
+#
+#     docker compose exec ml python -m training.seed_db --artists 200
+#     curl -X POST localhost:8000/embeddings/rebuild
+#     curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{}'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector's own image: stock postgres:16 has no vector extension, and the
+    # ML service needs it for similarity search.
+    image: pgvector/pgvector:pg16
     container_name: openmichub-postgres
     restart: unless-stopped
     environment:
@@ -53,6 +62,10 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       CHATBOT_API_KEY: ${CHATBOT_API_KEY:-}
+
+      # Search and recommendations degrade to the plain listing when this is
+      # unreachable, so the API does not depend on it to start.
+      ML_SERVICE_URL: http://ml:8000
     ports:
       - "${API_PORT:-8181}:8181"
     volumes:
@@ -60,7 +73,31 @@ services:
       - uploads:/app/uploads
       - certs:/app/certs
 
+  ml:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    image: openmichub/ml:latest
+    container_name: openmichub-ml
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-open_mic_hub}
+      DB_USER: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      MODEL_DIR: /app/models
+    ports:
+      - "${ML_PORT:-8000}:8000"
+    volumes:
+      # The trained model survives restarts and rebuilds.
+      - mlmodels:/app/models
+
 volumes:
   pgdata:
   uploads:
   certs:
+  mlmodels:

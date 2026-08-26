@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+models/
+.pytest_cache/
+.fastembed/

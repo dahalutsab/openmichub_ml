@@ -67,6 +67,12 @@ khalti:
   base-url: ${KHALTI_BASE_URL:https://dev.khalti.com/api/v2}
   secret-key: ${KHALTI_SECRET_KEY:}
 
+ml:
+  service:
+    # The discovery endpoints degrade to a plain listing when this is unreachable.
+    url: ${ML_SERVICE_URL:http://localhost:8000}
+    timeout-ms: ${ML_SERVICE_TIMEOUT_MS:4000}
+
 chatbot:
   api-key: ${CHATBOT_API_KEY:}
 

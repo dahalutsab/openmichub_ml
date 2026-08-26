@@ -11,6 +11,8 @@ public enum WHITE_LIST_URLS {
     GET_GENRES("/api/v1/genre", new HttpMethod[]{HttpMethod.GET}),
     ARTIST_CALENDAR("/api/v1/artist/calendar/**", new HttpMethod[]{HttpMethod.GET}),
     PUBLIC_APIS("/api/v1/public/**", new HttpMethod[]{HttpMethod.GET}),
+    // Browsing and searching for artists is what brings organizers to the site.
+    DISCOVERY("/api/v1/discover/**", new HttpMethod[]{HttpMethod.GET}),
     FILES("/media/**", new HttpMethod[]{HttpMethod.GET}),
     // Liveness probe for the container orchestrator. Details are never shown.
     HEALTH("/actuator/health", new HttpMethod[]{HttpMethod.GET}),
