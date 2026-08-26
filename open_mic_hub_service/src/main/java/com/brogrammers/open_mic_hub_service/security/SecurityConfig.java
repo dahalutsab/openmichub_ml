@@ -3,6 +3,7 @@ package com.brogrammers.open_mic_hub_service.security;
 import com.brogrammers.open_mic_hub_service.config.RSAKeyRecord;
 import com.brogrammers.open_mic_hub_service.security.jwt_auth.CustomExceptionHandlingFilter;
 import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtAccessTokenFilter;
+import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtTokenDecoder;
 import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtTokenUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class SecurityConfig {
 
     private final RSAKeyRecord rsaKeyRecord;
     private final JwtTokenUtils jwtTokenUtils;
+    private final JwtTokenDecoder jwtTokenDecoder;
     private final ObjectMapper objectMapper;
 
     @Bean
@@ -65,7 +67,7 @@ public class SecurityConfig {
                 })
                 // Move filters after permitAll evaluation
                 .addFilterBefore(new CustomExceptionHandlingFilter(objectMapper), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAccessTokenFilter(rsaKeyRecord, jwtTokenUtils), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAccessTokenFilter(rsaKeyRecord, jwtTokenUtils, jwtTokenDecoder), UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/api/v1/auth/logout")
                         .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())

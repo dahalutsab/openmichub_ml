@@ -3,7 +3,9 @@ package com.brogrammers.open_mic_hub_service.security.jwt_auth;
 import com.brogrammers.open_mic_hub_service.config.RSAKeyRecord;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -39,13 +41,21 @@ public class JwtTokenGenerator {
                     .claim("scope", permissions)
                     .build();
 
+            // Sign first, then encrypt. Encryption alone proves only confidentiality: because the
+            // public key is public, anyone could previously encrypt claims of their choosing and
+            // the server would decrypt and trust them. The signature is what proves we issued it.
+            SignedJWT signedJWT = new SignedJWT(
+                    new JWSHeader.Builder(JWSAlgorithm.RS256).build(), claims);
+            signedJWT.sign(new RSASSASigner(rsaKeyRecord.rsaPrivateKey()));
+
             JWEObject jweObject = new JWEObject(
-                    new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM),
-                    new Payload(claims.toJSONObject())
+                    new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                            .contentType("JWT")
+                            .build(),
+                    new Payload(signedJWT)
             );
 
-            RSAEncrypter encrypter = new RSAEncrypter(rsaKeyRecord.rsaPublicKey());
-            jweObject.encrypt(encrypter);
+            jweObject.encrypt(new RSAEncrypter(rsaKeyRecord.rsaPublicKey()));
 
             String token = jweObject.serialize();
             log.info("[JwtTokenGenerator:generateAccessToken] Generated encrypted access token for: {}", authentication.getName());

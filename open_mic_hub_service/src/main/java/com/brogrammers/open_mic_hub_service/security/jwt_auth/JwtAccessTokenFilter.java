@@ -36,6 +36,7 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
 
     private final RSAKeyRecord rsaKeyRecord;
     private final JwtTokenUtils jwtTokenUtils;
+    private final JwtTokenDecoder jwtTokenDecoder;
 
 
     @Override
@@ -68,15 +69,10 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
         final String token = authHeader.substring(7);
 
         try {
-            // Decrypt the JWE
-            JWEObject jweObject = JWEObject.parse(token);
-            RSADecrypter decrypter = new RSADecrypter(rsaKeyRecord.rsaPrivateKey());
-            jweObject.decrypt(decrypter);
+            // Decrypt AND verify the signature. Decryption alone would let anyone holding the
+            // public key mint a token for any subject.
+            JWTClaimsSet claims = jwtTokenDecoder.decodeAndVerify(token);
 
-            // Get claims from decrypted payload
-            JWTClaimsSet claims = JWTClaimsSet.parse(jweObject.getPayload().toJSONObject());
-
-            // Validate and authenticate
             final String userName = jwtTokenUtils.getUserName(claims);
             if (!userName.isEmpty() && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = jwtTokenUtils.userDetails(userName);
@@ -89,9 +85,9 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
                     SecurityContextHolder.setContext(securityContext);
                 }
             }
-        } catch (ParseException | JOSEException e) {
-            log.error("[JwtAccessTokenFilter] Error processing token: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token: " + e.getMessage());
+        } catch (JwtTokenDecoder.InvalidAccessTokenException e) {
+            log.warn("[JwtAccessTokenFilter] {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
         }
 
         filterChain.doFilter(request, response);

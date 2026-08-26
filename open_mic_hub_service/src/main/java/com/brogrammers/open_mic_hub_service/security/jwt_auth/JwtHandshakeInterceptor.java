@@ -27,7 +27,7 @@ import java.util.Map;
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtTokenUtils jwtTokenUtils;
-    private final RSAKeyRecord rsaKeyRecord;
+    private final JwtTokenDecoder jwtTokenDecoder;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request,
@@ -48,7 +48,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
                     String[] pair = param.split("=");
                     if (pair.length == 2 && pair[0].equals("access_token")) {
                         token = pair[1];
-                        log.debug("Extracted JWT from access_token query parameter: {}", token);
+                        log.debug("Extracted JWT from access_token query parameter");
                         break;
                     }
                 }
@@ -61,9 +61,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         try {
-            JWEObject jweObject = JWEObject.parse(token);
-            jweObject.decrypt(new RSADecrypter(rsaKeyRecord.rsaPrivateKey()));
-            JWTClaimsSet claims = JWTClaimsSet.parse(jweObject.getPayload().toJSONObject());
+            JWTClaimsSet claims = jwtTokenDecoder.decodeAndVerify(token);
 
             String username = jwtTokenUtils.getUserName(claims);
             if (username == null || username.isBlank()) {
@@ -84,7 +82,8 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             return true;
 
         } catch (Exception e) {
-            log.error("Token validation failed during WebSocket handshake for token: {}", token, e);
+            // Deliberately does not log the token itself.
+            log.warn("WebSocket handshake rejected: {}", e.getMessage());
             return false;
         }
     }
