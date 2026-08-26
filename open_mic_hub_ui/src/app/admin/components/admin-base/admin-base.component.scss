@@ -1,1 +1,10 @@
-@use '../../../../app/shared/css/admin.scss' as admin;
+/*
+ * The shared admin theme is loaded once, globally, from angular.json.
+ *
+ * Every shell component used to `@use` it here instead, which inlined all
+ * 12,600 lines into each component's compiled styles — the same 157 kB of CSS
+ * shipped five times over, and five times the work for the browser to parse.
+ *
+ * Component-specific rules still belong in this file. Shared ones belong in
+ * src/styles.scss.
+ */

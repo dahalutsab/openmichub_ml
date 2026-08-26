@@ -35,6 +35,11 @@ const routes: Routes = [
   },
 
   {
+    path: 'discover',
+    loadChildren: () => import('./discovery/discovery.routes').then(m => m.DISCOVERY_ROUTES)
+  },
+
+  {
     path: 'chat',
     component: ChatComponent
   }

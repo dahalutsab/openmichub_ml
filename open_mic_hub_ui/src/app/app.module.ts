@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserModule } from '@angular/platform-browser';
@@ -25,6 +26,7 @@ import {ChatBotComponent} from "./chat_bot/component/chat-bot.component";
     BrowserModule,
     BrowserAnimationsModule,
     AppRoutingModule,
+    RouterModule,
     HttpClientModule,
     FormsModule,
     ToastrModule.forRoot({

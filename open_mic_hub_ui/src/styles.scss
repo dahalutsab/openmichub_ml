@@ -1,1 +1,286 @@
-/* You can add global styles to this file, and also import other style files */
+/* =========================================================================
+   OpenMicHub — global stylesheet
+
+   Everything shared lives here: the design tokens, then a small set of
+   reusable component classes built from them.
+
+   The app previously had no global layer at all — styles.scss was empty and
+   every component redeclared its own colours, spacing, buttons and cards.
+   That is why the same blue appears as #4e73df in one file and #4E73DF in
+   another, and why a card looks slightly different on each screen.
+
+   The rule from here: a colour, radius, shadow or spacing step is defined
+   once as a token below. Components compose `.omh-*` classes and Tailwind
+   utilities; they do not invent new values.
+
+   Tailwind's preflight is switched off (see tailwind.config.js) because
+   Bootstrap and Angular Material own the base layer on the existing screens.
+   ========================================================================= */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+/* -------------------------------------------------------------------------
+   Tokens
+
+   Stored as space-separated RGB channels so Tailwind can apply opacity to
+   them (`bg-brand/10`). Read them in plain CSS with rgb(var(--token)).
+   ------------------------------------------------------------------------- */
+
+:root {
+  /* Neutrals, biased very slightly toward the brand hue so greys read as
+     chosen rather than inherited. */
+  --omh-ground:     248 248 251;
+  --omh-surface:    255 255 255;
+  --omh-surface-2:  242 242 247;
+  --omh-line:       227 227 236;
+  --omh-ink:         23  21  35;
+  --omh-ink-soft:    74  71  95;
+  --omh-muted:      124 121 145;
+
+  /* Brand. Derived from the app's existing #4e73df, deepened for contrast:
+     the original fails AA for body text on white. */
+  --omh-brand:        79  70 205;
+  --omh-brand-strong: 60  52 165;
+  --omh-brand-soft:  238 236 254;
+
+  /* Stage amber — ratings and highlights. Kept separate from the brand so a
+     five-star result reads without leaning on the primary colour. */
+  --omh-stage:      201 132  17;
+
+  /* Semantic. Independent of the brand hue. */
+  --omh-positive:    22 125  86;
+  --omh-warning:    177 108  10;
+  --omh-critical:   183  45  37;
+
+  /* Spacing rhythm. Components step through these rather than picking px. */
+  --omh-space-1: 0.25rem;
+  --omh-space-2: 0.5rem;
+  --omh-space-3: 0.75rem;
+  --omh-space-4: 1rem;
+  --omh-space-5: 1.5rem;
+  --omh-space-6: 2rem;
+  --omh-space-7: 3rem;
+
+  --omh-radius-sm:   8px;
+  --omh-radius:     14px;
+  --omh-radius-lg:  20px;
+  --omh-radius-pill: 999px;
+
+  --omh-shadow-soft: 0 1px 2px rgb(16 12 30 / 0.04), 0 4px 16px -4px rgb(16 12 30 / 0.08);
+  --omh-shadow-lift: 0 2px 4px rgb(16 12 30 / 0.05), 0 12px 32px -8px rgb(16 12 30 / 0.16);
+
+  --omh-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* -------------------------------------------------------------------------
+   Reusable components
+
+   In Tailwind's `components` layer so utilities still win: a card can be
+   nudged with `!p-6` without a specificity fight.
+   ------------------------------------------------------------------------- */
+
+@layer components {
+
+  /* --- surfaces --- */
+
+  .omh-card {
+    @apply bg-surface border border-line rounded-card;
+    box-shadow: var(--omh-shadow-soft);
+  }
+
+  .omh-card-interactive {
+    @apply omh-card cursor-pointer;
+    transition: transform 0.22s var(--omh-ease), box-shadow 0.22s var(--omh-ease),
+                border-color 0.22s var(--omh-ease);
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--omh-shadow-lift);
+      @apply border-brand/30;
+    }
+
+    &:focus-visible {
+      @apply outline-none border-brand;
+      box-shadow: var(--omh-shadow-lift), 0 0 0 3px rgb(var(--omh-brand) / 0.25);
+    }
+  }
+
+  .omh-panel {
+    @apply bg-surface-2 border border-line rounded-card;
+  }
+
+  /* --- type --- */
+
+  .omh-display {
+    @apply font-display font-bold text-ink tracking-tight;
+    text-wrap: balance;
+  }
+
+  .omh-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-brand;
+  }
+
+  .omh-label {
+    @apply block text-[12px] font-semibold text-ink-soft mb-1.5;
+  }
+
+  .omh-help {
+    @apply text-[13px] text-muted;
+  }
+
+  /* --- controls --- */
+
+  .omh-input,
+  .omh-select {
+    @apply w-full bg-surface border border-line rounded-[10px]
+           px-3.5 py-2.5 text-[14px] text-ink;
+    transition: border-color 0.18s var(--omh-ease), box-shadow 0.18s var(--omh-ease);
+
+    &::placeholder { @apply text-muted; }
+
+    &:hover:not(:disabled) { @apply border-muted/60; }
+
+    &:focus {
+      @apply outline-none border-brand;
+      box-shadow: 0 0 0 3px rgb(var(--omh-brand) / 0.16);
+    }
+
+    &:disabled { @apply bg-surface-2 text-muted cursor-not-allowed; }
+  }
+
+  .omh-select {
+    @apply appearance-none pr-9 cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%237c7991' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+  }
+
+  /* --- buttons --- */
+
+  .omh-btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-semibold text-[14px] rounded-[10px] px-4 py-2.5
+           border border-transparent cursor-pointer select-none;
+    transition: background-color 0.18s var(--omh-ease), color 0.18s var(--omh-ease),
+                border-color 0.18s var(--omh-ease), transform 0.12s var(--omh-ease);
+
+    &:active:not(:disabled) { transform: translateY(1px); }
+
+    &:focus-visible {
+      @apply outline-none;
+      box-shadow: 0 0 0 3px rgb(var(--omh-brand) / 0.3);
+    }
+
+    &:disabled { @apply opacity-55 cursor-not-allowed; }
+  }
+
+  .omh-btn-primary {
+    @apply omh-btn text-white;
+    background-color: rgb(var(--omh-brand));
+
+    &:hover:not(:disabled) { background-color: rgb(var(--omh-brand-strong)); }
+  }
+
+  .omh-btn-secondary {
+    @apply omh-btn bg-surface text-ink border-line;
+
+    &:hover:not(:disabled) { @apply bg-surface-2 border-muted/50; }
+  }
+
+  .omh-btn-ghost {
+    @apply omh-btn bg-transparent text-ink-soft;
+
+    &:hover:not(:disabled) { @apply bg-surface-2 text-ink; }
+  }
+
+  /* --- chips --- */
+
+  .omh-chip {
+    @apply inline-flex items-center gap-1.5 rounded-pill
+           px-2.5 py-1 text-[12px] font-medium
+           bg-surface-2 text-ink-soft border border-line;
+  }
+
+  .omh-chip-brand {
+    @apply omh-chip border-transparent;
+    background-color: rgb(var(--omh-brand-soft));
+    color: rgb(var(--omh-brand-strong));
+  }
+
+  .omh-chip-toggle {
+    @apply omh-chip cursor-pointer select-none;
+    transition: all 0.16s var(--omh-ease);
+
+    &:hover { @apply border-brand/40 text-ink; }
+
+    &[aria-pressed='true'] {
+      @apply border-transparent text-white;
+      background-color: rgb(var(--omh-brand));
+    }
+  }
+
+  /* --- feedback --- */
+
+  .omh-skeleton {
+    @apply relative overflow-hidden bg-surface-2 rounded-[8px];
+
+    &::after {
+      content: '';
+      @apply absolute inset-0 -translate-x-full;
+      background-image: linear-gradient(
+        90deg,
+        transparent,
+        rgb(255 255 255 / 0.65),
+        transparent
+      );
+      animation: shimmer 1.6s infinite;
+    }
+  }
+
+  .omh-empty {
+    @apply flex flex-col items-center justify-center text-center
+           py-16 px-6 rounded-card border border-dashed border-line bg-surface;
+  }
+
+  /* --- layout --- */
+
+  .omh-page {
+    @apply min-h-screen;
+    background-color: rgb(var(--omh-ground));
+  }
+
+  .omh-container {
+    @apply mx-auto w-full max-w-[1180px] px-5;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------------- */
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: rgb(var(--omh-ink));
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Respect a reduced-motion preference everywhere, including the utilities
+   above, rather than leaving it to each component to remember. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

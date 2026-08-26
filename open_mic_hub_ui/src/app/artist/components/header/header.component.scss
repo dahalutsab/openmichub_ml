@@ -1,5 +1,6 @@
-@use '../../../../app/shared/css/admin.scss' as admin;
-
+/* The shared admin theme is loaded once, globally, from angular.json.
+   It used to be @use'd here, which inlined all 12,600 lines into this
+   component's styles. Component-specific rules follow. */
 // Profile Toggle Styles
 .profile-toggle {
   padding: 0.5rem 1rem !important;

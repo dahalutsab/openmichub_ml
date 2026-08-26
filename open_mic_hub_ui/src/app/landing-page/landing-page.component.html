@@ -7,6 +7,7 @@
       </div>
       <div class="nav-menu">
 
+        <a routerLink="/discover" class="nav-link">Find artists</a>
         <a href="#features" class="nav-link" (click)="scrollToSection('features')">Features</a>
         <a href="#artists" class="nav-link" (click)="scrollToSection('artists')">Artists</a>
         <a href="#how-it-works" class="nav-link" (click)="scrollToSection('how-it-works')">How It Works</a>
@@ -34,8 +35,8 @@
           <button class="btn-primary" (click)="navigateTo('auth/register')">
             Request a Demo
           </button>
-          <button class="btn-secondary" (click)="scrollToSection('features')">
-            Explore Features
+          <button class="btn-secondary" (click)="navigateTo('discover')">
+            Find an artist
           </button>
         </div>
         <div class="hero-stats">
