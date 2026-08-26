@@ -2,6 +2,7 @@ package com.brogrammers.open_mic_hub_service.message.controller;
 
 import com.brogrammers.open_mic_hub_service.message.dto.request.ChatRequest;
 import com.brogrammers.open_mic_hub_service.message.dto.response.ChatResponse;
+import com.brogrammers.open_mic_hub_service.message.service.ChatService;
 import com.brogrammers.open_mic_hub_service.user_management.user.entity.UserEntity;
 import com.brogrammers.open_mic_hub_service.user_management.user.repository.UserInfoRepository;
 import org.slf4j.Logger;
@@ -31,19 +32,26 @@ public class WSMessageController {
     @Autowired
     private SimpUserRegistry simpUserRegistry;
 
+    @Autowired
+    private ChatService chatService;
+
     @MessageMapping("/chat.sendPrivateMessage")
     public void sendPrivateMessage(@Payload ChatRequest message, Principal principal) {
         log.info("Received private message from: {}, to: {}, content: {}", principal.getName(), message.getRecipientEmail(), message.getContent());
 
-        // Save message to database (assuming this is handled elsewhere, e.g., a service)
         UserEntity sender = userInfoRepository.findByEmailId(principal.getName())
                 .orElseThrow(() -> new IllegalArgumentException("Sender not found: " + principal.getName()));
         UserEntity recipient = userInfoRepository.findByEmailId(message.getRecipientEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Recipient not found: " + message.getRecipientEmail()));
 
-        log.info("Recipient email: {}", message.getRecipientEmail());
+        if (message.getContent() == null || message.getContent().isBlank()) {
+            return;
+        }
 
-        // Create response
+        // Persist before broadcasting. This was previously left to "a service" that did not exist,
+        // so messages lived only for the duration of the socket connection.
+        chatService.saveMessage(sender, recipient, message.getContent());
+
         ChatResponse response = ChatResponse.builder()
                 .senderEmail(principal.getName())
                 .recipientEmail(message.getRecipientEmail())

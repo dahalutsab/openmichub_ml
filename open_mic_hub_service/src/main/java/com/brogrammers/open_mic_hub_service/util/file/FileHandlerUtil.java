@@ -31,18 +31,28 @@ public class FileHandlerUtil {
             throw new IllegalArgumentException("Invalid file name");
         }
 
-        // Clean and generate unique file name
-        String baseName = getBaseName(originalFilename);
-        String extension = getFileExtension(originalFilename);
-        String cleanedName = cleanFileName(baseName);
-        String uniqueFileName = cleanedName + "-" + System.currentTimeMillis() + "." + extension;
+        // Both halves of the name are sanitized. The extension used to be taken raw from the
+        // client-supplied filename and concatenated into the path, so a crafted name could write
+        // outside the upload root - and anything landing there is served from /media/**.
+        String baseName = cleanFileName(getBaseName(originalFilename));
+        String extension = cleanExtension(getFileExtension(originalFilename));
+        if (baseName.isBlank()) {
+            baseName = "file";
+        }
+        String uniqueFileName = baseName + "-" + System.currentTimeMillis()
+                + (extension.isEmpty() ? "" : "." + extension);
 
-        // Prepare relative and full path
         String relativePath = (additionalPath != null && !additionalPath.isBlank())
-                ? additionalPath + "/" + uniqueFileName
+                ? cleanFileName(additionalPath) + "/" + uniqueFileName
                 : uniqueFileName;
-        String basePath = fileConfig.getFilePath();
-        Path fullPath = Paths.get(basePath, relativePath);
+
+        Path root = fileConfig.getRoot();
+        Path fullPath = root.resolve(relativePath).normalize();
+
+        // Belt and braces: refuse anything that escaped the root despite the cleaning above.
+        if (!fullPath.startsWith(root)) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
 
         log.info("[FileHandlerUtil:saveFile] Saving file: {} to {}", uniqueFileName, fullPath);
 
@@ -91,6 +101,17 @@ public class FileHandlerUtil {
         } catch (IOException e) {
             log.error("[FileHandlerUtil:deleteFile] Error deleting file: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Keeps only characters that are safe in a path segment, and only for known file types.
+     *
+     * <p>An unrecognised extension is dropped rather than trusted, so a name like
+     * {@code avatar.png/../../../evil.sh} cannot steer the write.
+     */
+    private String cleanExtension(String extension) {
+        String cleaned = extension.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return determineFileType("x." + cleaned) == null ? "" : cleaned;
     }
 
     private String cleanFileName(String name) {

@@ -57,6 +57,10 @@ springdoc:
   swagger-ui:
     path: /v1/swagger
 
+cors:
+  # Comma-separated. Add your deployed frontend origin here per environment.
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
 khalti:
   # Sandbox by default. Production: https://khalti.com/api/v2
   base-url: ${KHALTI_BASE_URL:https://dev.khalti.com/api/v2}

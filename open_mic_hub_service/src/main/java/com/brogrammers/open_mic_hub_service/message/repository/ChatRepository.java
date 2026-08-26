@@ -15,5 +15,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
 
     Page<Chat> findAllBySenderOrRecipient(UserEntity loggedInUser, UserEntity loggedInUser1, Pageable pageable);
 
+    List<Chat> findAllBySenderOrRecipientOrderByTimestampDesc(UserEntity sender, UserEntity recipient);
+
     Chat findTopBySenderOrRecipientOrderByTimestampDesc(UserEntity loggedInUser, UserEntity user);
 }

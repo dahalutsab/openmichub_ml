@@ -24,14 +24,19 @@ export class AuthInterceptor implements HttpInterceptor {
     
     if (token) {
       request = this.addToken(request, token);
-    } else {
     }
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
+        // An expired or rejected token means the session is over: clear it and send the user to
+        // sign in. This used to route to the registration page, which is not where someone whose
+        // session lapsed needs to end up.
         if (error.status === 401) {
-        
-          this.router.navigate(['/auth/register']);
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('urole');
+          this.router.navigate(['/auth/login'], {
+            queryParams: { returnUrl: this.router.url }
+          });
         }
         return throwError(() => error);
       })
