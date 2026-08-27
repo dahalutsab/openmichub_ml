@@ -4,6 +4,7 @@ package com.brogrammers.open_mic_hub_service.public_apis;
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.public_apis.service.PublicService;
+import com.brogrammers.open_mic_hub_service.social_feed.service.PostService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.dto.response.ArtistResponse;
 import com.brogrammers.open_mic_hub_service.user_management.user.service.UserService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +32,7 @@ public class PublicController extends BaseController {
     private final UserService userService;
     private final ArtistService artistService;
     private final PublicService publicService;
+    private final PostService postService;
 
     @GetMapping("/artists")
     public ResponseEntity<GlobalApiResponse> getAllArtists(
@@ -47,6 +50,22 @@ public class PublicController extends BaseController {
         return successResponse(
                 artistService.getArtistById(artistId),
                 "Fetched artist successfully."
+        );
+    }
+
+    /**
+     * An artist's posts, for their public profile.
+     *
+     * <p>Under /public so it is readable without an account, like the profile itself. Paged with a
+     * small default: the profile shows a strip, not an archive.
+     */
+    @GetMapping("/artists/{artistId:\\d+}/posts")
+    public ResponseEntity<GlobalApiResponse> getArtistPosts(
+            @PathVariable Long artistId,
+            @PageableDefault(size = 6) Pageable pageable) {
+        return successResponse(
+                postService.getPostsByArtist(artistId, pageable),
+                "Fetched artist posts successfully."
         );
     }
 

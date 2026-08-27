@@ -13,6 +13,9 @@ public interface PostService {
     PostResponse getPostById(Long postId);
     void deletePost(Long postId);
     Page<PostResponse> getAllPosts(Pageable pageable);
+
+    /** One artist's posts, newest first. Readable without an account: profiles are public. */
+    Page<PostResponse> getPostsByArtist(Long artistId, Pageable pageable);
     PostResponse toggleLike(Long postId);
     Boolean isPostLiked(Long postId);
 }

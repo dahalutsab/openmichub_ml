@@ -32,6 +32,7 @@ export class ViewArtistComponent implements OnInit {
   artist: any = null;
   availability: any[] = [];
   similar: any[] = [];
+  posts: any[] = [];
 
   loading = true;
   error = '';
@@ -63,6 +64,7 @@ export class ViewArtistComponent implements OnInit {
           this.artist = null;
           this.availability = [];
           this.similar = [];
+          this.posts = [];
           this.booking = false;
         }),
         switchMap(params => {
@@ -77,6 +79,7 @@ export class ViewArtistComponent implements OnInit {
           this.loading = false;
           this.loadAvailability();
           this.loadSimilar();
+          this.loadPosts();
         },
         error: err => {
           console.error('Failed to load artist', err);
@@ -99,6 +102,26 @@ export class ViewArtistComponent implements OnInit {
       next: (res: any) => (this.availability = res?.data?.availabilities ?? []),
       error: () => (this.availability = []),
     });
+  }
+
+  /**
+   * The artist's own posts, newest first.
+   *
+   * Public, like the profile itself, and best-effort: an artist who has not
+   * posted is not an error, the section simply does not appear.
+   */
+  private loadPosts(): void {
+    if (this.artistId === null) {
+      return;
+    }
+    this.http
+      .get<any>(`${environment.baseUrl}/public/artists/${this.artistId}/posts`, {
+        params: { size: 4 },
+      })
+      .subscribe({
+        next: res => (this.posts = res?.data?.content ?? []),
+        error: () => (this.posts = []),
+      });
   }
 
   /**

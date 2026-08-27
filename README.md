@@ -97,6 +97,50 @@ evaluated.
 Self-registration creates an `ORGANIZER`. Existing databases are migrated on startup: `ADMIN`
 becomes `SUPER_ADMIN` and `USER` becomes `ORGANIZER`, with all assignments preserved.
 
+## Demo accounts
+
+Created by the seed data and `scripts/demo-accounts.sql`. **Local development only** — these are
+throwaway logins for a throwaway database, and none of them should ever exist in an environment
+that faces the internet.
+
+Every account below uses the same password:
+
+```
+Admin@123
+```
+
+| Role | Email | Sees |
+|---|---|---|
+| `ADMIN` | `admin@demo.openmichub.local` | Admin dashboard, users, transactions, payments |
+| `ORGANIZER` | `booker@demo.openmichub.local` | Booker dashboard, bookings, payment history |
+| `ARTIST` | `artist1@seed.openmichub.local` | Artist dashboard, calendar, wallet, posts |
+
+There are **320 seeded artists**, numbered consecutively — `artist1@…` through `artist320@…`, all
+on the same password. A few with recognisable stage names:
+
+| Email | Stage name | City | Rating |
+|---|---|---|---|
+| `artist1@seed.openmichub.local` | The Velvet Club | Chitwan | 3.65 |
+| `artist2@seed.openmichub.local` | Aayush Maharjan | Bhaktapur | 4.47 |
+| `artist3@seed.openmichub.local` | Aastha Lama | Chitwan | 5.00 |
+| `artist4@seed.openmichub.local` | Distant Machine | Bhaktapur | 4.40 |
+| `artist5@seed.openmichub.local` | Project Midnight Avenue | Bhaktapur | 3.71 |
+
+`SUPER_ADMIN` is **not** in this list. It is created from `ADMIN_EMAIL`/`ADMIN_PASSWORD` in your
+`.env` (default email `admin@openmichub.com`), so its password is whatever you set — deliberately,
+since it is the only role that can move money.
+
+To recreate the two demo accounts after a `docker compose down -v`:
+
+```bash
+docker compose exec -T postgres psql -U postgres -d open_mic_hub < scripts/demo-accounts.sql
+```
+
+The same file has teardown SQL at the bottom for removing them again.
+
+Repeated failed logins are rate-limited, so a script that guesses passwords will start getting
+`429` after a few tries. Wait a minute rather than hammering it.
+
 ## Notes
 
 - The initial admin account is only created when `ADMIN_PASSWORD` is set. There is no default

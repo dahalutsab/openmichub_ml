@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -112,6 +113,20 @@ public class PostServiceImpl implements PostService{
     @Override
     public Page<PostResponse> getAllPosts(Pageable pageable) {
         return postRepository.findAllByOrderByCreatedDateDesc(pageable)
+                .map(PostResponse::new);
+    }
+
+    /**
+     * One artist's posts.
+     *
+     * <p>Read-only and transactional because PostResponse reaches through to the artist's user for
+     * the author's name and picture, and the profile that shows this is served with
+     * open-in-view off.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getPostsByArtist(Long artistId, Pageable pageable) {
+        return postRepository.findByArtist_IdOrderByCreatedDateDesc(artistId, pageable)
                 .map(PostResponse::new);
     }
 

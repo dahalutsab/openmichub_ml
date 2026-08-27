@@ -133,6 +133,39 @@
             <p class="whitespace-pre-wrap text-base leading-relaxed text-ink-soft">{{ artist.bio }}</p>
           </section>
 
+          <!-- The artist's own posts. Hidden entirely when they have not posted,
+               rather than showing an empty shelf: reviews are what other people
+               say, this is what the artist says for themselves. -->
+          <section class="omh-tile" *ngIf="posts.length">
+            <div class="omh-tile-head">
+              <span class="omh-tile-title">Recent posts</span>
+              <a routerLink="/user/feeds" class="text-xs text-muted hover:text-ink">See the feed</a>
+            </div>
+
+            <ul class="flex flex-col gap-2">
+              <li *ngFor="let post of posts"
+                  class="rounded-card border border-line bg-surface-2/40 p-3">
+                <div class="flex items-baseline justify-between gap-3">
+                  <p class="min-w-0 truncate font-display text-sm font-bold text-ink">{{ post.title }}</p>
+                  <span class="shrink-0 text-xs text-muted">{{ post.createdAt | date:'mediumDate' }}</span>
+                </div>
+
+                <p class="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-soft"
+                   *ngIf="post.content">{{ post.content }}</p>
+
+                <div class="mt-2 flex gap-1.5" *ngIf="post.images?.length">
+                  <img *ngFor="let image of post.images.slice(0, 4)"
+                       [src]="image" alt=""
+                       class="h-14 w-14 rounded-[6px] border border-line object-cover">
+                </div>
+
+                <p class="mt-2 text-xs text-muted" *ngIf="post.likesCount">
+                  <i class="bi bi-heart-fill mr-1 text-hot"></i>{{ post.likesCount }}
+                </p>
+              </li>
+            </ul>
+          </section>
+
           <!-- Reviews. The star average deliberately lives only in the hero: repeating
                it here put "3.7 ★★★★" directly above "No reviews yet", which reads as a
                contradiction. A rating can exist without anyone having written anything,
