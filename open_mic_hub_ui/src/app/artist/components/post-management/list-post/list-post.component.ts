@@ -3,6 +3,7 @@ import { Post } from '../model/post.model';
 import { PostsService } from '../service/posts.service';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { visiblePages } from '../../../../shared/pagination';
 
 @Component({
   selector: 'app-list-post',
@@ -55,8 +56,9 @@ export class ListPostComponent implements OnInit {
     this.loadPosts();
   }
 
+  /** A window around the current page, not one button per page. */
   get pageNumbers(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i);
+    return visiblePages(this.currentPage, this.totalPages);
   }
 
   viewPost(id: number): void {

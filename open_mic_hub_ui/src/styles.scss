@@ -1113,10 +1113,15 @@ a {
 
     &:hover:not(:disabled) { @apply bg-surface-2 text-ink; }
 
+    /* The accent, not ink.
+       This used to paint an ink background with white text, which reads on the
+       light theme and vanishes on the dark one: `--omh-ink` is near-white there,
+       so the current page was white text on a white tile. The accent pair is
+       defined per theme with its own foreground, so the contrast holds in both. */
     &.is-active {
-      background-color: rgb(var(--omh-ink));
-      border-color: rgb(var(--omh-ink));
-      @apply text-white;
+      background-color: rgb(var(--omh-accent));
+      border-color: rgb(var(--omh-accent));
+      color: rgb(var(--omh-accent-ink));
     }
 
     &:disabled { @apply cursor-not-allowed opacity-45; }

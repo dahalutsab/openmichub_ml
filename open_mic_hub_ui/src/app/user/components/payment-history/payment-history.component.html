@@ -92,6 +92,10 @@
 
       <nav class="omh-pagination" aria-label="Payment pagination">
         <button type="button" class="omh-page-btn" [disabled]="page === 0"
+                (click)="goToPage(0)" aria-label="First page">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="page === 0"
                 (click)="goToPage(page - 1)" aria-label="Previous page">
           <i class="bi bi-chevron-left"></i>
         </button>
@@ -108,6 +112,10 @@
         <button type="button" class="omh-page-btn" [disabled]="page >= totalPages - 1"
                 (click)="goToPage(page + 1)" aria-label="Next page">
           <i class="bi bi-chevron-right"></i>
+        </button>
+        <button type="button" class="omh-page-btn" [disabled]="page >= totalPages - 1"
+                (click)="goToPage(totalPages - 1)" aria-label="Last page">
+          <i class="bi bi-chevron-double-right"></i>
         </button>
       </nav>
     </div>
