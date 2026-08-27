@@ -73,16 +73,42 @@ They fall back to the plain artist listing if the ML service is unreachable, so 
 degrades rather than breaking. The response `strategy` field says which ranker produced the
 ordering.
 
-To get a demo catalogue and a trained model on a fresh install:
+To get a demo catalogue and trained models on a fresh install:
 
 ```bash
-docker compose exec ml python -m training.seed_db --artists 200
+docker compose exec ml python -m training.seed_world --artists 300 --wipe
 curl -X POST localhost:8000/embeddings/rebuild
+docker compose exec ml python -m training.segment
 curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
 ```
 
 See [ml_service/README.md](ml_service/README.md) for the model, its features and how it is
 evaluated.
+
+### What is trained, and on what
+
+Worth being exact about, because "trained" covers three different things here.
+
+| Component | Fitted on | What that means |
+|---|---|---|
+| Profile embeddings | Real catalogue | Not trained. A pretrained sentence encoder runs over every artist's own profile text; the vectors are theirs. |
+| Similar artists | Real catalogue | Not trained. Nearest neighbours by cosine distance over those vectors. |
+| Segmentation | **Real catalogue** | Genuinely fitted here: k-means over the real profile embeddings, k chosen by sweeping silhouette and Davies-Bouldin. Re-fit whenever the catalogue changes. |
+| Search ranker | **Synthetic** | LightGBM LambdaRank, fitted on query-artist pairs from an explicit generative process in `training/generate.py`, not on anything that happened on the platform. |
+
+The ranker is the honest gap. It is a real model — it learns weights, it is evaluated on a held-out
+split, and its features are computed from real artists at query time — but the *preferences* it
+learned came from a simulation, because the platform has no record of what anyone actually clicked
+or booked after searching.
+
+Closing that needs a search interaction log: what was searched, what was shown, what was clicked,
+what turned into a booking request. Nothing in the seeded data substitutes for it. Booking outcomes
+will not do either — over 99% of seeded bookings resolve the same way, and real ones would need to
+be plentiful and varied before they carried signal.
+
+Until that log exists, describe the ranker as bootstrapped on synthetic preferences rather than
+trained on platform data. The distinction matters and `training/generate.py` states its whole
+generative process in the first thirty lines precisely so the claim can be checked.
 
 ## Roles
 
@@ -113,30 +139,80 @@ Admin@123
 |---|---|---|
 | `ADMIN` | `admin@demo.openmichub.local` | Admin dashboard, users, transactions, payments |
 | `ORGANIZER` | `booker@demo.openmichub.local` | Booker dashboard, bookings, payment history |
-| `ARTIST` | `artist1@seed.openmichub.local` | Artist dashboard, calendar, wallet, posts |
+| `ARTIST` | see below | Artist dashboard, calendar, wallet, posts |
 
-There are **320 seeded artists**, numbered consecutively — `artist1@…` through `artist320@…`, all
-on the same password. A few with recognisable stage names:
+There are **300 seeded artists**. Their email is their slug — the same string that appears in
+their public URL — so `/artists/amber-machine` signs in as `amber-machine@seed.openmichub.local`.
+List them with:
+
+```bash
+docker compose exec postgres psql -U postgres -d open_mic_hub \
+  -c "select u.email, a.stage_name, a.rating from users u
+      join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"
+```
+
+A few to start with:
 
 | Email | Stage name | City | Rating |
 |---|---|---|---|
-| `artist1@seed.openmichub.local` | The Velvet Club | Chitwan | 3.65 |
-| `artist2@seed.openmichub.local` | Aayush Maharjan | Bhaktapur | 4.47 |
-| `artist3@seed.openmichub.local` | Aastha Lama | Chitwan | 5.00 |
-| `artist4@seed.openmichub.local` | Distant Machine | Bhaktapur | 4.40 |
-| `artist5@seed.openmichub.local` | Project Midnight Avenue | Bhaktapur | 3.71 |
+| `the-machhapuchhre-assembly@seed.openmichub.local` | The Machhapuchhre Assembly | Bhaktapur | 5.00 |
+| `amber-machine@seed.openmichub.local` | Amber Machine | Kathmandu | 5.00 |
+| `suraj-karki@seed.openmichub.local` | Suraj Karki | Kathmandu | 5.00 |
+| `bhairav-company@seed.openmichub.local` | Bhairav Company | Bhaktapur | 5.00 |
+
+Roughly 47 artists have no reviews and so no rating at all. That is deliberate — a new act should
+read as new rather than as mediocre — and it is worth having one open while working on the
+profile page.
 
 `SUPER_ADMIN` is **not** in this list. It is created from `ADMIN_EMAIL`/`ADMIN_PASSWORD` in your
 `.env` (default email `admin@openmichub.com`), so its password is whatever you set — deliberately,
 since it is the only role that can move money.
 
-To recreate the two demo accounts after a `docker compose down -v`:
+To rebuild the whole demo world after a `docker compose down -v`:
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d open_mic_hub < scripts/demo-accounts.sql
+docker compose exec ml python -m training.seed_world --artists 300 --wipe
+curl -X POST localhost:8000/embeddings/rebuild
+docker compose exec ml python -m training.segment
 ```
 
-The same file has teardown SQL at the bottom for removing them again.
+That replaces every row the platform owns, so it asks for `--wipe` explicitly. The seed is fixed,
+so the same command produces the same catalogue — the same names, the same bookings, the same
+artwork — on any machine.
+
+## Sharing the demo
+
+Two ways, depending on whether the other person can wait two minutes.
+
+**Reproduce it from source.** The seeder is deterministic, so they need nothing but the repository:
+
+```bash
+docker compose up -d --build
+docker compose exec ml python -m training.seed_world --artists 300 --wipe
+curl -X POST localhost:8000/embeddings/rebuild
+docker compose exec ml python -m training.segment
+```
+
+They end up with a byte-for-byte identical catalogue. Nothing large travels, and the data stays
+readable in version control as the code that produces it.
+
+**Ship a snapshot.** For a demo machine, or when the ranker's weights matter and you do not want
+them retrained:
+
+```bash
+./scripts/export-demo.sh demo-export     # about 10 MB
+# ... send demo-export/ ...
+./scripts/import-demo.sh demo-export     # on the other machine, containers up first
+```
+
+The export carries the database (including the embeddings and segment assignments), the generated
+artwork, and the trained model files, plus a `MANIFEST.txt` saying what is in it.
+
+Two things are deliberately left out. **`certs/`**, the JWT signing keypair — sharing a private
+signing key lets anyone holding it mint tokens for any account on any deployment that trusts it,
+so the receiving stack generates its own. And **`.env`**, which holds your Khalti key and mail
+password. Import refuses to overwrite a database that already has artists unless you pass
+`--force`.
 
 Repeated failed logins are rate-limited, so a script that guesses passwords will start getting
 `429` after a few tries. Wait a minute rather than hammering it.
