@@ -85,7 +85,7 @@
     <!-- Identity + standing -->
     <section class="omh-tile">
       <div class="flex items-center gap-3">
-        <img [src]="d.profileImage || fallbackAvatar" alt="" class="omh-avatar-lg">
+        <img [src]="(d.profileImage | media) || fallbackAvatar" alt="" class="omh-avatar-lg">
         <div class="min-w-0">
           <h2 class="truncate font-display text-lg font-bold text-ink">{{ d.stageName }}</h2>
           <p class="truncate text-sm text-muted">{{ d.fullName }}</p>

@@ -182,7 +182,7 @@
           <span class="omh-rank w-4 shrink-0 text-center text-sm text-muted">{{ i + 1 }}</span>
 
           <img *ngIf="artist.profileImage; else artistInitials"
-               [src]="artist.profileImage" alt="" class="omh-avatar-sm">
+               [src]="artist.profileImage | media" alt="" class="omh-avatar-sm">
           <ng-template #artistInitials>
             <span class="omh-avatar-fallback h-8 w-8 text-micro">{{ initials(artist.stageName) }}</span>
           </ng-template>

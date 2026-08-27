@@ -32,7 +32,7 @@
 
         <div class="user-avatar">
           <img
-            [src]="selectedUser?.profile || getDefaultAvatar(selectedUser?.fullName)"
+            [src]="(selectedUser?.profile | media) || getDefaultAvatar(selectedUser?.fullName)"
             [alt]="selectedUser?.fullName"
             (error)="onImageError($event, selectedUser?.fullName)">
         <div class="user-info">
@@ -60,7 +60,7 @@
       <div class="selected-user-info">
         <div class="selected-user-avatar">
           <img
-            [src]="selectedUser.profile || getDefaultAvatar(selectedUser.fullName)"
+            [src]="(selectedUser.profile | media) || getDefaultAvatar(selectedUser.fullName)"
             [alt]="selectedUser.fullName"
             (error)="onImageError($event, selectedUser.fullName)">
         </div>

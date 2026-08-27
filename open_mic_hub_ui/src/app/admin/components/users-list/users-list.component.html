@@ -44,7 +44,7 @@
             <td>
               <div class="flex items-center gap-3">
                 <img *ngIf="user.profileImage; else initials"
-                     [src]="user.profileImage"
+                     [src]="user.profileImage | media"
                      [alt]="user.fullName"
                      class="omh-avatar-sm"
                      (error)="onImageError(user)">

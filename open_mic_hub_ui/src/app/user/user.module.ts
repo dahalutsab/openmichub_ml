@@ -16,6 +16,7 @@ import { PaymentCallbackComponent } from './payment-callback/payment-callback.co
 import { BookingDetailsComponent } from './components/booking-details/booking-details.component';
 import { OMH_CHARTS } from '../shared/charts';
 import { OMH_REVIEWS } from '../shared/reviews';
+import { MediaUrlPipe } from '../shared/media-url.pipe';
 
 @NgModule({
   declarations: [
@@ -38,6 +39,6 @@ import { OMH_REVIEWS } from '../shared/reviews';
     FormsModule,
     ...OMH_CHARTS,
     ...OMH_REVIEWS,
-  ]
+   MediaUrlPipe]
 })
 export class UserModule { }

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 import { ArtistHit } from '../discovery.service';
+import { MediaUrlPipe } from '../../shared/media-url.pipe';
 
 /**
  * One act in the lineup.
@@ -12,7 +13,7 @@ import { ArtistHit } from '../discovery.service';
 @Component({
   selector: 'omh-artist-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MediaUrlPipe],
   templateUrl: './artist-card.component.html',
 })
 export class ArtistCardComponent {

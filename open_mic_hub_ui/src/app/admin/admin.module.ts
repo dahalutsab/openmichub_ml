@@ -13,6 +13,7 @@ import { TransactionsListComponent } from './components/coin-transaction/transac
 import { PaymentRecordsComponent } from './components/payment-records/payment-records.component';
 import { WithdrawlCallbackComponent } from './withdrawl-callback/withdrawl-callback.component';
 import { OMH_CHARTS } from '../shared/charts';
+import { MediaUrlPipe } from '../shared/media-url.pipe';
 
 /**
  * Angular Material used to be imported here in bulk. No template in the module
@@ -37,6 +38,6 @@ import { OMH_CHARTS } from '../shared/charts';
     SharedModule,
     FormsModule,
     ...OMH_CHARTS,
-  ]
+   MediaUrlPipe]
 })
 export class AdminModule { }

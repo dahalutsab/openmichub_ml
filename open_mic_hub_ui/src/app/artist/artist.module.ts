@@ -19,6 +19,7 @@ import { PaymentRecordComponent } from './components/payment-record/payment-reco
 import { VirtualMoneyComponent } from './components/virtual-money/virtual-money.component';
 import { OMH_CHARTS } from '../shared/charts';
 import { OMH_REVIEWS } from '../shared/reviews';
+import { MediaUrlPipe } from '../shared/media-url.pipe';
 
 /**
  * Two things used to be imported here that should not have been:
@@ -56,6 +57,6 @@ import { OMH_REVIEWS } from '../shared/reviews';
     FormsModule,
     ...OMH_CHARTS,
     ...OMH_REVIEWS,
-  ]
+   MediaUrlPipe]
 })
 export class ArtistModule { }

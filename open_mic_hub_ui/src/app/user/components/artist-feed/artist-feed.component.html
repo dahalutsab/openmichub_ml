@@ -73,7 +73,7 @@
               [class.col-span-2]="post.images.length === 3 && i === 0"
               [attr.aria-label]="'Open image ' + (i + 1)"
               (click)="openImage(post, i)">
-        <img [src]="image"
+        <img [src]="image | media"
              [alt]="post.title + ' image ' + (i + 1)"
              class="w-full object-cover transition-transform duration-300 group-hover:scale-105"
              [class.h-72]="post.images.length === 1"
@@ -130,7 +130,7 @@
      steps through the post's images. -->
 <div class="omh-modal-backdrop" *ngIf="lightboxPost" (click)="closeImage()">
   <div class="relative w-full max-w-4xl animate-slide-up" (click)="$event.stopPropagation()">
-    <img [src]="lightboxPost.images[lightboxIndex]"
+    <img [src]="lightboxPost.images[lightboxIndex] | media"
          [alt]="lightboxPost.title"
          class="max-h-[80vh] w-full rounded-[var(--omh-radius-lg)] object-contain">
 

@@ -10,6 +10,7 @@ import { AVATAR_FALLBACK } from '../../../shared/avatar';
 import { ReviewListComponent } from '../../../shared/reviews';
 import { BookingDialogComponent } from '../../../shared/booking/booking-dialog.component';
 import { canBook, isSignedIn } from '../../../shared/session';
+import { MediaUrlPipe } from '../../../shared/media-url.pipe';
 
 /**
  * An artist's public profile.
@@ -22,7 +23,7 @@ import { canBook, isSignedIn } from '../../../shared/session';
 @Component({
   selector: 'app-view-artist',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReviewListComponent, BookingDialogComponent],
+  imports: [CommonModule, RouterModule, ReviewListComponent, BookingDialogComponent, MediaUrlPipe],
   templateUrl: './view-artist.component.html',
 })
 export class ViewArtistComponent implements OnInit {

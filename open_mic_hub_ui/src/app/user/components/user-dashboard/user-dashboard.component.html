@@ -149,7 +149,7 @@
 
       <ol class="flex flex-col gap-2.5" *ngIf="d.favouriteArtists.length; else noFavourites">
         <li *ngFor="let artist of d.favouriteArtists" class="flex items-center gap-2.5">
-          <img *ngIf="artist.profileImage; else fav" [src]="artist.profileImage" alt="" class="omh-avatar-sm">
+          <img *ngIf="artist.profileImage; else fav" [src]="artist.profileImage | media" alt="" class="omh-avatar-sm">
           <ng-template #fav>
             <span class="omh-avatar-fallback h-8 w-8 text-micro">{{ initials(artist.stageName) }}</span>
           </ng-template>

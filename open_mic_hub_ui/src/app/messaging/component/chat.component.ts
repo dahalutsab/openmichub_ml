@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { RxStompService } from '@stomp/ng2-stompjs';
 import { Message as StompMessage } from '@stomp/stompjs';
 import { Subscription } from 'rxjs';
+import { MediaUrlPipe } from '../../shared/media-url.pipe';
 
 interface User {
   fullName: string;
@@ -36,7 +37,7 @@ interface ChatResponse {
   selector: 'app-chat',
   templateUrl: './chat.component.html',
   standalone: true,
-  imports: [NgIf, NgForOf, FormsModule],
+  imports: [NgIf, NgForOf, FormsModule, MediaUrlPipe],
   styleUrls: ['./chat.component.scss']
 })
 export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {

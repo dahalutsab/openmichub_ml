@@ -111,6 +111,7 @@ public class PostServiceImpl implements PostService{
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(Pageable pageable) {
         return postRepository.findAllByOrderByCreatedDateDesc(pageable)
                 .map(PostResponse::new);
