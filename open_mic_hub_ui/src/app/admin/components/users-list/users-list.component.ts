@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../admin.service';
+import { visiblePages } from '../../../shared/pagination';
 
 // Interfaces
 interface Role {
@@ -118,20 +119,7 @@ export class UsersListComponent implements OnInit {
   }
 
   getVisiblePages(): number[] {
-    const pages: number[] = [];
-    const maxVisible = 5;
-    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    const end = Math.min(this.totalPages - 1, start + maxVisible - 1);
-
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(0, end - maxVisible + 1);
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-
-    return pages;
+    return visiblePages(this.currentPage, this.totalPages);
   }
 
   get startIndex(): number {

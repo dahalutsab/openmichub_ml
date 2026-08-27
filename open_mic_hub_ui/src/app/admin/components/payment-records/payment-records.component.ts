@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { PaymentService, Payment } from './payment.service';
+import { visiblePages } from '../../../shared/pagination';
 
 @Component({
   selector: 'app-payment-records',
@@ -69,8 +70,9 @@ export class PaymentRecordsComponent implements OnInit {
    * Page buttons. Built here rather than with `[].constructor(totalPages)` in
    * the template, which allocated a fresh array on every change-detection pass.
    */
+  /** A window around the current page, not one button per page. */
   get pageNumbers(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i);
+    return visiblePages(this.page, this.totalPages);
   }
 
   statusClass(status: string | undefined): string {

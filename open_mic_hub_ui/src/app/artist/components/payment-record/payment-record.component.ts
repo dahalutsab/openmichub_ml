@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ArtistService } from '../../artist.service';
+import { visiblePages } from '../../../shared/pagination';
 
 interface PaymentResponse {
   paymentTime: string;
@@ -95,21 +96,7 @@ export class PaymentRecordComponent implements OnInit {
   }
 
   getVisiblePages(): number[] {
-    const visiblePages: number[] = [];
-    const maxVisible = 5;
-    
-    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages, start + maxVisible);
-    
-    if (end - start < maxVisible) {
-      start = Math.max(0, end - maxVisible);
-    }
-    
-    for (let i = start; i < end; i++) {
-      visiblePages.push(i);
-    }
-    
-    return visiblePages;
+    return visiblePages(this.currentPage, this.totalPages);
   }
 
   formatTime(timeString: string): string {

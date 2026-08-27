@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environment/environment';
+import { visiblePages } from '../../../shared/pagination';
 
 interface PaymentRow {
   paymentTime: string;
@@ -76,8 +77,9 @@ export class PaymentHistoryComponent implements OnInit {
     this.fetch();
   }
 
+  /** A window around the current page, not one button per page. */
   get pageNumbers(): number[] {
-    return Array.from({ length: this.totalPages }, (_, i) => i);
+    return visiblePages(this.page, this.totalPages);
   }
 
   get totalPaid(): number {
