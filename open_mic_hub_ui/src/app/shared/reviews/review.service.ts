@@ -51,6 +51,19 @@ export class ReviewService {
   }
 
   /** Reviews written by the signed-in user. */
+  /**
+   * Every review an artist has, in aggregate.
+   *
+   * The average and the count used to be derived from whichever page had
+   * loaded, so an artist with twenty reviews advertised ten and the figure
+   * disagreed with the rating shown beside it. The server counts them all.
+   */
+  summaryForArtist(artistId: number): Observable<RatingSummary> {
+    return this.http
+      .get<{ data: RatingSummary }>(`${this.baseUrl}/artist/${artistId}/summary`)
+      .pipe(map(res => res.data));
+  }
+
   mine(page = 0, size = 20): Observable<ReviewPage> {
     return this.get('/me', page, size);
   }

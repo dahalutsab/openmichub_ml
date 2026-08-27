@@ -95,6 +95,11 @@ services:
     volumes:
       # The trained model survives restarts and rebuilds.
       - mlmodels:/app/models
+      # The same upload root the API serves /media from. The demo seeder writes
+      # generated artist artwork here, so it has to be the identical volume
+      # rather than a copy — otherwise every seeded profile points at a file
+      # only the ML container can see.
+      - uploads:/app/uploads
 
 volumes:
   pgdata:

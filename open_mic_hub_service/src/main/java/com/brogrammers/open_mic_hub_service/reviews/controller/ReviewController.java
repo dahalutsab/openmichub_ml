@@ -48,6 +48,14 @@ public class ReviewController extends BaseController {
 
     @Operation(summary = "Reviews for an artist",
             description = "Public. Returns the reviews left for one artist, newest first.")
+    @GetMapping("/artist/{artistId:\\d+}/summary")
+    public ResponseEntity<GlobalApiResponse> getArtistRatingSummary(@PathVariable Long artistId) {
+        return successResponse(
+                reviewService.getArtistRatingSummary(artistId),
+                "Fetched rating summary successfully."
+        );
+    }
+
     @GetMapping("/artist/{artistId:\\d+}")
     public ResponseEntity<GlobalApiResponse> getReviewsByArtist(@PathVariable Long artistId,
                                                                 Pageable pageable) {

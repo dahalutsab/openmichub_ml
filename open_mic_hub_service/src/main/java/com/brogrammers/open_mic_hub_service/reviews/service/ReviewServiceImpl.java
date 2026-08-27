@@ -3,6 +3,7 @@ package com.brogrammers.open_mic_hub_service.reviews.service;
 import com.brogrammers.open_mic_hub_service.booking.entity.Booking;
 import com.brogrammers.open_mic_hub_service.booking.repository.BookingRepository;
 import com.brogrammers.open_mic_hub_service.reviews.dto.ReviewRequest;
+import com.brogrammers.open_mic_hub_service.reviews.dto.RatingSummaryResponse;
 import com.brogrammers.open_mic_hub_service.reviews.dto.ReviewResponse;
 import com.brogrammers.open_mic_hub_service.reviews.entity.Review;
 import com.brogrammers.open_mic_hub_service.reviews.repository.ReviewRepository;
@@ -21,6 +22,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -206,5 +210,31 @@ public class ReviewServiceImpl implements ReviewService{
 
         log.info("Average rating for artist ID {}: {}", artist.getId(), averageRating);
         return averageRating;
+    }
+
+    /**
+     * Aggregates in the database rather than over a loaded page.
+     *
+     * <p>One grouped query gives both the distribution and, from it, the mean and the total, so
+     * the three can never disagree with one another.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public RatingSummaryResponse getArtistRatingSummary(Long artistId) {
+        long[] buckets = new long[5];
+        long total = 0;
+        long weighted = 0;
+
+        for (Object[] row : reviewRepository.countByRatingForArtist(artistId)) {
+            int stars = Math.min(Math.max(((Number) row[0]).intValue(), 1), 5);
+            long count = ((Number) row[1]).longValue();
+            buckets[stars - 1] += count;
+            total += count;
+            weighted += (long) stars * count;
+        }
+
+        double average = total == 0 ? 0 : Math.round(((double) weighted / total) * 10) / 10.0;
+        return new RatingSummaryResponse(average, total, List.of(
+                buckets[0], buckets[1], buckets[2], buckets[3], buckets[4]));
     }
 }

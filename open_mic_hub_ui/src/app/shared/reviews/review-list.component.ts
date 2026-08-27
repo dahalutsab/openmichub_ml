@@ -123,13 +123,29 @@ export class ReviewListComponent {
   readonly page = signal(0);
   readonly totalPages = signal(0);
 
-  readonly summary = computed<RatingSummary>(() => this.service.summarise(this.reviews()));
+  /**
+   * The aggregate over every review, fetched from the server.
+   *
+   * Falls back to summarising the loaded page when there is no artist to ask
+   * about — the "mine" and "about-me" listings have no single artist, and a
+   * page-derived summary is correct for them because they load in one go.
+   */
+  readonly serverSummary = signal<RatingSummary | null>(null);
+  readonly summary = computed<RatingSummary>(
+    () => this.serverSummary() ?? this.service.summarise(this.reviews()));
   readonly hasMore = computed(() => this.page() + 1 < this.totalPages());
 
   constructor(private service: ReviewService) {}
 
   ngOnInit(): void {
     this.fetch(0);
+    // Independent of paging: the totals must not move as more pages load.
+    if (this.source === 'artist' && this.artistId) {
+      this.service.summaryForArtist(this.artistId).subscribe({
+        next: summary => this.serverSummary.set(summary),
+        error: () => this.serverSummary.set(null),
+      });
+    }
   }
 
   /** Re-reads from the first page. Called by hosts after a review is posted. */

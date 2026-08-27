@@ -182,7 +182,7 @@ def choose_k(points: list[SweepPoint], min_cluster_size: int = 3) -> int:
     return max(usable, key=lambda p: p.silhouette).k
 
 
-def distinctive_terms(texts: list[str], background: Counter, limit: int = 6) -> list[str]:
+def distinctive_terms(rows: list[dict], background: Counter, limit: int = 6) -> list[str]:
     """Terms common in this cluster and uncommon everywhere else.
 
     Raw frequency would return the same filler for every segment. Scoring each
@@ -190,8 +190,8 @@ def distinctive_terms(texts: list[str], background: Counter, limit: int = 6) -> 
     whole catalogue is what makes the labels differ from one another.
     """
     inside = Counter()
-    for text in texts:
-        inside.update(w for w in WORD.findall(text.lower()) if w not in STOPWORDS and len(w) > 2)
+    for row in rows:
+        inside.update(describing_words(row))
 
     if not inside:
         return []
@@ -212,14 +212,30 @@ def distinctive_terms(texts: list[str], background: Counter, limit: int = 6) -> 
     return [term for _, term in scored[:limit]]
 
 
+def describing_words(row: dict) -> list[str]:
+    """The words of an artist's profile that describe them rather than name them.
+
+    A third of the catalogue trades under a personal name, so the artist's own
+    name words dominated their cluster's distinctive terms and produced labels
+    like "Punk — puja, maharjan, khadka". Those words are unique to one artist by
+    construction, which is exactly what the distinctiveness score rewards, and
+    they say nothing about what the segment is. The vector already excludes the
+    name; this makes the description agree with it.
+    """
+    own_name = {
+        w for w in WORD.findall((row.get("stage_name") or "").lower()) if len(w) > 2
+    }
+    return [
+        w for w in WORD.findall(row["source_text"].lower())
+        if w not in STOPWORDS and w not in own_name and len(w) > 2
+    ]
+
+
 def profile_clusters(labels: np.ndarray, meta: list[dict]) -> list[SegmentProfile]:
     """Turns each cluster into something a person can read."""
     background = Counter()
     for row in meta:
-        background.update(
-            w for w in WORD.findall(row["source_text"].lower())
-            if w not in STOPWORDS and len(w) > 2
-        )
+        background.update(describing_words(row))
 
     grouped = {
         segment: [row for row, label in zip(meta, labels) if label == segment]
@@ -242,7 +258,7 @@ def profile_clusters(labels: np.ndarray, meta: list[dict]) -> list[SegmentProfil
         for row in members:
             genres.update(row["genres"])
         top_genres = [name for name, _ in genres.most_common(4)]
-        terms = distinctive_terms([row["source_text"] for row in members], background)
+        terms = distinctive_terms(members, background)
         details[segment] = (top_genres, terms)
 
         label = None
