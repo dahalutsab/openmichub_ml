@@ -32,3 +32,8 @@ uploads/
 # ---- os ----
 .DS_Store
 Thumbs.db
+
+# Claude Code worktrees and session state. Never part of the repository:
+# .claude/worktrees holds full checkouts, so "git add -A" would otherwise
+# commit an entire second copy of the tree.
+.claude/
