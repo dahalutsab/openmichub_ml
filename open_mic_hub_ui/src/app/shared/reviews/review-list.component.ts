@@ -85,11 +85,19 @@ import { AVATAR_FALLBACK } from '../avatar';
       </ng-container>
 
       <ng-template #empty>
-        <div class="omh-empty border-0 py-10">
-          <i class="bi bi-chat-quote omh-empty-icon"></i>
-          <p class="omh-empty-title">{{ emptyTitle }}</p>
-          <p class="omh-empty-text">{{ emptyText }}</p>
-        </div>
+        <!-- Compact where the section is one of many on a page: a full empty
+             state for something nobody has written yet left a third of the
+             artist profile as blank card. -->
+        <p class="omh-help" *ngIf="compact; else roomyEmpty">
+          <i class="bi bi-chat-quote mr-1.5"></i>{{ emptyTitle }} — {{ emptyText }}
+        </p>
+        <ng-template #roomyEmpty>
+          <div class="omh-empty border-0 py-10">
+            <i class="bi bi-chat-quote omh-empty-icon"></i>
+            <p class="omh-empty-title">{{ emptyTitle }}</p>
+            <p class="omh-empty-text">{{ emptyText }}</p>
+          </div>
+        </ng-template>
       </ng-template>
     </ng-container>
   `,
@@ -100,6 +108,9 @@ export class ReviewListComponent {
 
   /** artist = reviews of an artist; mine = ones I wrote; about-me = ones about me. */
   @Input() source: 'artist' | 'mine' | 'about-me' = 'artist';
+
+  /** Render the empty state as a single line rather than a full-height panel. */
+  @Input() compact = false;
 
   @Input() emptyTitle = 'No reviews yet';
   @Input() emptyText = 'Reviews appear here once a booking has been played and rated.';
