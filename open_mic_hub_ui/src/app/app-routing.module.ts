@@ -8,6 +8,21 @@ import { PaymentCallbackComponent } from './user/payment-callback/payment-callba
 const routes: Routes = [
    { path: '', component: LandingPageComponent },
 
+  /**
+   * Artist profiles are public.
+   *
+   * Browsing is what brings organizers to the platform, and discovery — itself
+   * public — links straight here. Behind the booker guard, a visitor following
+   * one of those links hit the login screen before seeing anything. Booking
+   * still requires an account; the profile checks that when the button is used.
+   */
+  {
+    path: 'artists/:id',
+    loadComponent: () =>
+      import('./user/components/view-artist/view-artist.component')
+        .then(m => m.ViewArtistComponent),
+  },
+
     {
     path: 'user/payment-callback',
     component: PaymentCallbackComponent

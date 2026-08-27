@@ -10,7 +10,6 @@ import { ProfileComponent } from './components/profile/profile.component';
 import { SharedModule } from '../shared/shared.module';
 import { ListArtistComponent } from './components/list-artist/list-artist.component';
 import { MyBookingsComponent } from './components/my-bookings/my-bookings.component';
-import { ViewArtistComponent } from './components/view-artist/view-artist.component';
 import { PaymentHistoryComponent } from './components/payment-history/payment-history.component';
 import { ArtistFeedComponent } from './components/artist-feed/artist-feed.component';
 import { PaymentCallbackComponent } from './payment-callback/payment-callback.component';
@@ -26,7 +25,6 @@ import { OMH_REVIEWS } from '../shared/reviews';
     ProfileComponent,
     ListArtistComponent,
     MyBookingsComponent,
-    ViewArtistComponent,
     PaymentHistoryComponent,
     ArtistFeedComponent,
     PaymentCallbackComponent,

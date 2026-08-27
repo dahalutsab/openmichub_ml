@@ -6,7 +6,6 @@ import { UserDashboardComponent } from './components/user-dashboard/user-dashboa
 import { authGuard } from '../auth/auth.guard';
 import { ListArtistComponent } from './components/list-artist/list-artist.component';
 import { MyBookingsComponent } from './components/my-bookings/my-bookings.component';
-import { ViewArtistComponent } from './components/view-artist/view-artist.component';
 import { PaymentHistoryComponent } from './components/payment-history/payment-history.component';
 import { ArtistFeedComponent } from './components/artist-feed/artist-feed.component';
 import { PaymentCallbackComponent } from './payment-callback/payment-callback.component';
@@ -38,9 +37,12 @@ const routes: Routes = [
         component: ListArtistComponent
       },
 
+        // The profile moved to the public /artists/:id. Kept as a redirect so
+        // existing links and bookmarks still land somewhere.
         {
          path: 'view-artist/:id',
-        component: ViewArtistComponent
+         redirectTo: '/artists/:id',
+         pathMatch: 'full'
       },
         {
          path: 'bookings',
@@ -51,11 +53,6 @@ const routes: Routes = [
          path: 'book-details',
         component: BookingDetailsComponent
       },
-       {
-         path: 'artist-posts',
-        component: ViewArtistComponent
-      },
-
          {
          path: 'payment-history',
         component: PaymentHistoryComponent

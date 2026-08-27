@@ -1,0 +1,35 @@
+/**
+ * Who is signed in, as far as the browser knows.
+ *
+ * Browsing is public and only acting requires an account, so screens need to
+ * ask this without an interceptor or a guard getting involved. The token is
+ * still verified server-side on every call — this only decides what the UI
+ * offers.
+ */
+
+/** The key the login flow writes. */
+const TOKEN_KEY = 'authToken';
+const ROLES_KEY = 'urole';
+
+export function isSignedIn(): boolean {
+  try {
+    return !!localStorage.getItem(TOKEN_KEY);
+  } catch {
+    // Private browsing and blocked site data both throw on access.
+    return false;
+  }
+}
+
+export function currentRoles(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(ROLES_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+/** Whether this account is allowed to raise a booking. */
+export function canBook(): boolean {
+  const roles = currentRoles();
+  return roles.includes('ORGANIZER') || roles.includes('USER');
+}
