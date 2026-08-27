@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { AdminOverview, AnalyticsService, RANGES } from '../../../shared/analytics.service';
+import { AdminOverview, AnalyticsService, ArtistSegment, RANGES } from '../../../shared/analytics.service';
 import { Slice, statusColor } from '../../../shared/charts';
 
 /**
@@ -20,11 +20,25 @@ export class AdminDashboardComponent implements OnInit {
   readonly error = signal('');
   readonly days = signal(30);
   readonly data = signal<AdminOverview | null>(null);
+  readonly segments = signal<ArtistSegment[]>([]);
 
   constructor(private analytics: AnalyticsService) {}
 
   ngOnInit(): void {
     this.load();
+
+    // Independent of the range picker: the segmentation is a property of the
+    // catalogue, not of a reporting window, so it is loaded once.
+    this.analytics.segments().subscribe({
+      next: segments => this.segments.set(segments),
+      error: () => this.segments.set([]),
+    });
+  }
+
+  /** Share of the catalogue in a segment, for the inline bar. */
+  segmentShare(size: number): number {
+    const total = this.segments().reduce((sum, s) => sum + s.size, 0);
+    return total ? Math.round((size / total) * 100) : 0;
   }
 
   load(): void {

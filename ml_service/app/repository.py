@@ -77,6 +77,16 @@ def fetch_artists(artist_ids: list[int] | None = None) -> list[dict]:
         return [dict(zip(columns, row)) for row in cur.fetchall()]
 
 
+def profile_document(artist: dict) -> str:
+    """The same profile with the stage name left out.
+
+    Used for similarity and clustering. Including the name there means two acts
+    that merely share a word look alike, which is a naming coincidence rather
+    than a musical one.
+    """
+    return _document(artist, include_name=False)
+
+
 def artist_document(artist: dict) -> str:
     """The text an artist is embedded from.
 
@@ -84,7 +94,11 @@ def artist_document(artist: dict) -> str:
     only, so a query like "acoustic folk singer in Pokhara" matches on meaning
     even when the words never appear in the artist's own bio.
     """
-    parts = [artist["stage_name"]]
+    return _document(artist, include_name=True)
+
+
+def _document(artist: dict, include_name: bool) -> str:
+    parts = [artist["stage_name"]] if include_name else []
     if artist.get("parent_genres"):
         parts.append("plays " + ", ".join(g for g in artist["parent_genres"] if g))
     if artist.get("sub_genres"):

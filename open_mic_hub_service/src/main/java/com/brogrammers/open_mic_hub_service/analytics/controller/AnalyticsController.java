@@ -1,6 +1,7 @@
 package com.brogrammers.open_mic_hub_service.analytics.controller;
 
 import com.brogrammers.open_mic_hub_service.analytics.service.AnalyticsService;
+import com.brogrammers.open_mic_hub_service.discovery.client.MlServiceClient;
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.UserRole;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AnalyticsController extends BaseController {
 
     private final AnalyticsService analyticsService;
+    private final MlServiceClient mlServiceClient;
 
     /** Default window: long enough to show a trend, short enough to still bucket by day. */
     private static final String DEFAULT_WINDOW = "30";
@@ -43,6 +45,21 @@ public class AnalyticsController extends BaseController {
                 analyticsService.adminOverview(days),
                 "Fetched platform analytics successfully."
         );
+    }
+
+    /**
+     * The unsupervised segmentation of the artist catalogue.
+     *
+     * <p>Lives here rather than under {@code /discover} because that path is
+     * whitelisted for public GETs — a {@code @PreAuthorize} there sees an
+     * anonymous principal and refuses every caller, admin included.
+     */
+    @PreAuthorize(UserRole.ANY_ADMIN)
+    @GetMapping("/admin/segments")
+    public ResponseEntity<GlobalApiResponse> artistSegments() {
+        return successResponse(
+                java.util.Map.of("segments", mlServiceClient.segments()),
+                "Artist segments fetched.");
     }
 
     @PreAuthorize("hasRole('ARTIST')")

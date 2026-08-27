@@ -96,6 +96,23 @@ def init_schema() -> None:
         )
         conn.commit()
 
+        # A second vector built from the same profile minus the stage name.
+        #
+        # Search embeds the name on purpose — looking an artist up by name has to
+        # work. But it makes "artists like this one" match on names: Newa Kings
+        # came back next to Newa Machine and Newa Ensemble because they share a
+        # word, not a sound. Similarity and clustering read this column instead.
+        #
+        # Nullable, so an existing install keeps working until the next rebuild
+        # fills it; the readers fall back to `embedding` when it is missing.
+        conn.execute(
+            f"""
+            ALTER TABLE {schema}.artist_embedding
+            ADD COLUMN IF NOT EXISTS profile_embedding vector({settings.embedding_dim})
+            """
+        )
+        conn.commit()
+
     # Existing pooled connections predate the extension, so drop them and let
     # the pool rebuild with the vector types registered.
     global _pool

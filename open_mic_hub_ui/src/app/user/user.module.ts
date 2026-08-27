@@ -16,6 +16,7 @@ import { ArtistFeedComponent } from './components/artist-feed/artist-feed.compon
 import { PaymentCallbackComponent } from './payment-callback/payment-callback.component';
 import { BookingDetailsComponent } from './components/booking-details/booking-details.component';
 import { OMH_CHARTS } from '../shared/charts';
+import { OMH_REVIEWS } from '../shared/reviews';
 
 @NgModule({
   declarations: [
@@ -38,6 +39,7 @@ import { OMH_CHARTS } from '../shared/charts';
     ReactiveFormsModule,
     FormsModule,
     ...OMH_CHARTS,
+    ...OMH_REVIEWS,
   ]
 })
 export class UserModule { }

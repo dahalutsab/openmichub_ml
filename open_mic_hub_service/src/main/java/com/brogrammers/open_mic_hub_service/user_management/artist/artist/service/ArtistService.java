@@ -7,6 +7,9 @@ import org.springframework.data.domain.Pageable;
 public interface ArtistService {
     Page<ArtistResponse> getAllVerifiedArtists(Pageable pageable, String searchTerm, String genreName);
     //get logged in artist
+    /** One verified artist by artist id, for the public profile page. */
+    ArtistResponse getArtistById(Long artistId);
+
     ArtistResponse getLoggedInArtist();
 
     ArtistResponse updateArtistHourlyRate(double hourlyRate);

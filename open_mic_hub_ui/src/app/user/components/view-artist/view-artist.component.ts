@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { UserService } from '../../user.service';
+import { environment } from '../../../environment/environment';
 import { AVATAR_FALLBACK } from '../../../shared/avatar';
 
 /**
@@ -21,6 +23,7 @@ export class ViewArtistComponent implements OnInit {
   artistId: number | null = null;
   artist: any = null;
   availability: any[] = [];
+  similar: any[] = [];
 
   loading = true;
   error = '';
@@ -28,7 +31,8 @@ export class ViewArtistComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private service: UserService
+    private service: UserService,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -41,11 +45,15 @@ export class ViewArtistComponent implements OnInit {
       return;
     }
 
-    this.service.getUserById(this.artistId).subscribe({
+    // Artist ids and user ids are separate sequences, so this reads the public
+    // artist endpoint rather than getUserById — passing an artist id there
+    // fetches a different person entirely.
+    this.http.get<any>(`${environment.baseUrl}/public/artists/${this.artistId}`).subscribe({
       next: (res: any) => {
         this.artist = res?.data ?? null;
         this.loading = false;
         this.loadAvailability();
+        this.loadSimilar();
       },
       error: err => {
         console.error('Failed to load artist', err);
@@ -71,6 +79,26 @@ export class ViewArtistComponent implements OnInit {
     });
   }
 
+  /**
+   * Nearest neighbours from the segmentation model, via the API's proxy.
+   *
+   * Best-effort: the strip is hidden when the ML service is unavailable rather
+   * than surfacing an error, since the profile itself is unaffected.
+   */
+  private loadSimilar(): void {
+    if (this.artistId === null) {
+      return;
+    }
+    this.http
+      .get<any>(`${environment.baseUrl}/discover/artists/${this.artistId}/similar`, {
+        params: { limit: 6 },
+      })
+      .subscribe({
+        next: res => (this.similar = res?.data?.similar ?? []),
+        error: () => (this.similar = []),
+      });
+  }
+
   book(): void {
     this.router.navigate(['/user/artists']);
   }
@@ -78,6 +106,14 @@ export class ViewArtistComponent implements OnInit {
   get genres(): string[] {
     const raw = this.artist?.genre ?? this.artist?.genres ?? [];
     return raw.map((g: any) => g?.name ?? g).filter(Boolean);
+  }
+
+  /** Sub-genres across every parent genre, for the at-a-glance panel. */
+  get styles(): string[] {
+    const raw = this.artist?.genre ?? this.artist?.genres ?? [];
+    return raw.flatMap((g: any) => (g?.categories ?? []).map((c: any) => c?.name))
+      .filter(Boolean)
+      .slice(0, 6);
   }
 
   get stars(): number[] {

@@ -12,6 +12,9 @@ export class MyBookingsComponent implements OnInit {
   isLoading = true;
   error: string | null = null;
 
+  /** Booking currently being reviewed, or null when the dialog is shut. */
+  reviewing: any = null;
+
   constructor(private service: UserService) {}
 
   ngOnInit(): void {
@@ -66,5 +69,16 @@ export class MyBookingsComponent implements OnInit {
       .replace(/_/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  openReview(booking: any): void {
+    this.reviewing = booking;
+  }
+
+  onReviewSaved(): void {
+    this.reviewing = null;
+    // The artist's average rating is recomputed server-side on write, so the
+    // list is refetched rather than patched locally.
+    this.fetchBookings();
   }
 }

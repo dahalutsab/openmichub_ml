@@ -87,6 +87,18 @@ export interface BookerOverview {
   recentBookings: BookingRow[];
 }
 
+/** One segment from the unsupervised clustering of the artist catalogue. */
+export interface ArtistSegment {
+  segment: number;
+  label: string;
+  size: number;
+  terms: string[];
+  topGenres: string[];
+  avgRating: number;
+  avgHourlyRate: number;
+  representatives: { artistId: number; stageName: string }[];
+}
+
 /** Windows offered by the range picker on every board. */
 export const RANGES = [
   { days: 7, label: '7D' },
@@ -111,6 +123,18 @@ export class AnalyticsService {
 
   bookerOverview(days: number): Observable<BookerOverview> {
     return this.get<BookerOverview>('/booker/overview', days);
+  }
+
+  /**
+   * Artist segments from the ML service, proxied by the API.
+   *
+   * Returns an empty list rather than erroring when segmentation has not been
+   * run — the board should show a prompt, not a failure.
+   */
+  segments(): Observable<ArtistSegment[]> {
+    return this.http
+      .get<{ data: { segments: ArtistSegment[] } }>(`${environment.baseUrl}/analytics/admin/segments`)
+      .pipe(map(response => response.data?.segments ?? []));
   }
 
   /** Unwraps the GlobalApiResponse envelope every endpoint here is wrapped in. */
