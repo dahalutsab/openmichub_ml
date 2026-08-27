@@ -47,12 +47,15 @@ def _gradient(top: tuple, bottom: tuple, angle_bytes: int) -> Image.Image:
     draw = ImageDraw.Draw(base)
 
     # A diagonal rather than a straight vertical: it reads less like a default.
+    # Each line is drawn well past both edges, because shifting a line by its
+    # lean and starting it at x=0 left an unpainted wedge in two corners.
     lean = (angle_bytes / 255.0) * 0.6 - 0.3
+    overhang = round(abs(lean) * SIZE) + 2
     for y in range(SIZE):
         t = y / (SIZE - 1)
         colour = tuple(round(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
         offset = round(lean * (y - SIZE / 2))
-        draw.line([(offset, y), (SIZE + offset, y)], fill=colour)
+        draw.line([(offset - overhang, y), (SIZE + offset + overhang, y)], fill=colour)
     return base
 
 
@@ -60,7 +63,7 @@ def _motif(image: Image.Image, accent: tuple, seed: list[int]) -> None:
     """Concentric arcs, bars or a starburst — whichever the seed picks."""
     draw = ImageDraw.Draw(image, "RGBA")
     kind = seed[0] % 3
-    tint = accent + (46,)
+    tint = accent + (64,)
 
     if kind == 0:  # concentric rings, off-centre
         cx = SIZE * (0.25 + (seed[1] / 255) * 0.5)
@@ -84,14 +87,17 @@ def _motif(image: Image.Image, accent: tuple, seed: list[int]) -> None:
             angle = (2 * math.pi * r / rays) + (seed[2] / 255)
             draw.line(
                 [cx, cy, cx + math.cos(angle) * SIZE, cy + math.sin(angle) * SIZE],
-                fill=accent + (30,), width=2,
+                fill=accent + (48,), width=2,
             )
 
 
 def _monogram(image: Image.Image, initials: str, accent: tuple) -> None:
     draw = ImageDraw.Draw(image)
-    # DejaVu ships with Pillow's test fonts on most images; fall back rather
-    # than fail the whole seed over a typeface.
+
+    # The container ships no TrueType fonts at all, so truetype() never matched
+    # and this silently fell back to the default bitmap face at about eleven
+    # pixels — a monogram invisible at any size the UI actually shows. Pillow 10
+    # can scale the built-in face, which is enough for two letters.
     font = None
     for candidate in (
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -101,7 +107,10 @@ def _monogram(image: Image.Image, initials: str, accent: tuple) -> None:
             font = ImageFont.truetype(candidate, 188)
             break
     if font is None:
-        font = ImageFont.load_default()
+        try:
+            font = ImageFont.load_default(size=190)
+        except TypeError:      # Pillow < 10.1 cannot size the default face
+            font = ImageFont.load_default()
 
     box = draw.textbbox((0, 0), initials, font=font)
     x = (SIZE - (box[2] - box[0])) / 2 - box[0]
