@@ -11,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 @RestController
 @RequiredArgsConstructor
@@ -40,14 +39,12 @@ public class PaymentController extends BaseController {
 
     @PreAuthorize(UserRole.ANY_BOOKER)
     @PostMapping("/booking")
-    public Mono<ResponseEntity<String>> bookArtist(@RequestParam Long bookingId, String paymentType) {
-        return paymentService.bookArtist(bookingId, paymentType)
-                .map(response -> {
-                    return ResponseEntity.ok().body(response); // Send the response to the user
-                })
-                .onErrorResume(error -> {
-                    return Mono.just(ResponseEntity.status(500).body(null)); // Handle errors gracefully
-                });
+    public ResponseEntity<String> bookArtist(@RequestParam Long bookingId, String paymentType) {
+        // Plain and synchronous. Returning a Mono here ran the gateway call off the request thread,
+        // where the security context is gone: any failure came back as an empty-bodied 401 and the
+        // browser signed the user out. Failures now travel as exceptions to the global handler,
+        // which gives them an honest status and a message worth reading.
+        return ResponseEntity.ok(paymentService.bookArtist(bookingId, paymentType));
     }
 
     @Operation(

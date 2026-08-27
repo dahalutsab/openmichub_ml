@@ -12,7 +12,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 @RequestMapping("/api/v1/artist")
 @RestController
@@ -110,15 +109,10 @@ public class BookingController extends BaseController {
     /** Disburses a pending withdrawal request. Admin only - this moves money out of the platform. */
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping("/withdraw")
-    public Mono<ResponseEntity<String>> withdraw(@RequestBody WithDrawRequest withDrawRequest) {
-        return bookingService.withdraw(withDrawRequest)
-                .map(response -> {
-                    return ResponseEntity.ok().body(response); // Send the response to the user
-                })
-                .onErrorResume(error -> {
-                    log.error("Error occurred during withdrawal" + error);
-                    return Mono.just(ResponseEntity.status(500).body(null)); // Handle errors gracefully
-                });
+    public ResponseEntity<String> withdraw(@RequestBody WithDrawRequest withDrawRequest) {
+        // Synchronous for the same reason as the booking payment: an async failure was answered
+        // with an empty 401 rather than the real cause.
+        return ResponseEntity.ok(bookingService.withdraw(withDrawRequest));
     }
 
     @PostMapping("/withdraw/callback")

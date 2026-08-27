@@ -146,6 +146,22 @@ export class ViewArtistComponent implements OnInit {
     this.booking = false;
   }
 
+  /**
+   * The artist's photo.
+   *
+   * The public DTO calls this `profilePictureUrl`; the template used to read
+   * `profilePicture`/`profileImage`, so every profile silently fell back to the
+   * placeholder. The other two keys stay because discovery spells it differently.
+   */
+  get avatar(): string {
+    return (
+      this.artist?.profilePictureUrl ||
+      this.artist?.profilePicture ||
+      this.artist?.profileImage ||
+      this.fallbackAvatar
+    );
+  }
+
   get genres(): string[] {
     const raw = this.artist?.genre ?? this.artist?.genres ?? [];
     return raw.map((g: any) => g?.name ?? g).filter(Boolean);
@@ -159,17 +175,83 @@ export class ViewArtistComponent implements OnInit {
       .slice(0, 6);
   }
 
-  get stars(): number[] {
-    return [1, 2, 3, 4, 5];
+  /** Whether there is a real rating, as opposed to an artist nobody has rated. */
+  get hasRating(): boolean {
+    return typeof this.artist?.rating === 'number' && this.artist.rating > 0;
   }
 
-  starClass(position: number): string {
-    const rating = this.artist?.rating ?? 0;
-    if (rating >= position) return 'bi-star-fill';
-    if (rating >= position - 0.5) return 'bi-star-half';
-    return 'bi-star';
+  /** The rating to one decimal, rounded exactly as Angular's number pipe rounds it. */
+  get ratingLabel(): string {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(this.artist?.rating ?? 0);
   }
 
+  /**
+   * The credibility strip under the name.
+   *
+   * Assembled here rather than in the template so an artist missing a stat gets
+   * a shorter strip instead of a row of dashes: someone new should read as new,
+   * not as broken.
+   */
+  get proof(): { icon: string; value: string; label: string }[] {
+    const out: { icon: string; value: string; label: string }[] = [];
+    const a = this.artist;
+    if (!a) return out;
+
+    if (this.hasRating) {
+      // Formatted the way Angular's number pipe formats it elsewhere. toFixed(1)
+      // rounds 3.65 down to "3.6" where the pipe gives "3.7", so the hero and the
+      // reviews section disagreed about the same artist's rating.
+      out.push({ icon: 'bi-star-fill', value: this.ratingLabel, label: 'rating' });
+    }
+    if (a.completedBookings > 0) {
+      out.push({
+        icon: 'bi-music-note-beamed',
+        value: String(a.completedBookings),
+        label: a.completedBookings === 1 ? 'gig played' : 'gigs played',
+      });
+    }
+    if (typeof a.responseRate === 'number') {
+      out.push({ icon: 'bi-reply-fill', value: Math.round(a.responseRate) + '%', label: 'responds' });
+    }
+    if (a.city) {
+      out.push({ icon: 'bi-geo-alt-fill', value: a.city, label: 'based in' });
+    }
+    return out;
+  }
+
+  /** "Mar 2024", or empty when the join date is unknown. */
+  get memberSince(): string {
+    const raw = this.artist?.memberSince;
+    if (!raw) return '';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  /** Two letters for the avatar when there is no photo. */
+  get initials(): string {
+    const name = this.artist?.stageName || this.artist?.fullName || '';
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word: string) => word[0])
+      .join('')
+      .toUpperCase();
+  }
+
+  /** Total published slots, so the schedule can be summarised in its header. */
+  get slotCount(): number {
+    return this.availability.reduce(
+      (total, day) => total + (day?.availabilityTimes?.length ?? 0),
+      0
+    );
+  }
+
+  /** "18:30:00" as "6:30 PM". The API sends a bare LocalTime, not a date. */
   shortTime(time: string | null | undefined): string {
     if (!time) return '';
     const [hourStr, minute] = time.split(':');

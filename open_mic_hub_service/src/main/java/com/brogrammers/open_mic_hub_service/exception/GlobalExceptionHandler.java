@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.brogrammers.open_mic_hub_service.payment.gateway.PaymentGatewayException;
+import com.brogrammers.open_mic_hub_service.payment.gateway.PaymentVerificationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -49,6 +51,20 @@ public class GlobalExceptionHandler extends BaseController {
         return errorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }
 
+
+    /**
+     * A payment gateway that refuses or cannot answer is a bad gateway, not an auth failure.
+     *
+     * <p>Khalti replies 401 to an unconfigured secret key. Letting that status through made the API
+     * answer 401 on a valid session, and the browser's interceptor cleared the token and redirected
+     * to the login screen — so a server misconfiguration read to the user as "payment failed, and
+     * also you are logged out".
+     */
+    @ExceptionHandler(PaymentGatewayException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ResponseEntity<GlobalErrorResponse> handlingPaymentGatewayException(PaymentGatewayException exception) {
+        return errorResponse(HttpStatus.BAD_GATEWAY, exception.getMessage(), exception);
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)

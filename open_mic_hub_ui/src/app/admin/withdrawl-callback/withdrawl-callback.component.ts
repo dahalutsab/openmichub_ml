@@ -2,6 +2,7 @@ import { Component, NgZone, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../admin.service';
 import { ToastService } from '../../auth/toastr.service';
+import { apiMessage } from '../../shared/api-error';
 
 @Component({
   selector: 'app-withdrawl-callback',
@@ -33,7 +34,8 @@ export class WithdrawlCallbackComponent implements OnInit {
           },
           error: (err) => {
             console.error('Withdrawal Callback Failed', err);
-            this.toast.showError('Withdrawal processing failed on the server.');
+            this.toast.showError(
+              apiMessage(err, 'Withdrawal processing failed on the server.'));
           }
         });
       }

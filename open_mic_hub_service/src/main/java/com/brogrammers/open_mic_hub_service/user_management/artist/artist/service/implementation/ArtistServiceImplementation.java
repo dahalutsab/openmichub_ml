@@ -1,5 +1,6 @@
 package com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.implementation;
 
+import com.brogrammers.open_mic_hub_service.booking.repository.BookingRepository;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.entity.Artist;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.repository.ArtistRepository;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
@@ -28,6 +29,7 @@ public class ArtistServiceImplementation implements ArtistService {
     private final ArtistRepository artistRepository;
     private final UserInfoRepository userInfoRepository;
     private final GenreRepository genreRepository;
+    private final BookingRepository bookingRepository;
     private final LoggedInUserUtil loggedInUserUtil;
     /**
      * A page of verified artists, each with their categories grouped under the parent genre.
@@ -55,6 +57,9 @@ public class ArtistServiceImplementation implements ArtistService {
 
         Map<Long, Genre> genreByCategoryId = genreByCategoryId();
 
+        Map<Long, long[]> stats = bookingStatsFor(
+                artists.getContent().stream().map(Artist::getId).toList());
+
         return artists.map(artist -> {
             List<Category> artistCategories = artist.getGenres() == null ? List.of() : artist.getGenres();
 
@@ -69,8 +74,50 @@ public class ArtistServiceImplementation implements ArtistService {
             List<GenreResponse> genreResponses = genreToCategories.entrySet().stream()
                     .map(entry -> new GenreResponse(entry.getKey(), entry.getValue()))
                     .collect(Collectors.toList());
-            return new ArtistResponse(artist, genreResponses);
+
+            ArtistResponse response = new ArtistResponse(artist, genreResponses);
+            applyStats(response, stats.get(artist.getId()));
+            return response;
         });
+    }
+
+    /**
+     * Booking counts for a set of artists, keyed by id.
+     *
+     * <p>One query for the whole page. An artist with no bookings simply has no entry, which
+     * {@link #applyStats} reads as "nothing yet" rather than as a zero response rate.
+     */
+    private Map<Long, long[]> bookingStatsFor(List<Long> artistIds) {
+        if (artistIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, long[]> stats = new HashMap<>();
+        for (Object[] row : bookingRepository.findBookingStatsFor(artistIds)) {
+            stats.put(
+                    ((Number) row[0]).longValue(),
+                    new long[]{
+                            ((Number) row[1]).longValue(),   // went ahead
+                            ((Number) row[2]).longValue(),   // answered
+                            ((Number) row[3]).longValue(),   // total requests
+                    });
+        }
+        return stats;
+    }
+
+    /**
+     * Copies the counts onto a response.
+     *
+     * <p>Response rate stays null when there have been no requests at all: showing 0% for a new
+     * artist reads as "ignores people" rather than "has not been asked yet".
+     */
+    private void applyStats(ArtistResponse response, long[] row) {
+        if (row == null) {
+            response.setCompletedBookings(0);
+            response.setResponseRate(null);
+            return;
+        }
+        response.setCompletedBookings(row[0]);
+        response.setResponseRate(row[2] == 0 ? null : Math.round((row[1] * 1000d) / row[2]) / 10d);
     }
 
     /** Every category id mapped to the genre that owns it, in one query. */
@@ -112,7 +159,9 @@ public class ArtistServiceImplementation implements ArtistService {
                 .map(entry -> new GenreResponse(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
 
-        return new ArtistResponse(artist, genreResponses);
+        ArtistResponse response = new ArtistResponse(artist, genreResponses);
+        applyStats(response, bookingStatsFor(List.of(artist.getId())).get(artist.getId()));
+        return response;
     }
 
     @Override
@@ -133,7 +182,9 @@ public class ArtistServiceImplementation implements ArtistService {
                 .map(entry -> new GenreResponse(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
 
-        return new ArtistResponse(artist, genreResponses);
+        ArtistResponse response = new ArtistResponse(artist, genreResponses);
+        applyStats(response, bookingStatsFor(List.of(artist.getId())).get(artist.getId()));
+        return response;
     }
 
     @Override

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { UserService } from '../../user.service';
 import { ToastrService } from 'ngx-toastr';
+import { apiMessage } from '../../../shared/api-error';
 import { environment } from '../../../environment/environment';
 
 @Component({
@@ -96,18 +97,26 @@ export class BookingDetailsComponent implements OnInit {
       })
       .subscribe({
         next: (paymentUrl: string) => {
-          this.paying = false;
           this.selectedBookingId = null;
-          if (paymentUrl) {
-            window.open(paymentUrl, '_blank');
+          if (paymentUrl?.trim()) {
+            // Same tab, not window.open: this runs in an HTTP callback rather
+            // than a click handler, so the popup blocker ate the new window and
+            // checkout appeared to do nothing. The gateway's return_url brings
+            // the booker back to /user/artist/payment-callback either way.
+            // `paying` stays true so the button cannot be pressed twice while
+            // the browser navigates away.
+            window.location.href = paymentUrl.trim();
           } else {
+            this.paying = false;
             this.toast.error('No payment link came back from the server.');
           }
         },
         error: (err) => {
           this.paying = false;
           console.error('Payment failed:', err);
-          this.toast.error('Payment failed. Please try again.');
+          // The server explains itself; repeating "please try again" over the
+          // top of "the gateway is not configured" helps nobody.
+          this.toast.error(apiMessage(err, 'Payment could not be started. Please try again.'));
         },
       });
   }

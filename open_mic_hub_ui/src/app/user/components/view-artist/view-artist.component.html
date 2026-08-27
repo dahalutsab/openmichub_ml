@@ -15,137 +15,186 @@
     <i class="bi bi-arrow-left"></i> Back to artists
   </a>
 
-  <!-- Header on the dark stage: this is the artist's poster. -->
-  <section class="omh-stage relative overflow-hidden rounded-[14px] p-6">
-    <div class="flex flex-wrap items-center gap-5">
-      <img [src]="artist.profilePicture || artist.profileImage || fallbackAvatar"
-           [alt]="artist.stageName || artist.fullName"
-           class="h-24 w-24 shrink-0 rounded-full border-2 border-white/15 object-cover">
+  <!-- The poster. Everything a booker decides on in one glance: who they are,
+       what they play, and the evidence that they are worth the rate. -->
+  <section class="omh-stage relative overflow-hidden rounded-[14px]">
+    <!-- A soft accent wash, so the hero reads as a stage rather than a slab. -->
+    <div class="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-32 -left-16 h-64 w-64 rounded-full bg-brand/20 blur-3xl"></div>
 
-      <div class="min-w-0 flex-1">
-        <h1 class="omh-display text-3xl text-on-stage">
-          {{ artist.stageName || artist.fullName }}
-        </h1>
-        <p class="text-base text-on-stage-dim" *ngIf="artist.stageName">{{ artist.fullName }}</p>
+    <div class="relative p-6 sm:p-7">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
 
-        <div class="mt-2 flex flex-wrap items-center gap-3">
-          <span class="omh-chip-toggle pointer-events-none" *ngIf="artist.hourlyRate">
-            NPR {{ artist.hourlyRate | number:'1.0-0' }}/hr
-          </span>
-        </div>
-      </div>
+        <img *ngIf="avatar !== fallbackAvatar; else initialsBadge"
+             [src]="avatar"
+             [alt]="artist.stageName || artist.fullName"
+             class="h-28 w-28 shrink-0 rounded-2xl border border-white/15 object-cover shadow-lg">
+        <ng-template #initialsBadge>
+          <div class="grid h-28 w-28 shrink-0 place-items-center rounded-2xl border border-white/15
+                      bg-white/10 font-display text-3xl font-bold text-on-stage">
+            {{ initials || '♪' }}
+          </div>
+        </ng-template>
 
-      <button type="button" class="omh-btn-primary shrink-0" (click)="book()">
-        <i class="bi bi-calendar-plus"></i> Book this artist
-      </button>
-    </div>
-
-    <div class="mt-4 flex flex-wrap gap-1.5" *ngIf="genres.length">
-      <span class="omh-chip-toggle pointer-events-none" *ngFor="let genre of genres">{{ genre }}</span>
-    </div>
-  </section>
-
-  <div class="mt-3 grid gap-3 lg:grid-cols-3">
-
-    <section class="omh-tile lg:col-span-2">
-      <div class="omh-tile-head"><span class="omh-tile-title">About</span></div>
-      <p class="whitespace-pre-wrap text-base leading-relaxed text-ink-soft" *ngIf="artist.bio; else noBio">
-        {{ artist.bio }}
-      </p>
-      <ng-template #noBio>
-        <p class="omh-help">This artist has not written a bio yet.</p>
-      </ng-template>
-    </section>
-
-    <!-- The public artist endpoint carries no email, phone or address, which is
-         the right call — this page is readable without an account. Booking goes
-         through the platform, so the panel shows what is bookable instead. -->
-    <section class="omh-tile">
-      <div class="omh-tile-head"><span class="omh-tile-title">At a glance</span></div>
-
-      <dl class="omh-deflist">
-        <div class="omh-defrow">
-          <dt class="omh-defterm">Rate</dt>
-          <dd class="omh-defvalue omh-figure" *ngIf="artist.hourlyRate; else noRate">
-            NPR {{ artist.hourlyRate | number:'1.0-0' }}<span class="text-muted">/hr</span>
-          </dd>
-          <ng-template #noRate><dd class="omh-defvalue text-muted">On request</dd></ng-template>
-        </div>
-        <div class="omh-defrow">
-          <dt class="omh-defterm">Styles</dt>
-          <dd class="omh-defvalue">{{ styles.length ? styles.join(', ') : '—' }}</dd>
-        </div>
-      </dl>
-
-      <button type="button" class="omh-btn-primary mt-4 w-full" (click)="book()">
-        <i class="bi bi-calendar-plus"></i> Request a booking
-      </button>
-      <p class="omh-help mt-2 text-center">The artist confirms before anything is charged.</p>
-    </section>
-  </div>
-
-  <!-- Reviews -->
-  <section class="omh-tile mt-3">
-    <div class="omh-tile-head">
-      <span class="omh-tile-title">Reviews</span>
-    </div>
-    <omh-review-list [artistId]="artistId!"
-                     emptyTitle="No reviews yet"
-                     emptyText="This artist has not been reviewed. Book them and you can be the first." />
-  </section>
-
-  <!-- Similar artists, from the segmentation model -->
-  <section class="omh-tile mt-3" *ngIf="similar.length">
-    <div class="omh-tile-head">
-      <span class="omh-tile-title">Artists like this one</span>
-      <span class="text-xs text-muted">By profile similarity</span>
-    </div>
-
-    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      <a *ngFor="let other of similar"
-         [routerLink]="['/artists', other.artistId]"
-         class="omh-card-interactive flex items-center gap-3 p-3">
-        <img [src]="other.profileImage || fallbackAvatar" alt="" class="omh-avatar-md">
         <div class="min-w-0 flex-1">
-          <p class="truncate font-display text-sm font-bold text-ink">{{ other.stageName }}</p>
-          <p class="truncate text-xs text-muted">{{ other.city || '—' }}</p>
+          <p class="omh-eyebrow text-on-stage-dim" *ngIf="memberSince">
+            On OpenMicHub since {{ memberSince }}
+          </p>
+
+          <h1 class="omh-display text-4xl leading-tight text-on-stage">
+            {{ artist.stageName || artist.fullName }}
+          </h1>
+          <p class="text-base text-on-stage-dim" *ngIf="artist.stageName">{{ artist.fullName }}</p>
+
+          <div class="mt-3 flex flex-wrap gap-1.5" *ngIf="genres.length">
+            <span class="omh-chip-toggle pointer-events-none" *ngFor="let genre of genres">{{ genre }}</span>
+          </div>
         </div>
-        <!-- Cosine similarity, shown as a percentage so the ordering is legible
-             rather than a bare 0.87 the reader has to interpret. -->
-        <span class="omh-chip shrink-0">{{ (other.similarity * 100) | number:'1.0-0' }}%</span>
-      </a>
-    </div>
-  </section>
+      </div>
 
-  <!-- Availability -->
-  <section class="omh-tile mt-3">
-    <div class="omh-tile-head">
-      <span class="omh-tile-title">Weekly availability</span>
-    </div>
-
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" *ngIf="availability.length; else noAvailability">
-      <div *ngFor="let day of availability" class="rounded-card border border-line p-3">
-        <p class="font-display text-sm font-bold text-ink">{{ pretty(day.dayOfWeek) }}</p>
-        <ul class="mt-2 flex flex-col gap-1">
-          <li *ngFor="let slot of day.availabilityTimes"
-              class="flex items-center justify-between rounded-[6px] bg-surface-2 px-2.5 py-1.5 text-sm">
-            <span class="text-ink">{{ shortTime(slot.startTime) }} – {{ shortTime(slot.endTime) }}</span>
-            <i class="bi bi-check2 text-positive"></i>
-          </li>
-        </ul>
+      <!-- Social proof. Only the stats this artist actually has, so a new
+           profile reads as new rather than as a row of empty dashes. -->
+      <div class="mt-6 flex flex-wrap items-stretch gap-2" *ngIf="proof.length">
+        <div *ngFor="let stat of proof"
+             class="flex min-w-[7rem] flex-1 items-center gap-2.5 rounded-card border border-white/10
+                    bg-white/5 px-3.5 py-2.5">
+          <i class="bi {{ stat.icon }} text-accent"></i>
+          <div class="min-w-0">
+            <p class="truncate font-display text-base font-bold leading-tight text-on-stage">{{ stat.value }}</p>
+            <p class="truncate text-xs text-on-stage-dim">{{ stat.label }}</p>
+          </div>
+        </div>
       </div>
     </div>
-
-    <ng-template #noAvailability>
-      <p class="omh-help">
-        This artist has not published a schedule. You can still send a booking request.
-      </p>
-    </ng-template>
   </section>
+
+  <!-- items-start, so a short bio no longer stretches its card to match the
+       rail beside it. That empty half-page was the worst of the old layout. -->
+  <div class="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]">
+
+    <!-- The booking rail. One primary action on the page, not two competing
+         ones: the hero used to carry a button as well. Ordered first on narrow
+         screens so the rate and the CTA stay above the fold. -->
+    <aside class="order-first flex flex-col gap-3 lg:order-2 lg:sticky lg:top-4">
+      <section class="omh-tile">
+        <p class="omh-eyebrow">Starting from</p>
+        <p class="omh-display mt-1 text-3xl text-ink" *ngIf="artist.hourlyRate; else rateOnRequest">
+          NPR {{ artist.hourlyRate | number:'1.0-0' }}<span class="text-base font-normal text-muted"> /hour</span>
+        </p>
+        <ng-template #rateOnRequest>
+          <p class="omh-display mt-1 text-2xl text-ink">On request</p>
+        </ng-template>
+
+        <button type="button" class="omh-btn-primary omh-btn-lg mt-4 w-full" (click)="book()">
+          <i class="bi bi-calendar-plus"></i> Request a booking
+        </button>
+        <p class="omh-help mt-2 text-center">
+          {{ artist.stageName || artist.fullName }} confirms before anything is charged.
+        </p>
+
+        <div class="my-4 h-px bg-line"></div>
+
+        <dl class="omh-deflist">
+          <div class="omh-defrow" *ngIf="artist.city">
+            <dt class="omh-defterm">Based in</dt>
+            <dd class="omh-defvalue">{{ artist.city }}</dd>
+          </div>
+          <div class="omh-defrow" *ngIf="styles.length">
+            <dt class="omh-defterm">Styles</dt>
+            <dd class="omh-defvalue">{{ styles.join(', ') }}</dd>
+          </div>
+          <div class="omh-defrow" *ngIf="artist.completedBookings > 0">
+            <dt class="omh-defterm">Gigs played</dt>
+            <dd class="omh-defvalue omh-figure">{{ artist.completedBookings }}</dd>
+          </div>
+          <div class="omh-defrow" *ngIf="artist.responseRate !== null && artist.responseRate !== undefined">
+            <dt class="omh-defterm">Responds to</dt>
+            <dd class="omh-defvalue omh-figure">{{ artist.responseRate | number:'1.0-0' }}%</dd>
+          </div>
+          <div class="omh-defrow" *ngIf="slotCount">
+            <dt class="omh-defterm">Open slots</dt>
+            <dd class="omh-defvalue omh-figure">{{ slotCount }} a week</dd>
+          </div>
+        </dl>
+      </section>
+    </aside>
+
+    <div class="flex min-w-0 flex-col gap-3 lg:order-1">
+
+      <section class="omh-tile" *ngIf="artist.bio">
+        <div class="omh-tile-head"><span class="omh-tile-title">About</span></div>
+        <p class="whitespace-pre-wrap text-base leading-relaxed text-ink-soft">{{ artist.bio }}</p>
+      </section>
+
+      <!-- Reviews. The star average deliberately lives only in the hero: repeating
+           it here put "3.7 ★★★★" directly above "No reviews yet", which reads as a
+           contradiction. A rating can exist without anyone having written anything,
+           so the empty state says written. -->
+      <section class="omh-tile">
+        <div class="omh-tile-head">
+          <span class="omh-tile-title">Reviews</span>
+        </div>
+        <omh-review-list [artistId]="artistId!"
+                         emptyTitle="No written reviews yet"
+                         emptyText="Book them and you can be the first to say how it went." />
+      </section>
+
+      <!-- Weekly availability -->
+      <section class="omh-tile">
+        <div class="omh-tile-head">
+          <span class="omh-tile-title">Weekly availability</span>
+          <span class="text-xs text-muted" *ngIf="slotCount">{{ slotCount }} slots published</span>
+        </div>
+
+        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" *ngIf="availability.length; else noAvailability">
+          <div *ngFor="let day of availability" class="rounded-card border border-line bg-surface-2/40 p-3">
+            <p class="omh-eyebrow">{{ pretty(day.dayOfWeek) }}</p>
+            <ul class="mt-2 flex flex-col gap-1">
+              <li *ngFor="let slot of day.availabilityTimes"
+                  class="flex items-center gap-2 rounded-[6px] bg-surface px-2.5 py-1.5 text-sm">
+                <i class="bi bi-clock text-positive"></i>
+                <span class="omh-figure text-ink">{{ shortTime(slot.startTime) }} – {{ shortTime(slot.endTime) }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <ng-template #noAvailability>
+          <p class="omh-help">
+            No schedule published yet — send a request with your date and they will confirm.
+          </p>
+        </ng-template>
+      </section>
+
+      <!-- Nearest neighbours from the segmentation model -->
+      <section class="omh-tile" *ngIf="similar.length">
+        <div class="omh-tile-head">
+          <span class="omh-tile-title">Artists like this one</span>
+          <span class="text-xs text-muted">By profile similarity</span>
+        </div>
+
+        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <a *ngFor="let other of similar"
+             [routerLink]="['/artists', other.artistId]"
+             class="omh-card-interactive flex items-center gap-3 p-3">
+            <img [src]="other.profileImage || fallbackAvatar" alt="" class="omh-avatar-md">
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-display text-sm font-bold text-ink">{{ other.stageName }}</p>
+              <p class="truncate text-xs text-muted">{{ other.city || '—' }}</p>
+            </div>
+            <!-- Cosine similarity as a percentage: the ordering is legible that
+                 way, where a bare 0.87 leaves the reader to interpret it. -->
+            <span class="omh-chip shrink-0">{{ (other.similarity * 100) | number:'1.0-0' }}%</span>
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </div>
 
 </ng-container>
 
-<!-- Booking. Only mounted once a signed-in booker has asked for it, so an
+<!-- Booking. Mounted only once a signed-in booker has asked for it, so an
      anonymous visitor never loads the form at all. -->
 <omh-booking-dialog *ngIf="booking && artist"
                     [artistId]="artistId!"

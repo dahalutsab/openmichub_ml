@@ -2,6 +2,7 @@ import { Component, NgZone, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../user.service';
 import { ToastService } from '../../auth/toastr.service';
+import { apiMessage } from '../../shared/api-error';
 
 @Component({
   selector: 'app-payment-callback',
@@ -33,7 +34,10 @@ export class PaymentCallbackComponent implements OnInit {
           },
           error: (err) => {
             console.error('Payment Callback Failed', err);
-            this.toast.showError('Payment processing failed on the server.');
+            // The server says why — a gateway that could not verify the payment is a
+            // different problem from a payment that was declined.
+            this.toast.showError(
+              apiMessage(err, 'Payment processing failed on the server.'));
           }
         });
       }

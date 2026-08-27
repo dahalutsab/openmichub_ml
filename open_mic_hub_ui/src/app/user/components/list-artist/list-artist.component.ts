@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { Router } from '@angular/router';
 import { AVATAR_FALLBACK } from '../../../shared/avatar';
+import { apiMessage } from '../../../shared/api-error';
 
 @Component({
   selector: 'app-list-artist',
@@ -167,7 +168,7 @@ export class ListArtistComponent implements OnInit {
       error: error => {
         this.booking = false;
         console.error('Booking failed:', error);
-        this.toast.error('Booking failed. Please try again later.');
+        this.toast.error(apiMessage(error, 'Booking failed. Please try again later.'));
       },
     });
   }

@@ -48,7 +48,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
@@ -341,7 +340,7 @@ public class BookingServiceImpl implements BookingService {
      * {@code TransactionServiceImpl.withDraw}, so this only performs the disbursement.
      */
     @Override
-    public Mono<String> withdraw(WithDrawRequest withDrawRequest) {
+    public String withdraw(WithDrawRequest withDrawRequest) {
         Transaction transaction = transactionRepository.findById(withDrawRequest.getTransactionId())
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Transaction not found with ID: " + withDrawRequest.getTransactionId()));
@@ -370,17 +369,17 @@ public class BookingServiceImpl implements BookingService {
         payment.setUserInfoEntity(artist.getUser());
         Payment saved = paymentRepository.save(payment);
 
-        return khaltiClient.initiate(
+        KhaltiInitiateResponse gateway = khaltiClient.initiate(
                 artist.getId(),
                 "Withdrawal Request",
                 BigDecimal.valueOf(amount),
                 frontendDomain + "/admin/withdraw/callback",
                 frontendDomain + "/"
-        ).map(response -> {
-            saved.setPidx(response.getPidx());
-            paymentRepository.save(saved);
-            return response.getPaymentUrl();
-        });
+        );
+
+        saved.setPidx(gateway.getPidx());
+        paymentRepository.save(saved);
+        return gateway.getPaymentUrl();
     }
 
     /**

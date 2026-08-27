@@ -35,7 +35,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
@@ -85,7 +84,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Transactional
     @Override
-    public Mono<String> bookArtist(Long bookingId, String paymentType) {
+    public String bookArtist(Long bookingId, String paymentType) {
         log.info("Booking payment requested for booking {}", bookingId);
 
         UserEntity loggedInUser = loggedInUserUtil.getLoggedInUser();
@@ -127,18 +126,19 @@ public class PaymentServiceImpl implements PaymentService{
         // subscribed, the payment row was silently never written.
         Payment saved = paymentRepository.save(payment);
 
-        return khaltiClient.initiate(
+        KhaltiInitiateResponse gateway = khaltiClient.initiate(
                 bookingId,
                 "Booking of Artist",
                 BigDecimal.valueOf(receivedAmount),
                 frontendDomain + "/user/artist/payment-callback",
                 frontendDomain + "/"
-        ).map(response -> {
-            saved.setPidx(response.getPidx());
-            paymentRepository.save(saved);
-            log.info("Payment {} initiated with pidx {}", saved.getPaymentId(), response.getPidx());
-            return response.getPaymentUrl();
-        });
+        );
+
+        // pidx is the handle the callback settles on, so it is stored before the browser leaves.
+        saved.setPidx(gateway.getPidx());
+        paymentRepository.save(saved);
+        log.info("Payment {} initiated with pidx {}", saved.getPaymentId(), gateway.getPidx());
+        return gateway.getPaymentUrl();
     }
 
     private PaymentType parsePaymentType(String paymentType) {

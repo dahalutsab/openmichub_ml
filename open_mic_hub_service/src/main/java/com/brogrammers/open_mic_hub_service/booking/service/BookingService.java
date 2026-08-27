@@ -9,7 +9,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
-import reactor.core.publisher.Mono;
 
 public interface BookingService {
     BookingResponse bookArtist(BookingRequest bookingRequest);
@@ -31,7 +30,8 @@ public interface BookingService {
 //
 //    Page<ArtistBookingResponse> getAllBookingsOfArtists(Pageable pageable);
 //
-    Mono<String> withdraw(WithDrawRequest withDrawRequest);
+    /** Returns the gateway payment link for the disbursement. */
+    String withdraw(WithDrawRequest withDrawRequest);
 
         ResponseEntity<String> handleWithdrawCallBack(String pidx);
 
