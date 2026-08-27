@@ -50,7 +50,7 @@
         <button type="button" class="omh-btn-primary omh-btn-sm flex-1" (click)="hireArtist(artist)">
           <i class="bi bi-calendar-plus"></i> Hire
         </button>
-        <a [routerLink]="['/user/view-artist', artist.artistId || artist.id]"
+        <a [routerLink]="['/artists', artist.artistId || artist.id]"
            class="omh-btn-secondary omh-btn-sm">
           View
         </a>

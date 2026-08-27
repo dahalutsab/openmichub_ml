@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {Genre, GenreResponse, LandingService} from '../landing.service';
 import { interval, Subscription } from 'rxjs';
+import { AVATAR_FALLBACK } from '../shared/avatar';
 
 @Component({
   selector: 'app-landing-page',
@@ -10,6 +11,8 @@ import { interval, Subscription } from 'rxjs';
   styleUrls: ['./landing-page.component.scss']
 })
 export class LandingPageComponent implements OnInit, OnDestroy {
+  readonly fallbackAvatar = AVATAR_FALLBACK;
+
   artists: any[] = [];
   featuredArtists: any[] = [];
   counts = { users: 0, artists: 0, bookings: 0 };

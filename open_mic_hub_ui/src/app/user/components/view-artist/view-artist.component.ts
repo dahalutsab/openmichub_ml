@@ -1,20 +1,28 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ToastrService } from 'ngx-toastr';
+import { switchMap, tap } from 'rxjs';
 import { UserService } from '../../user.service';
 import { environment } from '../../../environment/environment';
 import { AVATAR_FALLBACK } from '../../../shared/avatar';
+import { ReviewListComponent } from '../../../shared/reviews';
+import { BookingDialogComponent } from '../../../shared/booking/booking-dialog.component';
+import { canBook, isSignedIn } from '../../../shared/session';
 
 /**
- * An artist's public profile, seen by a booker.
+ * An artist's public profile.
  *
- * Was the CLI stub. Reads the artist through the existing user endpoint and
- * their published availability, so a booker can see who they are and when they
- * can play before raising a request.
+ * Standalone and routed publicly, because browsing is what brings organizers to
+ * the platform — it used to live behind the booker guard, so a visitor
+ * following a link from discovery was bounced to the login screen before seeing
+ * anything. Signing in is required to book, not to look.
  */
 @Component({
   selector: 'app-view-artist',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, ReviewListComponent, BookingDialogComponent],
   templateUrl: './view-artist.component.html',
 })
 export class ViewArtistComponent implements OnInit {
@@ -27,46 +35,60 @@ export class ViewArtistComponent implements OnInit {
 
   loading = true;
   error = '';
+  booking = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private service: UserService,
-    private http: HttpClient
+    private http: HttpClient,
+    private toast: ToastrService
   ) {}
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.params['id']);
-    this.artistId = Number.isNaN(id) ? null : id;
-
-    if (this.artistId === null) {
-      this.error = 'No artist was specified.';
-      this.loading = false;
-      return;
-    }
-
-    // Artist ids and user ids are separate sequences, so this reads the public
-    // artist endpoint rather than getUserById — passing an artist id there
-    // fetches a different person entirely.
-    this.http.get<any>(`${environment.baseUrl}/public/artists/${this.artistId}`).subscribe({
-      next: (res: any) => {
-        this.artist = res?.data ?? null;
-        this.loading = false;
-        this.loadAvailability();
-        this.loadSimilar();
-      },
-      error: err => {
-        console.error('Failed to load artist', err);
-        this.error = 'Could not load this artist.';
-        this.loading = false;
-      },
-    });
+    /**
+     * Reacts to the id changing, not just to the component being created.
+     *
+     * The similar-artists strip links to this same route with a different id.
+     * Angular reuses the component for that, so reading a snapshot in ngOnInit
+     * navigated the URL and left the previous artist on screen.
+     */
+    this.route.paramMap
+      .pipe(
+        tap(() => {
+          this.loading = true;
+          this.error = '';
+          // Cleared so the previous artist is not briefly shown under the new
+          // one's heading while the request is in flight.
+          this.artist = null;
+          this.availability = [];
+          this.similar = [];
+          this.booking = false;
+        }),
+        switchMap(params => {
+          const id = Number(params.get('id'));
+          this.artistId = Number.isNaN(id) ? null : id;
+          return this.http.get<any>(`${environment.baseUrl}/public/artists/${this.artistId}`);
+        })
+      )
+      .subscribe({
+        next: (res: any) => {
+          this.artist = res?.data ?? null;
+          this.loading = false;
+          this.loadAvailability();
+          this.loadSimilar();
+        },
+        error: err => {
+          console.error('Failed to load artist', err);
+          this.error = 'Could not load this artist.';
+          this.loading = false;
+        },
+      });
   }
 
   /**
-   * Availability is keyed by stage name on the API. It is best-effort: an
-   * artist who has not published a schedule is not an error, just an empty
-   * section.
+   * Availability is keyed by stage name on the API. Best-effort: an artist who
+   * has not published a schedule is not an error, just an empty section.
    */
   private loadAvailability(): void {
     const stageName = this.artist?.stageName;
@@ -99,8 +121,29 @@ export class ViewArtistComponent implements OnInit {
       });
   }
 
+  /**
+   * Opens the booking dialog, or sends an unauthenticated visitor to sign in
+   * and come straight back here.
+   */
   book(): void {
-    this.router.navigate(['/user/artists']);
+    if (!isSignedIn()) {
+      this.toast.info('Sign in to request a booking.');
+      this.router.navigate(['/auth/login'], {
+        queryParams: { returnUrl: this.router.url },
+      });
+      return;
+    }
+
+    if (!canBook()) {
+      this.toast.error('Only organizer accounts can raise a booking.');
+      return;
+    }
+
+    this.booking = true;
+  }
+
+  onBooked(): void {
+    this.booking = false;
   }
 
   get genres(): string[] {

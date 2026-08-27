@@ -89,10 +89,15 @@ module.exports = {
         soft: '0 1px 1px rgb(16 12 30 / 0.03)',
         lift: '0 1px 2px rgb(16 12 30 / 0.06), 0 18px 36px -14px rgb(16 12 30 / 0.28)',
       },
+      // Ordered so each layer sits above what it is meant to cover. The scrim
+      // dims the content and the topbar but stays under the rail and the
+      // drawer — it used to outrank the drawer, which dimmed the very panel it
+      // was opened to reveal.
       zIndex: {
-        rail: '45',
-        sidebar: '40',
         topbar: '30',
+        scrim: '35',
+        rail: '45',
+        sidebar: '46',
         overlay: '50',
         modal: '60',
       },

@@ -864,11 +864,22 @@ a {
     left: 0;
     width: var(--omh-sidebar-w);
     transform: translateX(-100%);
-    transition: transform 0.26s var(--omh-ease);
+    box-shadow: var(--omh-shadow-lift);
+
+    /* Hidden rather than merely shifted off-screen while closed: a translated
+       panel still takes keyboard focus, so tabbing from the topbar used to walk
+       through a menu nobody could see. `visibility` is delayed by the length of
+       the slide so the panel is still painted while it animates out. */
+    visibility: hidden;
+    transition: transform 0.26s var(--omh-ease), visibility 0s linear 0.26s;
 
     @screen lg { left: var(--omh-rail-w); }
 
-    &.is-open { transform: translateX(0); }
+    &.is-open {
+      transform: translateX(0);
+      visibility: visible;
+      transition: transform 0.26s var(--omh-ease), visibility 0s;
+    }
   }
 
   .omh-drawer-head {
@@ -962,11 +973,13 @@ a {
     @apply border-t border-line px-6 py-4 text-center text-xs text-muted;
   }
 
-  /* Drawer scrim. */
+  /* Drawer scrim.
+     Below the rail and the drawer, above everything else — dimming the panel
+     the drawer just opened is what made it look broken. */
   .omh-scrim {
-    @apply fixed inset-0 z-overlay;
-    background-color: rgb(0 0 0 / 0.5);
-    backdrop-filter: blur(2px);
+    @apply fixed inset-0 z-scrim;
+    background-color: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(1px);
   }
 
   /* ---- page header -------------------------------------------------------

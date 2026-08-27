@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Role } from '../../shared/role';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
 
@@ -21,6 +21,7 @@ export class LoginComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private authService: AuthService,
     private toast: ToastrService
   ) {}
@@ -73,6 +74,16 @@ export class LoginComponent implements OnInit {
    * ordering matters once an account can hold more than one role.
    */
   private redirectUser(roles: string[]): void {
+    // Came here from something that needed an account — a booking request, say.
+    // Send them back to finish it rather than to their dashboard.
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl && returnUrl.startsWith('/')) {
+      // Relative paths only: an absolute URL here would let a crafted link
+      // bounce someone off the site straight after they sign in.
+      this.router.navigateByUrl(returnUrl);
+      return;
+    }
+
     if (roles.includes(Role.SUPER_ADMIN) || roles.includes(Role.ADMIN)) {
       this.router.navigate(['/admin']);
     } else if (roles.includes(Role.ARTIST)) {

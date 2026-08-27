@@ -6,12 +6,12 @@
 <div class="omh-alert-critical" *ngIf="error && !loading">
   <i class="bi bi-exclamation-triangle mt-0.5"></i>
   <span class="flex-1">{{ error }}</span>
-  <a routerLink="/user/artists" class="omh-btn-ghost omh-btn-sm">Browse artists</a>
+  <a routerLink="/discover" class="omh-btn-ghost omh-btn-sm">Browse artists</a>
 </div>
 
 <ng-container *ngIf="artist && !loading">
 
-  <a routerLink="/user/artists" class="omh-btn-ghost omh-btn-sm mb-3 -ml-3">
+  <a routerLink="/discover" class="omh-btn-ghost omh-btn-sm mb-3 -ml-3">
     <i class="bi bi-arrow-left"></i> Back to artists
   </a>
 
@@ -103,7 +103,7 @@
 
     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       <a *ngFor="let other of similar"
-         [routerLink]="['/user/view-artist', other.artistId]"
+         [routerLink]="['/artists', other.artistId]"
          class="omh-card-interactive flex items-center gap-3 p-3">
         <img [src]="other.profileImage || fallbackAvatar" alt="" class="omh-avatar-md">
         <div class="min-w-0 flex-1">
@@ -144,3 +144,12 @@
   </section>
 
 </ng-container>
+
+<!-- Booking. Only mounted once a signed-in booker has asked for it, so an
+     anonymous visitor never loads the form at all. -->
+<omh-booking-dialog *ngIf="booking && artist"
+                    [artistId]="artistId!"
+                    [artistName]="artist.stageName || artist.fullName"
+                    [stageName]="artist.stageName"
+                    (booked)="onBooked()"
+                    (dismissed)="booking = false" />
