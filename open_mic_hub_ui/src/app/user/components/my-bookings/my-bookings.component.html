@@ -31,6 +31,7 @@
           <th>Venue</th>
           <th>Status</th>
           <th class="omh-num">Amount</th>
+          <th class="text-right">Review</th>
         </tr>
       </thead>
       <tbody>
@@ -63,6 +64,20 @@
               NPR {{ booking.remainingAmount | number:'1.0-0' }} remaining
             </div>
           </td>
+
+          <td class="text-right">
+            <!-- The API only accepts a review for a CONFIRMED booking, so the
+                 action only appears where it would actually succeed. -->
+            <button type="button"
+                    class="omh-btn-secondary omh-btn-sm"
+                    *ngIf="booking.bookingStatus === 'CONFIRMED'; else noReview"
+                    (click)="openReview(booking)">
+              <i class="bi bi-star"></i> Review
+            </button>
+            <ng-template #noReview>
+              <span class="text-xs text-muted">—</span>
+            </ng-template>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -79,3 +94,10 @@
     </div>
   </ng-template>
 </section>
+
+<omh-review-dialog *ngIf="reviewing"
+                   [bookingId]="reviewing.bookingId"
+                   [artistName]="reviewing.artistResponse?.stageName || reviewing.artistResponse?.artistName"
+                   [eventLabel]="reviewing.venue"
+                   (saved)="onReviewSaved()"
+                   (dismissed)="reviewing = null" />

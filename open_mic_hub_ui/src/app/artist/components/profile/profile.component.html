@@ -74,3 +74,13 @@
   </section>
 
 </div>
+
+<!-- What clients said. Reads /reviews/me/artist, so it needs no artist id. -->
+<section class="omh-tile mt-3" *ngIf="user && !loading">
+  <div class="omh-tile-head">
+    <span class="omh-tile-title">What clients said</span>
+  </div>
+  <omh-review-list source="about-me"
+                   emptyTitle="No reviews yet"
+                   emptyText="Once a booker rates a gig you played, it shows up here and feeds your rating." />
+</section>

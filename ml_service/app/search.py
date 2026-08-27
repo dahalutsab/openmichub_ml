@@ -13,7 +13,7 @@ import logging
 from app.config import get_settings
 from app.db import connection
 from app.embedder import embed_one
-from app.repository import artist_document, fetch_artists
+from app.repository import artist_document, fetch_artists, profile_document
 
 log = logging.getLogger(__name__)
 
@@ -34,19 +34,28 @@ def rebuild_embeddings(batch_size: int = 128) -> int:
             documents = [artist_document(artist) for artist in batch]
             vectors = embed(documents)
 
+            # The same profiles without the stage name, for similarity and
+            # clustering. Embedded in one extra call per batch rather than one
+            # per artist.
+            profiles = [profile_document(artist) for artist in batch]
+            profile_vectors = embed(profiles)
+
             with conn.cursor() as cur:
-                for artist, document, vector in zip(batch, documents, vectors):
+                for artist, document, vector, profile_vector in zip(
+                    batch, documents, vectors, profile_vectors
+                ):
                     cur.execute(
                         f"""
                         INSERT INTO {get_settings().db_schema}.artist_embedding
-                            (artist_id, embedding, source_text, updated_at)
-                        VALUES (%s, %s, %s, NOW())
+                            (artist_id, embedding, profile_embedding, source_text, updated_at)
+                        VALUES (%s, %s, %s, %s, NOW())
                         ON CONFLICT (artist_id) DO UPDATE
                         SET embedding = EXCLUDED.embedding,
+                            profile_embedding = EXCLUDED.profile_embedding,
                             source_text = EXCLUDED.source_text,
                             updated_at = NOW()
                         """,
-                        (artist["artist_id"], vector, document),
+                        (artist["artist_id"], vector, profile_vector, document),
                     )
             conn.commit()
             written += len(batch)

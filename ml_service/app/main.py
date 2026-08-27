@@ -6,6 +6,8 @@ Two capabilities, behind one small API:
                     plain language finds artists whose bios never use those words
   ranking           a LightGBM LambdaRank model that reorders the retrieved
                     candidates by predicted fit for the specific request
+  segmentation      k-means over the same embeddings, grouping the catalogue
+                    into segments and answering "more artists like this one"
 
 Retrieval and ranking are deliberately separate. Vector similarity is good at
 "is this the right kind of artist" and blind to whether they are affordable,
@@ -20,7 +22,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
-from app import ranker, search
+from app import ranker, search, segments
 from app.config import get_settings
 from app.db import connection, init_schema
 from app.repository import fetch_artists, genre_vocabulary
@@ -42,6 +44,7 @@ async def lifespan(_: FastAPI):
         # failure; the schema is retried on first use.
         log.exception("Could not prepare the vector schema at startup")
     ranker.load_model()
+    segments.load()
     yield
 
 
@@ -202,3 +205,65 @@ def model_details() -> dict:
     if not meta_path.exists():
         raise HTTPException(status_code=404, detail="No model has been trained yet.")
     return json.loads(meta_path.read_text())
+
+
+# --------------------------------------------------------------------------- #
+# Segmentation
+# --------------------------------------------------------------------------- #
+
+@app.post("/segments/train")
+def train_segments(k: int | None = None) -> dict:
+    """Refits the segmentation and hot-reloads it.
+
+    `k` is chosen automatically when not given. Pass one to override the sweep.
+    """
+    from training.segment import run
+
+    try:
+        report = run(k)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    segments.reload_model()
+    return {
+        "artists": report["artists"],
+        "k": report["k"],
+        "chosen_by": report["chosen_by"],
+        "metrics": report["metrics"],
+        "segments": [
+            {"segment": s["segment"], "label": s["label"], "size": s["size"]}
+            for s in report["segments"]
+        ],
+    }
+
+
+@app.get("/segments")
+def list_segments() -> dict:
+    """Segments with live membership counts and representative artists."""
+    if not segments.is_ready():
+        raise HTTPException(
+            status_code=404,
+            detail="Segmentation has not been run. POST /segments/train first.",
+        )
+    return {"segments": segments.overview()}
+
+
+@app.get("/segments/report")
+def segments_report() -> dict:
+    """Full report, including the metric sweep across every k considered."""
+    return segments.report()
+
+
+@app.get("/artists/{artist_id}/segment")
+def artist_segment(artist_id: int) -> dict:
+    result = segments.segment_of(artist_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="This artist has not been segmented.")
+    return result
+
+
+@app.get("/artists/{artist_id}/similar")
+def artist_similar(artist_id: int, limit: int = 6) -> dict:
+    """Nearest neighbours by embedding. Works whether or not segmentation has run."""
+    limit = max(1, min(limit, 24))
+    return {"artistId": artist_id, "similar": segments.similar_artists(artist_id, limit)}

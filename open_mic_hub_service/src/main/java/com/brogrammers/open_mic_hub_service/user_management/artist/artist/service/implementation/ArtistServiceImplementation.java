@@ -10,6 +10,7 @@ import com.brogrammers.open_mic_hub_service.user_management.genere.entity.Genre;
 import com.brogrammers.open_mic_hub_service.user_management.genere.repository.GenreRepository;
 import com.brogrammers.open_mic_hub_service.user_management.user.repository.UserInfoRepository;
 import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -84,6 +85,34 @@ public class ArtistServiceImplementation implements ArtistService {
             }
         }
         return index;
+    }
+
+    /**
+     * One artist, with their categories grouped by parent genre.
+     *
+     * <p>Artist ids and user ids are separate sequences, so the profile page has to look up by
+     * artist id — passing a user id here finds the wrong person or nobody at all.
+     */
+    @Transactional(readOnly = true)
+    @Override
+    public ArtistResponse getArtistById(Long artistId) {
+        Artist artist = artistRepository.findById(artistId)
+                .orElseThrow(() -> new EntityNotFoundException("No artist found with id " + artistId));
+
+        Map<Long, Genre> genreByCategoryId = genreByCategoryId();
+        Map<Genre, List<Category>> genreToCategories = new LinkedHashMap<>();
+        for (Category category : artist.getGenres() == null ? List.<Category>of() : artist.getGenres()) {
+            Genre parent = genreByCategoryId.get(category.getId());
+            if (parent != null) {
+                genreToCategories.computeIfAbsent(parent, k -> new ArrayList<>()).add(category);
+            }
+        }
+
+        List<GenreResponse> genreResponses = genreToCategories.entrySet().stream()
+                .map(entry -> new GenreResponse(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
+
+        return new ArtistResponse(artist, genreResponses);
     }
 
     @Override

@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -92,6 +93,19 @@ public class DiscoveryController extends BaseController {
         return mlServiceClient.recommend(request)
                 .map(result -> successResponse(result, "Recommended artists"))
                 .orElseGet(() -> fallback(null, limit));
+    }
+
+    @Operation(summary = "Artists similar to one artist",
+            description = "Nearest neighbours in the embedding space the ML service maintains. "
+                    + "Public, and returns an empty list if the ML service is unavailable.")
+    @GetMapping("/artists/{artistId:\\d+}/similar")
+    public ResponseEntity<GlobalApiResponse> similarArtists(
+            @PathVariable long artistId,
+            @RequestParam(defaultValue = "6") int limit) {
+        int capped = Math.min(Math.max(limit, 1), MAX_LIMIT);
+        return successResponse(
+                java.util.Map.of("similar", mlServiceClient.similarArtists(artistId, capped)),
+                "Similar artists fetched");
     }
 
     /**

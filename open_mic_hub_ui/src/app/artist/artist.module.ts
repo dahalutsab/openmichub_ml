@@ -18,6 +18,7 @@ import { CoinTransactionComponent } from './components/coin-transaction/coin-tra
 import { PaymentRecordComponent } from './components/payment-record/payment-record.component';
 import { VirtualMoneyComponent } from './components/virtual-money/virtual-money.component';
 import { OMH_CHARTS } from '../shared/charts';
+import { OMH_REVIEWS } from '../shared/reviews';
 
 /**
  * Two things used to be imported here that should not have been:
@@ -54,6 +55,7 @@ import { OMH_CHARTS } from '../shared/charts';
     ReactiveFormsModule,
     FormsModule,
     ...OMH_CHARTS,
+    ...OMH_REVIEWS,
   ]
 })
 export class ArtistModule { }
