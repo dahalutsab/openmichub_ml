@@ -251,7 +251,8 @@ export class DiscoverComponent implements OnInit {
    * account anyway, and the route guard already carries the returnUrl.
    */
   openArtist(artist: ArtistHit): void {
-    this.router.navigate(['/artists', artist.artistId]);
+    // Slug where the catalogue has one; the numeric route still resolves.
+    this.router.navigate(['/artists', artist.slug || artist.artistId]);
   }
 
   private syncUrl(): void {

@@ -143,9 +143,25 @@ public class ArtistServiceImplementation implements ArtistService {
     @Transactional(readOnly = true)
     @Override
     public ArtistResponse getArtistById(Long artistId) {
-        Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new EntityNotFoundException("No artist found with id " + artistId));
+        return toResponse(artistRepository.findById(artistId)
+                .orElseThrow(() -> new EntityNotFoundException("No artist found with id " + artistId)));
+    }
 
+    /**
+     * The same profile, addressed by its public URL segment.
+     *
+     * <p>Both lookups end in the same mapper so a profile cannot come out differently depending on
+     * which kind of link the reader followed.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistResponse getArtistBySlug(String slug) {
+        return toResponse(artistRepository.findBySlug(slug)
+                .orElseThrow(() -> new EntityNotFoundException("No artist found at /" + slug)));
+    }
+
+    /** Genres regrouped under their parents, plus the booking stats. */
+    private ArtistResponse toResponse(Artist artist) {
         Map<Long, Genre> genreByCategoryId = genreByCategoryId();
         Map<Genre, List<Category>> genreToCategories = new LinkedHashMap<>();
         for (Category category : artist.getGenres() == null ? List.<Category>of() : artist.getGenres()) {

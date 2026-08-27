@@ -33,6 +33,9 @@ public class ArtistResponse {
      */
     private Long artistId;
 
+    /** The artist's public URL segment. Prefer this over the id when building links. */
+    private String slug;
+
     private String fullName;
     private String bio;
     private URI profilePictureUrl;
@@ -62,6 +65,7 @@ public class ArtistResponse {
 
     public ArtistResponse(Artist artist, List<GenreResponse> genreResponses) {
         this.artistId = artist.getId();
+        this.slug = artist.getSlug();
         this.fullName = artist.getUser().getFullName();
         this.bio = artist.getBio();
         this.profilePictureUrl = FileUrlUtil.getFileUri(artist.getUser().getProfileImage());

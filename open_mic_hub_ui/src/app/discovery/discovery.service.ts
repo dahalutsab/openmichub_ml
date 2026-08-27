@@ -7,6 +7,8 @@ import { environment } from '../environment/environment';
 /** One ranked artist, as returned by /api/v1/discover. */
 export interface ArtistHit {
   artistId: number;
+  /** Public URL segment. Prefer it over the id when linking to the profile. */
+  slug?: string;
   stageName: string;
   fullName?: string;
   bio?: string;

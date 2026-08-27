@@ -27,6 +27,9 @@ class RecommendRequest(BaseModel):
 
 class ArtistHit(BaseModel):
     artist_id: int
+    # Public URL segment, so callers can build /artists/<slug> links rather than
+    # falling back to the numeric id.
+    slug: str | None = None
     stage_name: str
     full_name: str | None = None
     bio: str | None = None

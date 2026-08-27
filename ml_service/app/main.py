@@ -61,6 +61,7 @@ def _to_hits(candidates: list[dict], scores) -> list[ArtistHit]:
     for artist, score in zip(candidates, scores):
         hits.append(ArtistHit(
             artist_id=artist["artist_id"],
+            slug=artist.get("slug"),
             stage_name=artist["stage_name"],
             full_name=artist.get("full_name"),
             bio=artist.get("bio") or None,

@@ -15,6 +15,7 @@ import com.brogrammers.open_mic_hub_service.auth.messages.AuthLogMessages;
 import com.brogrammers.open_mic_hub_service.auth.messages.AuthResponseMessages;
 import com.brogrammers.open_mic_hub_service.auth.service.AuthService;
 import com.brogrammers.open_mic_hub_service.mail.MailService;
+import com.brogrammers.open_mic_hub_service.user_management.artist.artist.Slugs;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.entity.Artist;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.repository.ArtistRepository;
 import com.brogrammers.open_mic_hub_service.user_management.genere.dto.response.GenreResponse;
@@ -259,6 +260,9 @@ public class AuthServiceImpl implements AuthService {
         var artist = new Artist();
         artist.setUser(userEntity);
         artist.setStageName(registration.getStageName());
+        // Assigned once, at creation, and never rewritten: a public link that has been shared
+        // should keep working even if the artist renames themselves later.
+        artist.setSlug(Slugs.uniqueSlug(registration.getStageName(), artistRepository::existsBySlug));
         artist.setBio(registration.getBio());
         artist.setGenres(selectedCategories);
         Artist savedArtist = artistRepository.save(artist);

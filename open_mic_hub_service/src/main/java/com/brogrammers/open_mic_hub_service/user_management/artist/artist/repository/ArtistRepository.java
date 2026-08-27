@@ -32,4 +32,10 @@ public interface ArtistRepository extends JpaRepository<Artist, Long> {
     Page<Artist> findByUserVerifiedTrueAndStageNameIgnoreCaseContaining(String searchTerm, Pageable pageable);
     @EntityGraph(attributePaths = "genres")
     Page<Artist> findByUserVerifiedTrueAndGenres_NameIgnoreCaseContaining(String genreName, Pageable pageable);
+
+    /** Looks an artist up by public URL segment. */
+    @EntityGraph(attributePaths = {"user", "genres"})
+    Optional<Artist> findBySlug(String slug);
+
+    boolean existsBySlug(String slug);
 }

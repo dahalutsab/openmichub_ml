@@ -216,7 +216,7 @@
 
             <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <a *ngFor="let other of similar"
-                 [routerLink]="['/artists', other.artistId]"
+                 [routerLink]="['/artists', other.slug || other.artistId]"
                  class="omh-card-interactive flex items-center gap-3 p-3">
                 <img [src]="other.profileImage || fallbackAvatar" alt="" class="omh-avatar-md">
                 <div class="min-w-0 flex-1">

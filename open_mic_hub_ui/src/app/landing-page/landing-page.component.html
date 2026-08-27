@@ -142,7 +142,7 @@
 
       <div class="grid gap-4 md:grid-cols-3">
         <a *ngFor="let artist of featuredArtists"
-           [routerLink]="['/artists', artist.artistId || artist.id]"
+           [routerLink]="['/artists', artist.slug || artist.artistId || artist.id]"
            class="omh-card-interactive group flex flex-col overflow-hidden">
           <div class="relative overflow-hidden">
             <img [src]="artist.profilePictureUrl || fallbackAvatar"

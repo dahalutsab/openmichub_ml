@@ -45,12 +45,24 @@ public class PublicController extends BaseController {
         );
     }
 
-    @GetMapping("/artists/{artistId:\\d+}")
-    public ResponseEntity<GlobalApiResponse> getArtistById(@PathVariable Long artistId) {
-        return successResponse(
-                artistService.getArtistById(artistId),
-                "Fetched artist successfully."
-        );
+    /**
+     * One artist, addressed either by slug or by id.
+     *
+     * <p>Deliberately a single mapping. Two — {@code {artistId:\\d+}} beside {@code {slug}} —
+     * looks tidier and does not work: Spring cannot rank one as more specific than the other and
+     * fails the request with "Ambiguous handler methods mapped for /api/v1/public/artists/201".
+     * So the handle arrives as text and this decides.
+     *
+     * <p>Slugs are what public links use; the numeric form stays valid so links already shared,
+     * and every internal caller that only knows an id, keep working.
+     */
+    @GetMapping("/artists/{handle}")
+    public ResponseEntity<GlobalApiResponse> getArtist(@PathVariable String handle) {
+        ArtistResponse artist = handle.matches("\\d+")
+                ? artistService.getArtistById(Long.valueOf(handle))
+                : artistService.getArtistBySlug(handle);
+
+        return successResponse(artist, "Fetched artist successfully.");
     }
 
     /**
@@ -59,10 +71,16 @@ public class PublicController extends BaseController {
      * <p>Under /public so it is readable without an account, like the profile itself. Paged with a
      * small default: the profile shows a strip, not an archive.
      */
-    @GetMapping("/artists/{artistId:\\d+}/posts")
+    @GetMapping("/artists/{handle}/posts")
     public ResponseEntity<GlobalApiResponse> getArtistPosts(
-            @PathVariable Long artistId,
+            @PathVariable String handle,
             @PageableDefault(size = 6) Pageable pageable) {
+        // Accepts either form for the same reason the profile does, so a page opened at a slug
+        // does not have to resolve an id before it can ask for anything else.
+        Long artistId = handle.matches("\\d+")
+                ? Long.valueOf(handle)
+                : artistService.getArtistBySlug(handle).getArtistId();
+
         return successResponse(
                 postService.getPostsByArtist(artistId, pageable),
                 "Fetched artist posts successfully."

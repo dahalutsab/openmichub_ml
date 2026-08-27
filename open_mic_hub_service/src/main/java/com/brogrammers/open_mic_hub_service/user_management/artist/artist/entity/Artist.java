@@ -30,6 +30,16 @@ public class Artist extends Auditable {
     @Column(unique = true, nullable = false)
     private String stageName;
 
+    /**
+     * The artist's public URL segment, derived from the stage name.
+     *
+     * <p>Separate from the id on purpose: the id stays the primary key that every foreign key and
+     * internal call uses, while this is what a reader and a search engine see. Never reused, and
+     * not changed when the stage name changes — an existing link should not rot.
+     */
+    @Column(unique = true, nullable = false, length = 160)
+    private String slug;
+
     private String bio;
 
     private double hourlyRate;

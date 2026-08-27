@@ -10,6 +10,9 @@ public interface ArtistService {
     /** One verified artist by artist id, for the public profile page. */
     ArtistResponse getArtistById(Long artistId);
 
+    /** The same profile, addressed by its public URL segment. */
+    ArtistResponse getArtistBySlug(String slug);
+
     ArtistResponse getLoggedInArtist();
 
     ArtistResponse updateArtistHourlyRate(double hourlyRate);

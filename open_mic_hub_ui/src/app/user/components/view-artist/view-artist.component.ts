@@ -68,14 +68,21 @@ export class ViewArtistComponent implements OnInit {
           this.booking = false;
         }),
         switchMap(params => {
-          const id = Number(params.get('id'));
-          this.artistId = Number.isNaN(id) ? null : id;
-          return this.http.get<any>(`${environment.baseUrl}/public/artists/${this.artistId}`);
+          // Either form works: the API has a numeric route and a slug route, told
+          // apart by a regex, so the raw parameter can go straight through. Old
+          // /artists/201 links keep resolving alongside /artists/the-velvet-club.
+          const handle = params.get('id') ?? '';
+          this.artistId = null;
+          return this.http.get<any>(
+            `${environment.baseUrl}/public/artists/${encodeURIComponent(handle)}`);
         })
       )
       .subscribe({
         next: (res: any) => {
           this.artist = res?.data ?? null;
+          // Reviews, similar artists and posts are all keyed by the numeric id,
+          // which the response carries whichever way the profile was addressed.
+          this.artistId = this.artist?.artistId ?? null;
           this.loading = false;
           this.loadAvailability();
           this.loadSimilar();

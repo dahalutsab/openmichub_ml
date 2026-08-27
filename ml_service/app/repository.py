@@ -40,6 +40,7 @@ booking_stats AS (
     GROUP BY artist_id
 )
 SELECT a.id                                   AS artist_id,
+       a.slug,
        a.stage_name,
        COALESCE(a.bio, '')                    AS bio,
        a.hourly_rate,

@@ -203,6 +203,7 @@ def similar_artists(artist_id: int, limit: int = 6) -> list[dict]:
                 FROM {schema}.artist_embedding WHERE artist_id = %(artist_id)s
             )
             SELECT e.artist_id,
+                   a.slug,
                    a.stage_name,
                    COALESCE(u.full_name, a.stage_name)  AS full_name,
                    u.profile                            AS profile_image,
@@ -225,13 +226,16 @@ def similar_artists(artist_id: int, limit: int = 6) -> list[dict]:
     return [
         {
             "artistId": row[0],
-            "stageName": row[1],
-            "fullName": row[2],
-            "profileImage": row[3],
-            "rating": float(row[4]),
-            "hourlyRate": float(row[5]) if row[5] is not None else None,
-            "city": row[6],
-            "similarity": round(1.0 - float(row[7]), 4),
+            # The public URL segment, so the "more like this" strip links the way
+            # every other artist link does rather than falling back to bare ids.
+            "slug": row[1],
+            "stageName": row[2],
+            "fullName": row[3],
+            "profileImage": row[4],
+            "rating": float(row[5]),
+            "hourlyRate": float(row[6]) if row[6] is not None else None,
+            "city": row[7],
+            "similarity": round(1.0 - float(row[8]), 4),
         }
         for row in rows
     ]

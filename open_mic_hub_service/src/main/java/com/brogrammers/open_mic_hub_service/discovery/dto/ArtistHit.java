@@ -20,6 +20,9 @@ public class ArtistHit {
     @JsonAlias("artist_id")
     private Long artistId;
 
+    /** Public URL segment. Prefer it over the id when building a link to the profile. */
+    private String slug;
+
     @JsonAlias("stage_name")
     private String stageName;
 
