@@ -1,56 +1,62 @@
+<!--
+  Built from the design tokens rather than raw palette colours. Every colour here resolves through
+  a CSS variable that is redefined for the dark theme, so the card follows the theme instead of
+  assuming a light one — an amber-50 panel on a dark dashboard is a white block with unreadable
+  text on it.
+-->
 <section class="omh-card mb-4 p-5" *ngIf="show()">
-  <div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h2 class="omh-display text-lg">Finish your profile</h2>
-      <p class="mt-0.5 text-sm text-muted">
+      <h2 class="omh-display text-lg text-ink">Finish your profile</h2>
+      <p class="mt-0.5 text-base text-muted">
         A complete profile is easier to find and quicker to trust.
       </p>
     </div>
 
-    <div class="flex items-center gap-3">
-      <div class="text-right">
-        <div class="omh-display text-2xl leading-none">{{ data()!.score }}%</div>
-        <div class="text-xs text-muted">complete</div>
-      </div>
+    <div class="text-right">
+      <div class="omh-display text-2xl leading-none"
+           [class]="data()!.bookable ? 'text-ink' : 'text-warning'">{{ data()!.score }}%</div>
+      <div class="text-xs text-muted">complete</div>
     </div>
   </div>
 
-  <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200"
+  <!-- The track is a surface, not a grey: on a dark card a fixed light grey reads as a filled bar. -->
+  <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-2"
        role="progressbar"
        [attr.aria-valuenow]="data()!.score" aria-valuemin="0" aria-valuemax="100"
        [attr.aria-label]="'Profile ' + data()!.score + ' percent complete'">
-    <div class="h-full rounded-full transition-all"
-         [class]="data()!.bookable ? 'bg-accent' : 'bg-amber-500'"
+    <div class="h-full rounded-full transition-all duration-500"
+         [class]="data()!.bookable ? 'bg-accent' : 'bg-warning'"
          [style.width.%]="data()!.score"></div>
   </div>
 
   <!--
-    The blocking item is separated out because it is not a matter of degree: without published
-    hours a booking request is refused outright, so this is not "less visible", it is "cannot be
-    booked".
+    The blocking item sits apart from the list because it is a different kind of gap: without
+    published hours a booking request is refused outright, so this is not "less visible" but
+    "cannot be booked", and a percentage alone would hide that.
   -->
   <a *ngIf="blocker() as item"
      [routerLink]="item.action"
-     class="mt-4 flex items-start gap-3 rounded-[10px] border border-amber-300 bg-amber-50 p-4 no-underline transition hover:border-amber-400">
-    <i class="bi bi-exclamation-triangle-fill mt-0.5 text-amber-600"></i>
+     class="omh-alert-warning mt-4 no-underline transition hover:border-warning/40">
+    <i class="bi bi-exclamation-triangle-fill mt-0.5 shrink-0"></i>
     <span class="flex-1">
-      <span class="block text-sm font-semibold text-ink">{{ item.label }}</span>
-      <span class="mt-1 block text-sm text-ink-soft">{{ item.hint }}</span>
-      <span class="mt-1.5 inline-block text-xs font-semibold uppercase tracking-wide text-amber-700">
+      <span class="block font-semibold text-ink">{{ item.label }}</span>
+      <span class="mt-1 block text-base text-ink-soft">{{ item.hint }}</span>
+      <span class="mt-1.5 inline-block text-micro font-semibold uppercase tracking-wide">
         You cannot be booked until this is done
       </span>
     </span>
-    <i class="bi bi-chevron-right mt-0.5 text-muted"></i>
+    <i class="bi bi-chevron-right mt-0.5 shrink-0 opacity-60"></i>
   </a>
 
   <ul class="mt-3 space-y-2" *ngIf="suggestions().length">
     <li *ngFor="let item of suggestions()">
       <a [routerLink]="item.action"
-         class="flex items-start gap-3 rounded-[10px] border border-gray-200 p-3.5 no-underline transition hover:border-gray-300 hover:bg-gray-50">
-        <i class="bi bi-circle mt-0.5 text-sm text-muted"></i>
+         class="flex items-start gap-3 rounded-card border border-line px-4 py-3 no-underline transition hover:border-ink/25 hover:bg-surface-2">
+        <i class="bi bi-circle mt-0.5 shrink-0 text-sm text-muted"></i>
         <span class="flex-1">
-          <span class="block text-sm font-medium text-ink">{{ item.label }}</span>
-          <span class="mt-0.5 block text-sm text-muted">{{ item.hint }}</span>
+          <span class="block text-base font-medium text-ink">{{ item.label }}</span>
+          <span class="mt-0.5 block text-base text-muted">{{ item.hint }}</span>
         </span>
         <span class="shrink-0 text-xs font-medium text-muted">+{{ item.weight }}%</span>
       </a>
