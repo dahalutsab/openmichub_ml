@@ -66,6 +66,11 @@ services:
       # Search and recommendations degrade to the plain listing when this is
       # unreachable, so the API does not depend on it to start.
       ML_SERVICE_URL: http://ml:8000
+      # Social sign-in. Both providers stay off until their credentials are set.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID:-}
+      FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET:-}
     ports:
       - "${API_PORT:-8181}:8181"
     volumes:

@@ -1,0 +1,10 @@
+<div class="flex min-h-[60vh] items-center justify-center px-4">
+  <div class="text-center">
+    <ng-container *ngIf="!error">
+      <div class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+           role="status" aria-label="Signing you in"></div>
+      <p class="text-sm text-gray-600">Signing you in&hellip;</p>
+    </ng-container>
+    <p *ngIf="error" class="text-sm text-red-600">{{ error }}</p>
+  </div>
+</div>

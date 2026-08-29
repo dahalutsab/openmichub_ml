@@ -1,5 +1,6 @@
 package com.brogrammers.open_mic_hub_service.user_management.user.repository;
 
+import com.brogrammers.open_mic_hub_service.security.oauth.AuthProvider;
 import com.brogrammers.open_mic_hub_service.user_management.user.entity.UserEntity;
 import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.Roles;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,9 @@ import java.util.Optional;
 @Repository
 public interface UserInfoRepository extends JpaRepository<UserEntity,Long> {
     Optional<UserEntity> findByEmailId(String emailId);
+
+    /** The account a social provider's subject id belongs to, if it has been seen before. */
+    Optional<UserEntity> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);
 
     Page<UserEntity> findAllByEmailIdNot(String emailId, Pageable pageable);
 

@@ -4,6 +4,7 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
+import { environment } from '../../environment/environment';
 
 @Component({
   selector: 'app-login',
@@ -13,6 +14,12 @@ import { ToastrService } from 'ngx-toastr';
 export class LoginComponent implements OnInit {
 
   readonly currentYear = new Date().getFullYear();
+
+  // The handshake starts at the backend, not at the provider: Spring builds the authorization URL,
+  // attaches the state and PKCE challenge, and redirects on. These are the paths it listens on.
+  readonly socialSignInEnabled = environment.socialSignIn;
+  readonly googleSignInUrl = `${environment.host}/oauth2/authorization/google`;
+  readonly facebookSignInUrl = `${environment.host}/oauth2/authorization/facebook`;
 
   loginError: boolean = false;
   loginForm: any;

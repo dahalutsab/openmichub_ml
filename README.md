@@ -115,6 +115,56 @@ genre match from a non-match is measured against the real catalogue by `training
 and fed back into the generator, so the ranker is at least fitted against an encoder as noisy as
 the one it will actually be given. See `ml_service/README.md` for the measurement.
 
+## Signing in
+
+Email and password, or Google or Facebook. Social sign-in is **off until you configure it**: with
+no credentials set the buttons stay hidden, the handshake endpoints refuse, and password login is
+untouched.
+
+### Turning it on
+
+Register an OAuth client with each provider you want, using these redirect URIs:
+
+```
+http://localhost:8181/login/oauth2/code/google
+http://localhost:8181/login/oauth2/code/facebook
+```
+
+| Provider | Where |
+|---|---|
+| Google | console.cloud.google.com -> APIs & Services -> Credentials -> OAuth client ID -> Web application |
+| Facebook | developers.facebook.com -> My Apps -> Create App -> Facebook Login -> Settings |
+
+Put the pairs in `.env`, then set `socialSignIn: true` in
+`open_mic_hub_ui/src/app/environment/environment.ts` so the buttons appear:
+
+```bash
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+FACEBOOK_CLIENT_ID=...
+FACEBOOK_CLIENT_SECRET=...
+```
+
+Set both halves of a pair or neither — a client id without its secret fails fast at startup rather
+than offering a button that cannot work. Facebook requires HTTPS for anyone outside your app's own
+test users, so localhost works for you and not for them.
+
+### What happens to the account
+
+A social sign-in creates an `ORGANIZER`, the same role self-registration creates, and marks the
+address verified because the provider already confirmed it. There is no password on the account,
+and a database constraint permits that only for provider-backed rows.
+
+Accounts are matched on the provider's own subject id rather than on the email address, so someone
+who changes their address at Google keeps their account here instead of silently acquiring a
+second one.
+
+If the address already belongs to a password account, the two are **linked** — but only when the
+provider states it has verified the address. Google reports this per-account and an unverified one
+is refused. Without that check, anyone who could set an arbitrary address on a provider account
+could take over an existing user here. An address already claimed by a *different* provider is
+refused outright rather than reassigned.
+
 ## Roles
 
 | Role | Can do |

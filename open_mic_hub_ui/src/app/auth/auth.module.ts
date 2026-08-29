@@ -6,6 +6,7 @@ import { RegisterComponent } from './register/register.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { OtpComponent } from './otp/otp.component';
+import { SocialComponent } from './social/social.component';
 
 
 @NgModule({
@@ -13,6 +14,7 @@ import { OtpComponent } from './otp/otp.component';
     LoginComponent,
     RegisterComponent,
     OtpComponent,
+    SocialComponent,
 
   ],
   imports: [

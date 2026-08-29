@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -45,7 +46,14 @@ public class SecurityConfig {
     private final JwtTokenDecoder jwtTokenDecoder;
     private final ObjectMapper objectMapper;
 
+    /**
+     * The application's chain.
+     *
+     * <p>Ordered after {@code OAuth2SecurityConfig}, which claims the two social sign-in handshake
+     * paths. Everything else — every API call, carrying a bearer token — is matched here.
+     */
     @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)

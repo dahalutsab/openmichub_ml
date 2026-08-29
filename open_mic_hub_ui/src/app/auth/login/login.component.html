@@ -103,6 +103,30 @@
           {{ isLoading ? 'Signing in…' : 'Sign in' }}
         </button>
 
+        <!--
+          Social sign-in. Plain anchors, not (click) handlers: this has to be a full page
+          navigation so the browser follows the redirect out to the provider and back. An
+          XHR would be blocked by the provider's CORS policy.
+        -->
+        <div class="flex items-center gap-3" *ngIf="socialSignInEnabled">
+          <span class="h-px flex-1 bg-gray-200"></span>
+          <span class="text-xs uppercase tracking-wide text-muted">or continue with</span>
+          <span class="h-px flex-1 bg-gray-200"></span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3" *ngIf="socialSignInEnabled">
+          <a [href]="googleSignInUrl"
+             class="flex items-center justify-center gap-2 rounded-[10px] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink no-underline transition hover:bg-gray-50">
+            <i class="bi bi-google text-base"></i>
+            Google
+          </a>
+          <a [href]="facebookSignInUrl"
+             class="flex items-center justify-center gap-2 rounded-[10px] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-ink no-underline transition hover:bg-gray-50">
+            <i class="bi bi-facebook text-base text-[#1877F2]"></i>
+            Facebook
+          </a>
+        </div>
+
         <p class="text-center text-sm text-muted">
           Don't have an account?
           <a routerLink="/auth/register" class="font-medium text-accent hover:underline">Sign up</a>

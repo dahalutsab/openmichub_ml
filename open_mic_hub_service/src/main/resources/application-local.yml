@@ -56,6 +56,26 @@ frontend:
   domain: ${server.host}:${frontend.port}
   forgot_password: /auth/reset-password
   verify_email: /auth/verify-email
+  # Where the browser lands after a social sign-in, carrying the token in the URL fragment.
+  oauth_redirect: /auth/social
+
+# Social sign-in. Blank means off: a provider is registered only when both of its values are
+# present, and with neither set the feature does not exist and the application boots unchanged.
+#
+# These are deliberately not `spring.security.oauth2.client.registration.*`. Spring Boot validates
+# that namespace eagerly and refuses to start on an empty client id, so declaring the providers
+# there with blank defaults would make the credentials mandatory rather than optional.
+#
+# Redirect URI to register with each provider:
+#   http://localhost:8181/login/oauth2/code/google
+#   http://localhost:8181/login/oauth2/code/facebook
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+  facebook:
+    client-id: ${FACEBOOK_CLIENT_ID:}
+    client-secret: ${FACEBOOK_CLIENT_SECRET:}
 
 otp:
   expiryInSeconds: 300 # OTP expiry time in seconds (5 minutes)

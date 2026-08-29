@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { OtpComponent } from './otp/otp.component';
+import { SocialComponent } from './social/social.component';
 
 const routes: Routes = [
     {
@@ -20,7 +21,10 @@ const routes: Routes = [
     path: 'register', component: RegisterComponent
   },
   
-{ path: 'verify-email', component: OtpComponent }
+{ path: 'verify-email', component: OtpComponent },
+
+  // Landing point for Google and Facebook sign-in; the backend redirects here.
+  { path: 'social', component: SocialComponent }
 
  
 
