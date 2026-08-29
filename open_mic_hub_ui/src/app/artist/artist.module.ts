@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ArtistRoutingModule } from './artist-routing.module';
 import { ArtistBaseComponent } from './components/artist-base/artist-base.component';
 import { ArtistDashboardComponent } from './components/artist-dashboard/artist-dashboard.component';
+import { ProfileCompletenessComponent } from './components/profile-completeness/profile-completeness.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { HeaderComponent } from './components/header/header.component';
 import { ArtistCalendarComponent } from './components/artist-calendar/artist-calendar.component';
@@ -37,6 +38,7 @@ import { MediaUrlPipe } from '../shared/media-url.pipe';
   declarations: [
     ArtistBaseComponent,
     ArtistDashboardComponent,
+    ProfileCompletenessComponent,
     ProfileComponent,
     HeaderComponent,
     ArtistCalendarComponent,

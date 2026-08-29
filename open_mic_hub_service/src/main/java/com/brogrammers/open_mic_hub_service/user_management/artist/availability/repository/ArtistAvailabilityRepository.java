@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -27,4 +28,13 @@ public interface ArtistAvailabilityRepository extends JpaRepository<ArtistAvaila
      */
     @EntityGraph(attributePaths = "availabilityTimes")
     Optional<ArtistAvailability> findByArtistAndDayOfWeek(Artist artist, DayOfWeek requestedDay);
+
+    /**
+     * Every weekday the artist has published hours for, with those hours loaded.
+     *
+     * <p>A day row with no times on it is not availability — nothing can be booked against it —
+     * so the checklist has to look at the times, not just the day.
+     */
+    @EntityGraph(attributePaths = "availabilityTimes")
+    List<ArtistAvailability> findAllByArtist(Artist artist);
 }

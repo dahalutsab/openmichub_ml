@@ -28,4 +28,7 @@ public interface PostRepository extends JpaRepository<Posts, Long> {
      */
     @EntityGraph(attributePaths = {"images", "artist", "artist.user"})
     Page<Posts> findByArtist_IdOrderByCreatedDateDesc(Long artistId, Pageable pageable);
+
+    /** How many posts this artist has published, for the profile checklist. */
+    long countByArtist_Id(Long artistId);
 }

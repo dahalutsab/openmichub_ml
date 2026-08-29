@@ -3,6 +3,7 @@ package com.brogrammers.open_mic_hub_service.user_management.artist.artist.contr
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
+import com.brogrammers.open_mic_hub_service.user_management.artist.completeness.ProfileCompletenessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import static com.brogrammers.open_mic_hub_service.common.constants.APIConstants
 @RequiredArgsConstructor
 public class ArtistController extends BaseController {
     private final ArtistService artistService;
+    private final ProfileCompletenessService profileCompletenessService;
 
     @PreAuthorize("hasRole('ARTIST')")
     @GetMapping
@@ -22,6 +24,21 @@ public class ArtistController extends BaseController {
         return successResponse(
             artistService.getLoggedInArtist(),
             "Fetched logged-in artist successfully."
+        );
+    }
+
+    /**
+     * What is still missing from this artist's profile, and why each item matters.
+     *
+     * <p>Weighted rather than a plain count of empty fields: an artist with no published
+     * availability cannot be booked at all, which is not the same kind of gap as a missing photo.
+     */
+    @PreAuthorize("hasRole('ARTIST')")
+    @GetMapping("/profile-completeness")
+    public ResponseEntity<GlobalApiResponse> getProfileCompleteness() {
+        return successResponse(
+            profileCompletenessService.forCurrentArtist(),
+            "Fetched profile completeness successfully."
         );
     }
 

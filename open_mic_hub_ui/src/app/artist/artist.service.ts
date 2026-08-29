@@ -39,6 +39,11 @@ rejectedBookings(bookingId: number): Observable<any> {
     return this.http.post(`${this.baseUrl}/artist/availability`, payload);
   }
 
+  /** What is still missing from this artist's profile, weighted by how much each item matters. */
+  getProfileCompleteness(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/artist/profile-completeness`);
+  }
+
   getArtist() {
     return this.http.get<any>(`${this.baseUrl}/user`);
   }

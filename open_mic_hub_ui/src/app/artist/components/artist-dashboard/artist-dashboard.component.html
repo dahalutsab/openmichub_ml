@@ -21,6 +21,10 @@
   </div>
 </div>
 
+<!-- Above the figures: what to do next matters more than last month's numbers when the
+     profile is not finished. It removes itself once it is. -->
+<app-profile-completeness />
+
 <div class="omh-alert-critical mb-4" *ngIf="error()">
   <i class="bi bi-exclamation-triangle mt-0.5"></i>
   <div class="flex-1">{{ error() }}</div>

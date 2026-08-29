@@ -201,6 +201,7 @@ What is covered, and why those parts:
 | `OAuth2AccountServiceTest` | Which account a social profile resolves to, including the linking guards that stop an unverified address taking over an existing user |
 | `OAuth2UserDetailsTest` | Google's OIDC claims versus Facebook's Graph fields, and that an absent verification flag never reads as verified |
 | `ProfileCompletionServiceTest` | The one-time setup answer, and that it stays one-time |
+| `ProfileCompletenessServiceTest` | The artist checklist: that availability alone decides bookability, and that a placeholder bio or a zero rate does not count as done |
 | `social.component.spec.ts` | The sign-in fragment, including the malformed shapes — an empty role list is refused rather than stored |
 | `complete-profile.component.spec.ts` | The submit guard and the payload it builds |
 | `login.component.social.spec.ts` | That only the providers the backend reports are offered |
@@ -210,6 +211,27 @@ a missing provider the first time the suite was executed, and one of them did no
 stopped the whole run. They prove only that a component can be constructed — thin, but that does
 catch a constructor asking for something its module never provides, which is a real way to break a
 lazy-loaded route. `src/app/testing/test-providers.ts` is what makes them cheap to keep.
+
+## Finishing an artist profile
+
+An artist's dashboard shows what is still missing, scored out of 100 and weighted by how much each
+item affects being booked rather than by how many fields are blank. `GET
+/api/v1/artist/profile-completeness` returns the list; the card disappears once everything is done.
+
+| | Weight | Why it is worth that much |
+|---|---|---|
+| Weekly availability | 25 | **Blocking.** A booking request is checked against the hours published for that weekday and refused when there are none, so an empty calendar means the artist cannot be booked at all — whatever else the profile says |
+| Styles performed | 20 | The strongest signal in search: organizers filter by it, and it carries the largest share of the ranking model's gain |
+| Bio | 15 | Search matches on meaning against the artist's own words, so a short or missing one gives it nothing to work with |
+| Hourly rate | 15 | Results are scored on how the rate fits the organizer's budget; zero reads as unstated, not as free |
+| Profile photo | 10 | First thing on every card and search result |
+| Location | 8 | Distance is part of the ranking, and organizers filter by city |
+| First post | 7 | What an organizer looks at once the profile has caught their eye |
+
+The availability item is separated in the UI rather than listed with the rest, because it is a
+different kind of gap: not "less visible" but "cannot be booked". The weights are a judgement about
+what gets someone booked, not a measurement, and they are stated in
+`ProfileCompletenessService` so they can be argued with.
 
 ## Roles
 
