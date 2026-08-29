@@ -83,12 +83,17 @@ browser sends one, and two things follow from that.
 half an hour, an unfiltered browse is ignored, and writing the row happens on another thread and
 can never fail a search. Nothing at all is recorded for a visitor who is not signed in.
 
-**The ranking uses it.** The ML service builds a taste profile per person — a preference vector
-over the artists they engaged with and the searches they typed, plus genre, city and price
-tendencies — and blends it into the ordering. A browse also *retrieves* against it, since
-re-ranking cannot promote an artist that retrieval never returned. Old events decay rather than
-falling out of a window, a typed query keeps most of the say over the results, and someone with
-almost no history gets the ordinary ranking rather than a guess.
+**The ranking uses it.** The ML service builds a taste profile per person and blends it into the
+ordering. Two things are tracked separately, because they answer different questions: what someone
+usually books, and what they are searching for this week. Averaging the two buries the second — an
+organizer with fifty bookings who searches for a DJ contributes one vector against fifty, so the
+search vanishes — so a browse retrieves from both, in a stated proportion, and scores them in the
+same proportion. Old events decay rather than falling out of a window, a typed query keeps most of
+the say over its own results, and someone with almost no history gets the ordinary ranking rather
+than a guess. One search is enough to shape what comes next; one profile view is not.
+
+Searching then browsing works immediately: the search is folded into the cached profile as it is
+served, rather than waiting for the next rebuild.
 
 Each ranked artist comes back with the reason it was raised — "you have booked them before",
 "you keep coming back to Jazz" — and the cards show it. `GET /users/{id}/taste` on the ML service
@@ -197,7 +202,7 @@ cd open_mic_hub_service && ./mvnw test
 # Frontend — 78 tests
 cd open_mic_hub_ui && CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless
 
-# ML — 19 tests, inside the running container
+# ML — 32 tests, inside the running container
 docker compose exec ml python -m pytest tests -q
 ```
 
@@ -227,7 +232,7 @@ What is covered, and why those parts:
 | `ProfileCompletionServiceTest` | The one-time setup answer, and that it stays one-time |
 | `ProfileCompletenessServiceTest` | The artist checklist: that availability alone decides bookability, and that a placeholder bio or a zero rate does not count as done |
 | `InteractionServiceImplTest` | What reaches the interaction log and what does not: an anonymous visitor, a blank query and an unfiltered browse are never recorded, a reloaded profile counts once, and a write that fails stays invisible to the person searching |
-| `test_personalization.py` (ML) | Recency decay, how a history turns into genre, city and price tendencies, the floor below which nobody is personalised, and that a stronger affinity reorders a list without overturning the model's ranking |
+| `test_personalization.py` (ML) | Recency decay, how a history turns into genre, city and price tendencies, the floor below which nobody is personalised, and that a stronger affinity reorders a list without overturning the model's ranking. Also the four ways a fresh search used to get lost: falling below the floor, being averaged into a long booking history, being scaled through the wrong cosine band, and arriving after the profile the next page reads had already been cached |
 | `social.component.spec.ts` | The sign-in fragment, including the malformed shapes — an empty role list is refused rather than stored |
 | `complete-profile.component.spec.ts` | The submit guard and the payload it builds |
 | `login.component.social.spec.ts` | That only the providers the backend reports are offered |

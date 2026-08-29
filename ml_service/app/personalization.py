@@ -17,7 +17,18 @@ What is read, and what each part is worth:
                   for *now*, which a months-old booking cannot say.
   browse filters  `user_interaction`. A stated genre or budget with no words.
 
-Three principles hold the rest of this module together.
+**Intent and taste are two different things, and are kept apart.** What someone
+booked over the last six months is a durable preference; what they typed into
+the search box ten minutes ago is what they are doing *right now*, and the two
+must not be averaged into one number. An organizer with twenty-eight bookings
+who searches for a DJ would otherwise see that search enter their profile at
+about two percent and vanish - which is precisely the complaint that produced
+this split. So there are two vectors: a taste vector from the artists they
+engaged with, and an intent vector from their recent searches, with a much
+shorter half-life. Retrieval draws on both, in a proportion that is stated
+rather than emergent.
+
+Four principles hold the rest of this module together.
 
 **Recency decays, it does not cut off.** An event's weight halves every
 `taste_half_life_days`. A cut-off would make the ranking jump on the day an
@@ -27,6 +38,19 @@ event aged out of the window; a decay moves it a little every day.
 weight, nothing is personalised at all and the caller gets the ranking it would
 have got before any of this existed. A taste profile built from two clicks is a
 guess wearing the costume of data.
+
+One search is the exception, and deliberately so: typing a sentence is a
+statement of what someone wants, where opening a profile is a glance. A single
+search is enough to shape what comes back next; a single profile view is not.
+
+**Retrieval draws from two pools rather than one blended vector.** A taste
+vector is an average of profile vectors; an intent vector is an average of query
+vectors, and query text sits systematically further from every profile than one
+profile sits from another. Averaging the two into a single vector and sorting by
+distance therefore hands the ranking to the taste side whatever share the code
+claims to give intent — the stated 60/40 quietly became something nearer 95/5.
+So each source retrieves against its own column, and the *share* is a share of
+the candidate slots, which is a thing that can be honoured exactly.
 
 **Personalisation adjusts, it does not decide.** The trained ranker still
 produces the ordering; this shifts it by at most `taste_alpha_*` of the final
@@ -40,7 +64,6 @@ and are served exactly as they were before.
 from __future__ import annotations
 
 import logging
-import math
 import threading
 import time
 from dataclasses import dataclass, field
@@ -50,7 +73,7 @@ import numpy as np
 
 from app.config import get_settings
 from app.db import connection
-from app.embedder import embed
+from app.embedder import embed, embed_one
 from app.features import price_fit
 from app.repository import fetch_artists
 
@@ -81,22 +104,60 @@ INTERACTION_WEIGHT = {
     "BROWSE": 0.25,
 }
 
-# How the affinity score divides up. These sum to 1, so affinity is on the same
-# 0-1 scale as the normalised model score it is blended with.
-W_TASTE_SIMILARITY = 0.35   # this artist against the profile as a whole
-W_GENRE = 0.25              # genres this person keeps returning to
-W_FAMILIARITY = 0.18        # they have booked or read this artist before
-W_BUDGET = 0.12             # what they usually pay
-W_CITY = 0.10               # where they usually book
+# What one search contributes to the *intent* vector, before its own faster
+# decay. Unrelated to the weights above, which are about durable taste: this
+# vector has nothing else in it, so the number only sets how fast repeated
+# searches for the same thing accumulate against the cap below.
+INTENT_WEIGHT = 1.0
+
+# Searching the same thing five times says more than searching it once, but not
+# five times more. Weight per distinct text stops here.
+MAX_INTENT_PER_TEXT = 3.0
+
+# How the affinity score divides up. The parts sum to 1, so affinity is on the
+# same 0-1 scale as the normalised model score it is blended with. Components
+# the person has given no signal for are dropped and the rest renormalised, so
+# nobody is scored against a preference they have never expressed.
+W_FAMILIARITY = 0.15        # they have booked or read this artist before
+W_BUDGET = 0.10             # what they usually pay
+W_CITY = 0.07               # where they usually book
+
+# What is left over is the question "does this artist fit this person", and it
+# is split between the two vectors by the same `taste_intent_share` that splits
+# the candidate pool. Deriving it rather than writing two sets of numbers is the
+# point: the first version had intent at 0.26 against a durable side of 0.42,
+# because taste was counted twice — once as a vector and again as genre
+# affinity — and a fresh search lost to a history it was supposed to outrank.
+W_PERSONAL = 1.0 - (W_FAMILIARITY + W_BUDGET + W_CITY)
+
+# Within the durable half, how much is the vector rather than the genre names.
+# Slightly under half: genre is the coarser signal and the more legible one, and
+# it is what the reason line can actually name.
+DURABLE_VECTOR_SPLIT = 0.45
+
+
+def _affinity_weights() -> tuple[float, float, float]:
+    """(intent, taste vector, genre), from the one share that governs both."""
+    share = get_settings().taste_intent_share
+    durable = W_PERSONAL * (1.0 - share)
+    return (W_PERSONAL * share,
+            durable * DURABLE_VECTOR_SPLIT,
+            durable * (1.0 - DURABLE_VECTOR_SPLIT))
 
 # Search texts embedded per profile. Recent and distinct; the tail of a long
 # history is already faint after decay and is not worth an encoder pass.
 MAX_QUERY_TEXTS = 6
 
 
-def _decay(age_days: float) -> float:
-    """Half weight every `taste_half_life_days`, and never quite zero."""
-    half_life = max(get_settings().taste_half_life_days, 1e-6)
+def _decay(age_days: float, half_life_days: float | None = None) -> float:
+    """Half weight every `half_life_days`, and never quite zero.
+
+    Two half-lives are in use. Taste decays slowly, because what someone books
+    says something durable about them. Intent decays fast, because a search is
+    about the event being planned this week and is stale long before the taste
+    is.
+    """
+    half_life = max(half_life_days or get_settings().taste_half_life_days, 1e-6)
     return float(0.5 ** (max(age_days, 0.0) / half_life))
 
 
@@ -117,10 +178,19 @@ class TasteProfile:
 
     user_id: int
 
-    #: Unit-length preference vector: the weighted centre of the artists this
-    #: person engaged with and the searches they typed. None when there were no
-    #: embeddings to build it from.
+    #: Unit-length taste vector: the weighted centre of the artists this person
+    #: booked or read. Durable. None when there were no embeddings to build it
+    #: from - a person who has only ever searched has intent and no taste.
     vector: np.ndarray | None = None
+
+    #: Unit-length intent vector, from recent search text alone and decayed on a
+    #: much shorter half-life. What they are looking for now, kept out of the
+    #: taste vector so a long booking history cannot drown a fresh search.
+    intent_vector: np.ndarray | None = None
+
+    #: Weight behind the intent vector, so a search noted mid-session can be
+    #: folded into it at the right strength. See `note_search`.
+    intent_signal: float = 0.0
 
     #: Genre and city names to a 0-1 share of this person's attention, scaled so
     #: the strongest is 1.0. Relative, deliberately: what matters is which genre
@@ -142,7 +212,15 @@ class TasteProfile:
 
     @property
     def usable(self) -> bool:
-        """Whether there is enough history to personalise from at all."""
+        """Whether there is enough history to personalise from at all.
+
+        One search clears this on its own. It is worth less than the floor as
+        durable taste - and it should be, a search is not a booking - but it is
+        an explicit statement of what someone wants, and ignoring it until they
+        have typed it three times is the wrong way round.
+        """
+        if self.intent_vector is not None:
+            return True
         return self.signal >= get_settings().taste_min_signal and (
             self.vector is not None or bool(self.genre_affinity)
         )
@@ -162,6 +240,8 @@ class TasteProfile:
             "bookedArtists": len(self.booked),
             "viewedArtists": len(self.viewed),
             "hasVector": self.vector is not None,
+            "hasIntent": self.intent_vector is not None,
+            "intentSignal": round(self.intent_signal, 3),
         }
 
 
@@ -217,6 +297,36 @@ def _embeddings(artist_ids: list[int]) -> dict[int, np.ndarray]:
     sql = _EMBEDDING_SQL.format(schema=get_settings().db_schema)
     return {int(row[0]): np.asarray(row[1], dtype=np.float32)
             for row in _rows(sql, {"ids": artist_ids}) if row[1] is not None}
+
+
+def _genre_vocabulary() -> list[str]:
+    """Every genre name, or nothing if the taxonomy cannot be read.
+
+    Read once per profile build rather than once per search row. It is cached in
+    the repository anyway, but a failure here should cost one log line rather
+    than one per row.
+    """
+    try:
+        from app.repository import genre_vocabulary
+
+        return genre_vocabulary()
+    except Exception:
+        log.exception("Could not read the genre taxonomy; searches will not credit a genre")
+        return []
+
+
+def _genre_in(text: str, vocabulary: list[str]) -> str | None:
+    """The genre named in a search, if one was, using the ranker's own matcher.
+
+    The same function `/search` uses to read a genre out of a query, so a search
+    contributes the genre it would have been ranked against rather than a second
+    opinion about what the words mean.
+    """
+    if not vocabulary:
+        return None
+    from app.ranker import infer_genre
+
+    return infer_genre(text, vocabulary)
 
 
 def _normalise_shares(weights: dict[str, float]) -> dict[str, float]:
@@ -277,8 +387,12 @@ def build_profile(user_id: int) -> TasteProfile:
         credit(city_weight, artist.get("city"), weight)
         rate_samples.append((float(artist["hourly_rate"]), weight))
 
+    intent_half_life = settings.taste_intent_half_life_days
+    vocabulary = _genre_vocabulary() if any(row[2] for row in interactions) else []
+
     for kind, artist_id, query, genre, city, _occasion, budget, created in interactions:
-        weight = INTERACTION_WEIGHT.get(kind, 0.2) * _decay(_age_days(created, now))
+        age = _age_days(created, now)
+        weight = INTERACTION_WEIGHT.get(kind, 0.2) * _decay(age)
         if weight <= 0:
             continue
         profile.signal += weight
@@ -295,8 +409,21 @@ def build_profile(user_id: int) -> TasteProfile:
         credit(city_weight, city, weight)
         if budget:
             rate_samples.append((float(budget), weight))
+
         if query and (text := query.strip()):
-            query_texts[text] = max(query_texts.get(text, 0.0), weight)
+            # Searches accumulate rather than taking the strongest: asking for
+            # the same thing four times is a firmer statement than asking once,
+            # up to a cap so a repeated query cannot become the whole profile.
+            intent = INTENT_WEIGHT * _decay(age, intent_half_life)
+            query_texts[text] = min(MAX_INTENT_PER_TEXT,
+                                    query_texts.get(text, 0.0) + intent)
+
+            # A typed query names a genre far more often than a filter does -
+            # "jazz trio for a dinner" states one as plainly as the dropdown -
+            # and the row has nowhere to put it, because the organizer picked no
+            # filter. Reading it back out is what lets a search contribute to
+            # genre affinity, and what puts a reason on the resulting cards.
+            credit(genre_weight, _genre_in(text, vocabulary), weight)
 
     for artist_id, status, _event_type, hourly_rate, happened_at in bookings:
         if artist_id is None:
@@ -321,51 +448,65 @@ def build_profile(user_id: int) -> TasteProfile:
         if total > 0:
             profile.typical_rate = sum(rate * weight for rate, weight in rate_samples) / total
 
-    profile.vector = _preference_vector(profile, query_texts)
+    profile.vector = _taste_vector(profile)
+    profile.intent_vector, profile.intent_signal = _intent_vector(profile.user_id, query_texts)
     return profile
 
 
-def _preference_vector(profile: TasteProfile, query_texts: dict[str, float]) -> np.ndarray | None:
-    """The weighted centre of what this person engaged with.
+def _centre(contributions: list[tuple[np.ndarray, float]]) -> np.ndarray | None:
+    """The weighted centre of some vectors, back on the unit sphere.
 
-    Artists they booked or read are represented by their profile vectors — the
-    ones with the stage name left out, because this is about what an act sounds
-    like rather than what it is called. Searches are represented by the text
-    itself, which is the only record of an intent that never reached a profile.
-
-    The result is re-normalised to unit length so a cosine against it means the
-    same thing whether it was built from two events or two hundred.
+    Re-normalised so a cosine against the result means the same thing whether it
+    was built from two events or two hundred.
     """
-    contributions: list[tuple[np.ndarray, float]] = []
-
-    engaged = dict(profile.viewed)
-    for artist_id, weight in profile.booked.items():
-        engaged[artist_id] = engaged.get(artist_id, 0.0) + weight
-
-    if engaged:
-        vectors = _embeddings(list(engaged))
-        contributions.extend((vector, engaged[artist_id])
-                             for artist_id, vector in vectors.items())
-
-    if query_texts:
-        recent = sorted(query_texts.items(), key=lambda kv: -kv[1])[:MAX_QUERY_TEXTS]
-        try:
-            encoded = embed([text for text, _ in recent])
-            contributions.extend((encoded[i], weight)
-                                 for i, (_, weight) in enumerate(recent))
-        except Exception:
-            # The encoder is optional here: the artist vectors alone still make
-            # a usable profile.
-            log.exception("Could not embed the search history for user %s", profile.user_id)
-
     if not contributions:
         return None
-
     stacked = np.vstack([vector for vector, _ in contributions])
     weights = np.array([weight for _, weight in contributions], dtype=np.float32)
     centre = (stacked * weights[:, None]).sum(axis=0)
     norm = float(np.linalg.norm(centre))
     return None if norm < 1e-9 else (centre / norm).astype(np.float32)
+
+
+def _taste_vector(profile: TasteProfile) -> np.ndarray | None:
+    """Where this person's engagement sits, as one direction.
+
+    Artists they booked or read, represented by their profile vectors — the ones
+    with the stage name left out, because this is about what an act sounds like
+    rather than what it is called. Searches are deliberately absent: they belong
+    to the intent vector, and averaging the two is what let a long history bury
+    a fresh search.
+    """
+    engaged = dict(profile.viewed)
+    for artist_id, weight in profile.booked.items():
+        engaged[artist_id] = engaged.get(artist_id, 0.0) + weight
+    if not engaged:
+        return None
+
+    vectors = _embeddings(list(engaged))
+    return _centre([(vector, engaged[artist_id]) for artist_id, vector in vectors.items()])
+
+
+def _intent_vector(user_id: int,
+                   query_texts: dict[str, float]) -> tuple[np.ndarray | None, float]:
+    """What this person has been searching for lately, as one direction.
+
+    Text rather than artists: a search that never reached a profile leaves no
+    other trace, and it is often the clearest thing anyone tells the platform.
+    """
+    if not query_texts:
+        return None, 0.0
+
+    recent = sorted(query_texts.items(), key=lambda kv: -kv[1])[:MAX_QUERY_TEXTS]
+    try:
+        encoded = embed([text for text, _ in recent])
+    except Exception:
+        # The encoder is optional here: the taste vector alone still ranks.
+        log.exception("Could not embed the search history for user %s", user_id)
+        return None, 0.0
+
+    weights = [weight for _, weight in recent]
+    return _centre(list(zip(encoded, weights))), float(sum(weights))
 
 
 # --------------------------------------------------------------------------- #
@@ -421,20 +562,45 @@ def forget(user_id: int | None = None) -> None:
 # Scoring
 # --------------------------------------------------------------------------- #
 
-def _taste_similarity(profile: TasteProfile, artist_id: int,
-                      vectors: dict[int, np.ndarray]) -> float | None:
-    """Cosine between the preference vector and this artist, on a 0-1 scale."""
-    if profile.vector is None:
+def _similarity_to(reference: np.ndarray | None, artist_id: int,
+                   vectors: dict[int, np.ndarray],
+                   band: tuple[float, float]) -> float | None:
+    """Cosine between one of the profile's vectors and this artist, on 0-1.
+
+    The band is a parameter because the two profile vectors live in different
+    parts of the cosine distribution, and using one scale for both is wrong in a
+    way that is invisible from the ranking. A taste vector is an average of
+    *profile* vectors and sits high against another profile; an intent vector is
+    an average of *query* vectors and sits lower against everything, the way any
+    typed query does. Scaled through the taste band, a search that matched an
+    artist perfectly scored about 0.2 and never earned a reason.
+
+    None means the observation is missing — no such vector, or no embedding for
+    that artist — rather than that the artist is a poor match. The caller drops
+    the component instead of scoring a zero against it.
+    """
+    if reference is None:
         return None
     vector = vectors.get(artist_id)
     if vector is None:
         return None
-    cosine = float(np.dot(profile.vector, vector))
-    settings = get_settings()
-    span = settings.taste_cos_high - settings.taste_cos_low
+    low, high = band
+    span = high - low
     if span <= 1e-9:
         return 0.5
-    return float(min(1.0, max(0.0, (cosine - settings.taste_cos_low) / span)))
+    cosine = float(np.dot(reference, vector))
+    return float(min(1.0, max(0.0, (cosine - low) / span)))
+
+
+def _taste_band() -> tuple[float, float]:
+    settings = get_settings()
+    return settings.taste_cos_low, settings.taste_cos_high
+
+
+def _intent_band() -> tuple[float, float]:
+    """The query-to-profile band, the same one `text_similarity` is scaled by."""
+    settings = get_settings()
+    return settings.similarity_cos_low, settings.similarity_cos_high
 
 
 def affinity(profile: TasteProfile, artist: dict,
@@ -449,11 +615,21 @@ def affinity(profile: TasteProfile, artist: dict,
     reasons: list[str] = []
     parts: list[tuple[float, float]] = []   # (weight, value)
 
-    similarity = _taste_similarity(profile, artist_id, vectors)
+    # Intent first: what someone searched for this week outranks what they
+    # booked last spring as an explanation of why an artist is in front of them.
+    w_intent, w_taste, w_genre = _affinity_weights()
+
+    intent = _similarity_to(profile.intent_vector, artist_id, vectors, _intent_band())
+    if intent is not None:
+        parts.append((w_intent, intent))
+        if intent >= 0.6:
+            reasons.append("Matches what you have been searching for")
+
+    similarity = _similarity_to(profile.vector, artist_id, vectors, _taste_band())
     if similarity is not None:
-        parts.append((W_TASTE_SIMILARITY, similarity))
+        parts.append((w_taste, similarity))
         if similarity >= 0.6:
-            reasons.append("Close to the acts you have been looking at")
+            reasons.append("Close to the acts you have booked and viewed")
 
     genres = [g for g in (artist.get("sub_genres") or []) + (artist.get("parent_genres") or []) if g]
     best_genre, genre_score = None, 0.0
@@ -462,7 +638,7 @@ def affinity(profile: TasteProfile, artist: dict,
         if share > genre_score:
             best_genre, genre_score = genre, share
     if profile.genre_affinity:
-        parts.append((W_GENRE, genre_score))
+        parts.append((w_genre, genre_score))
         if best_genre and genre_score >= 0.5:
             reasons.append(f"You keep coming back to {best_genre}")
 
@@ -531,7 +707,8 @@ def rerank(profile: TasteProfile, candidates: list[dict], scores: np.ndarray,
     if not candidates:
         return scores, []
 
-    vectors = _embeddings([int(c["artist_id"]) for c in candidates]) if profile.vector is not None else {}
+    needs_vectors = profile.vector is not None or profile.intent_vector is not None
+    vectors = _embeddings([int(c["artist_id"]) for c in candidates]) if needs_vectors else {}
     scored = [affinity(profile, candidate, vectors) for candidate in candidates]
     affinities = np.array([value for value, _ in scored], dtype=np.float64)
     reasons = [why for _, why in scored]
@@ -540,21 +717,62 @@ def rerank(profile: TasteProfile, candidates: list[dict], scores: np.ndarray,
     return blended, reasons
 
 
-def retrieval_vector(profile: TasteProfile, query_vector: np.ndarray | None) -> np.ndarray | None:
-    """The vector to retrieve candidates with on a browse surface.
+def query_space_vector(profile: TasteProfile,
+                       query_vector: np.ndarray | None) -> np.ndarray | None:
+    """What this person is asking for now: stated filters and recent searches.
 
-    Re-ranking can only reorder what retrieval found, so on a surface with no
-    words — where the alternative is a generic pool — the taste profile is
-    allowed into retrieval itself. Stated filters keep the majority share when
-    there are any: they are about this event, and the profile is about the
-    person.
+    Both are query text, so blending them is comparing like with like. The taste
+    vector is deliberately not in here — it is an average of profile vectors and
+    would take the comparison over, as the module notes explain; it retrieves
+    from its own share of the pool instead. Intent takes the larger share of
+    this side, because a search is what someone typed and a filter is what they
+    clicked past.
     """
-    if profile.vector is None:
+    if profile.intent_vector is None:
         return query_vector
     if query_vector is None:
-        return profile.vector
+        return profile.intent_vector
 
-    share = get_settings().taste_retrieval_share
-    blended = (1.0 - share) * np.asarray(query_vector, dtype=np.float32) + share * profile.vector
-    norm = float(np.linalg.norm(blended))
-    return query_vector if norm < 1e-9 else (blended / norm).astype(np.float32)
+    share = get_settings().taste_intent_share
+    return _centre([(profile.intent_vector, share), (query_vector, 1.0 - share)])
+
+
+def note_search(user_id: int | None, query_text: str | None) -> None:
+    """Folds a search into the cached profile the moment it is made.
+
+    The API records the search on its own thread and this service rebuilds a
+    profile at most every `taste_cache_ttl_seconds`, so without this the browse
+    surface someone lands on straight after searching still reflects the profile
+    they had *before* they searched. That is the gap between "I searched for a
+    DJ" and "it is not showing me DJs", and it closes here rather than by
+    rebuilding the profile on every request.
+
+    The row still reaches the database, and the next rebuild reads it: this
+    anticipates that read, it does not replace it.
+    """
+    if not user_id or not query_text or not query_text.strip():
+        return
+
+    with _cache_lock:
+        cached = _cache.get(user_id)
+    if cached is None:
+        # Nothing cached to update, and the next build will read the row anyway.
+        return
+
+    profile = cached[1]
+    try:
+        vector = np.asarray(embed_one(query_text.strip()), dtype=np.float32)
+    except Exception:
+        log.exception("Could not embed a search for user %s", user_id)
+        return
+
+    weight = min(MAX_INTENT_PER_TEXT, INTENT_WEIGHT)
+    if profile.intent_vector is None:
+        profile.intent_vector, profile.intent_signal = vector, weight
+        return
+
+    # An online update of the same weighted centre `_intent_vector` builds.
+    combined = _centre([(profile.intent_vector, profile.intent_signal), (vector, weight)])
+    if combined is not None:
+        profile.intent_vector = combined
+        profile.intent_signal += weight

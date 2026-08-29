@@ -9,6 +9,7 @@ filters, because those are requirements rather than preferences.
 from __future__ import annotations
 
 import logging
+from itertools import zip_longest
 
 from app.config import get_settings
 from app.db import connection
@@ -151,6 +152,52 @@ def candidates_near(retrieval_vector, limit: int | None = None,
         artist["similarity"] = hits.get(artist["artist_id"])
     artists.sort(key=lambda a: order.get(a["artist_id"], len(order)))
     return artists
+
+
+def merged_candidates(query_side, taste_side, *, taste_share: float,
+                      limit: int, city: str | None = None,
+                      similarity_vector=None) -> list[dict]:
+    """Candidates from two sources at once, in a stated proportion.
+
+    Personalised browse has two things to retrieve on and they do not live in
+    the same distribution: what the person is asking for now is query text, and
+    what they have engaged with is a centre of profile vectors. Averaging them
+    into one vector and sorting by distance does not give each the share it was
+    meant to have — profile vectors sit closer to every other profile vector
+    than query text ever does, so that side wins the comparison outright.
+
+    Splitting the pool by slot count instead makes the share exact: `taste_share`
+    of the candidates come from the person's history and the rest from what they
+    just asked for. The ranker then scores the union, and the merge order below
+    only decides who survives a tie in the pool, not who ends up on top.
+    """
+    if query_side is None and taste_side is None:
+        return []
+    if taste_side is None:
+        return candidates_near(query_side, limit=limit, city=city,
+                               similarity_vector=similarity_vector)
+    if query_side is None:
+        return candidates_near(taste_side, limit=limit, city=city,
+                               on_profile_vectors=True,
+                               similarity_vector=similarity_vector)
+
+    from_taste = max(1, round(limit * taste_share))
+    from_query = max(1, limit - from_taste)
+
+    asked_for = candidates_near(query_side, limit=from_query, city=city,
+                                similarity_vector=similarity_vector)
+    history = candidates_near(taste_side, limit=from_taste, city=city,
+                              on_profile_vectors=True,
+                              similarity_vector=similarity_vector)
+
+    # Interleaved, so an overlap between the two costs the tail of both rather
+    # than the whole of one.
+    merged: dict[int, dict] = {}
+    for pair in zip_longest(asked_for, history):
+        for candidate in pair:
+            if candidate is not None:
+                merged.setdefault(candidate["artist_id"], candidate)
+    return list(merged.values())
 
 
 def requirement_query(genre: str | None, event_type: str | None,

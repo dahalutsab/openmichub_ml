@@ -422,7 +422,7 @@ tracking beyond the interaction log the API now writes:
 | Booking request, not yet answered | `booking` | 0.6 |
 | Booking the artist declined | `booking` | 0.45 |
 | Profile view | `user_interaction` | 0.45 |
-| Search, with its text | `user_interaction` | 0.35 |
+| Search, with its text | `user_interaction` | 0.35 towards taste, and its own intent weight |
 | Browse with filters | `user_interaction` | 0.25 |
 
 Only signed-in visitors are recorded. An anonymous one is not identified across
@@ -432,35 +432,82 @@ requests and is served exactly as before.
 `taste_half_life_days` (45). A window with a hard edge would make someone's
 ranking jump on the day an old booking fell out of it.
 
-**What it builds.** One `TasteProfile` per person, cached for two minutes:
+**What it builds.** One `TasteProfile` per person, cached for a minute:
 
-- a **preference vector** — the weighted centre of the profile vectors of
-  artists they engaged with, plus the embedded text of their recent searches,
-  re-normalised to unit length
-- **genre and city affinities**, relative, scaled so the strongest is 1.0
+- a **taste vector** — the weighted centre of the profile vectors of the artists
+  they booked or read; durable, 45-day half-life
+- an **intent vector** — the weighted centre of their recent search *text*;
+  volatile, 7-day half-life
+- **genre and city affinities**, relative, scaled so the strongest is 1.0. A
+  genre named in the words of a search counts, read back out with the same
+  matcher `/search` uses, because the row has nowhere to put a genre the
+  organizer never selected from a dropdown
 - a **typical rate**, from rates actually paid and budgets actually typed
 - the artists they have **booked** and **read**
 
-**Where it applies.** Two places, deliberately different:
+**Intent and taste are kept apart on purpose.** They answer different questions —
+what someone usually wants, and what they are doing this week — and averaging
+them buries the second. An organizer with fifty bookings who searches for a DJ
+contributes one text vector against fifty artist vectors, which is about two
+percent of a combined centre and invisible in the result. Splitting them makes
+the balance a stated policy (`taste_intent_share`, 0.6 to intent) rather than an
+accident of how much history someone happens to have.
+
+**Where it applies.** Two surfaces, deliberately different:
 
 | Surface | Retrieval | Re-ranking |
 |---|---|---|
 | `/search` — words were typed | untouched | 25% of the final score |
-| `/recommend` — browse | taste vector, blended 35% with any stated filters | 40% |
+| `/recommend` — browse with filters | two pools: 35% taste, 65% filters+intent | 40% |
+| `/recommend` — browse with nothing stated | same split | 60% |
 
 Re-ranking alone cannot fix a browse surface: it can only reorder whatever pool
-retrieval returned, so on a surface with no words the taste vector is allowed
-into retrieval itself. A typed query is left alone — somebody who searches "dj
-for a club night" gets DJs, however much jazz they have booked.
+retrieval returned, so on a surface with no words the profile is allowed into
+retrieval itself. A typed query is left alone — somebody who searches "dj for a
+club night" gets DJs, however much jazz they have booked.
+
+The unfiltered browse gets the larger share because the ranker has nothing about
+*that request* to work with: with no genre, occasion or budget stated, every
+request-specific feature is withheld and what is left is rating and track
+record, identical for everyone. That is precisely where a person's own history
+should decide.
+
+**Retrieval draws two pools rather than blending two vectors**, and this is the
+part that is easy to get wrong. Profile-to-profile cosines sit higher than
+query-to-profile ones, so a single vector containing both a taste centre and a
+query direction is not split by the weights written on it — the taste side wins
+the distance comparison outright, and a stated 60/40 behaves like 95/5. Each
+source therefore retrieves against its own column and the share is a share of
+*slots*, which can be honoured exactly.
+
+The same distinction applies when scoring: taste similarity is scaled through
+the profile-to-profile band, intent similarity through the query-to-profile band
+that `text_similarity` already uses. Scaled through the wrong one, an artist who
+matched a search perfectly scored about 0.2 and never earned a reason.
 
 The model's score and the affinity are blended after mapping the score onto 0-1
 with a logistic on its standardised value. Min-max would pin the top candidate
 to exactly 1.0 and the last to 0.0 on every request, which throws away how far
 apart they actually were.
 
-**Below `taste_min_signal` (0.75 of decayed weight) nothing happens at all.** One
-profile view is worth 0.45; a person with a single click gets the ordinary
-ranking rather than a taste profile inferred from nothing.
+**Below `taste_min_signal` (0.75 of decayed weight) nothing happens at all — with
+one exception.** A profile view is worth 0.45, so a single click leaves someone
+with the ordinary ranking rather than a taste profile inferred from nothing. A
+single *search* does personalise, because typing a sentence is a statement of
+what you want where opening a page is a glance.
+
+**A search reaches the next page immediately.** The API records it on another
+thread and a profile is rebuilt at most once a minute, so the browse surface
+someone lands on straight after searching would otherwise still be reading the
+profile they had before they searched — which is exactly what "I searched for a
+DJ and it still isn't showing me DJs" looks like from the outside.
+`note_search` folds the query into the cached profile as the search is served.
+
+**Measured effect.** For two seeded organizers with forty to fifty bookings and
+no Electronic act among them, one search for "dj for a late night club event"
+moves Electronic acts from 0 of the top 10 to 3 and 4, and from 1 of the top 20
+to 6 and 7. Their booking history still shows, which is the intended balance
+rather than a shortfall: one search should bend the list, not replace it.
 
 **Reasons are emitted by the component that moved the score**, not written
 afterwards — "you have booked them before", "you keep coming back to Jazz",
@@ -468,8 +515,8 @@ afterwards — "you have booked them before", "you keep coming back to Jazz",
 
 **Calibration.** The cosine between a taste vector and an artist's profile
 vector runs higher and tighter than a query-to-profile cosine, so it has its own
-band (`taste_cos_low`/`taste_cos_high`), measured the same way and printed by the
-same command:
+band (`taste_cos_low`/`taste_cos_high`) while intent keeps the query band. Both
+are measured the same way and printed by the same command:
 
 ```bash
 docker compose exec ml python -m training.calibrate

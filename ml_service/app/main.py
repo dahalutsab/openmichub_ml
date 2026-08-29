@@ -150,6 +150,10 @@ def semantic_search(request: SearchRequest) -> SearchResponse:
         scores, reasons = personalization.rerank(
             profile, candidates, scores, get_settings().taste_alpha_search)
 
+    # Folded in after this search was ranked, not before: the query already
+    # decides these results, and what it shapes is where they go next.
+    personalization.note_search(request.user_id, request.query)
+
     hits = _to_hits(candidates, scores, reasons)[: request.limit]
     return SearchResponse(query=request.query, total=len(hits),
                           strategy=_strategy(profile), personalized=profile is not None,
@@ -171,18 +175,21 @@ def recommend(request: RecommendRequest) -> SearchResponse:
         request.genre, request.event_type, request.city)
     profile = personalization.profile_for(request.user_id)
 
-    if profile is not None and profile.vector is not None:
+    if profile is not None and (profile.vector is not None or profile.intent_vector is not None):
         # A browse has no words, so re-ranking alone would only reorder whatever
-        # generic pool retrieval happened to return. Here the taste profile is
-        # allowed into retrieval itself, blended with the stated filters when
-        # there are any. The reported similarity is still measured against the
-        # filters alone, so the ranker's `text_similarity` keeps meaning what it
-        # was calibrated to mean.
+        # generic pool retrieval happened to return. Here the profile is allowed
+        # into retrieval itself, from two sources: what this person is asking
+        # for now (stated filters and recent searches, both query text) and what
+        # they have engaged with (a centre of profile vectors). The reported
+        # similarity is still measured against the filters alone, so the ranker's
+        # `text_similarity` keeps meaning what it was calibrated to mean.
         query_vector = embed_one(pseudo_query) if pseudo_query else None
-        candidates = search.candidates_near(
-            personalization.retrieval_vector(profile, query_vector),
+        candidates = search.merged_candidates(
+            personalization.query_space_vector(profile, query_vector),
+            profile.vector,
+            taste_share=settings.taste_retrieval_share,
             limit=settings.candidate_pool_size, city=request.city,
-            on_profile_vectors=True, similarity_vector=query_vector)
+            similarity_vector=query_vector)
     elif pseudo_query:
         candidates = search.vector_candidates(
             pseudo_query, limit=settings.candidate_pool_size, city=request.city)
@@ -209,8 +216,13 @@ def recommend(request: RecommendRequest) -> SearchResponse:
 
     reasons = None
     if profile is not None:
-        scores, reasons = personalization.rerank(
-            profile, candidates, scores, settings.taste_alpha_browse)
+        # A browse that states nothing leaves the ranker with no feature about
+        # this request to order by, so the person's own history takes the larger
+        # share. Say what the event is and that reverses.
+        stated_something = bool(request.genre or request.event_type or request.budget_per_hour)
+        alpha = (settings.taste_alpha_browse if stated_something
+                 else settings.taste_alpha_browse_unfiltered)
+        scores, reasons = personalization.rerank(profile, candidates, scores, alpha)
 
     hits = _to_hits(candidates, scores, reasons)[: request.limit]
     return SearchResponse(total=len(hits), strategy=_strategy(profile),
