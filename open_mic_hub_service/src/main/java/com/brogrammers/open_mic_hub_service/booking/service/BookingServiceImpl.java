@@ -53,6 +53,7 @@ import reactor.core.scheduler.Schedulers;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -98,6 +99,11 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
+    /** Money, to the paisa. Half-hour slots make the raw product a repeating decimal. */
+    private static double round2(double amount) {
+        return BigDecimal.valueOf(amount).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
+    }
+
     @Override
     public BookingResponse bookArtist(BookingRequest bookingRequest) {
         BookingServiceImpl.log.info("Booking request received: {}", bookingRequest);
@@ -109,6 +115,17 @@ public class BookingServiceImpl implements BookingService {
         // Fetch the artist by ID
         Artist artist = artistRepository.findById(bookingRequest.getArtistId())
                 .orElseThrow(() -> new EntityNotFoundException("Artist not found with ID: " + bookingRequest.getArtistId()));
+
+        // A slot that ends before it starts passes every check below - it sits inside any
+        // availability window, and it overlaps nothing - and then prices at a negative number of
+        // hours, crediting the organizer. Reject it first.
+        if (!endTime.isAfter(startTime)) {
+            throw new IllegalArgumentException("The end time must be after the start time.");
+        }
+
+        if (bookingRequest.getEventDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("The event date cannot be in the past.");
+        }
 
         // Validate artist availability
         DayOfWeek requestedDay = bookingRequest.getEventDate().getDayOfWeek();
@@ -156,9 +173,10 @@ public class BookingServiceImpl implements BookingService {
         booking.setEventType(bookingRequest.getEventType());
         booking.setStatus(BookingStatus.PENDING); // Set initial status as PENDING
         booking.setUserId(loggedInUserUtil.getLoggedInUser());
-        // Calculate the duration in hours between startTime and endTime
-        long durationInHours = java.time.Duration.between(startTime, endTime).toHours();
-        booking.setTotalAmount(artist.getHourlyRate() * durationInHours);
+        // Priced on the exact duration. `toHours()` truncated: a 20:00-20:30 booking came out as
+        // zero hours and cost nothing at all, and 21:00-22:30 was charged as a single hour.
+        double durationInHours = java.time.Duration.between(startTime, endTime).toMinutes() / 60.0;
+        booking.setTotalAmount(round2(artist.getHourlyRate() * durationInHours));
         Booking savedBooking = bookingRepository.save(booking);
 
         BookingServiceImpl.log.info("Booking successfully created: {}", booking);

@@ -5,6 +5,7 @@ import com.brogrammers.open_mic_hub_service.booking.dto.request.WithDrawRequest;
 import com.brogrammers.open_mic_hub_service.booking.service.BookingService;
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.brogrammers.open_mic_hub_service.user_management.user.role.entity.UserRole;
@@ -22,7 +23,7 @@ public class BookingController extends BaseController {
 
     @PreAuthorize(UserRole.ANY_BOOKER)
     @PostMapping("/booking")
-    public ResponseEntity<GlobalApiResponse> bookArtist(@RequestBody BookingRequest bookingRequest) {
+    public ResponseEntity<GlobalApiResponse> bookArtist(@Valid @RequestBody BookingRequest bookingRequest) {
         log.info("Received booking request: {}", bookingRequest);
         return successResponse(bookingService.bookArtist(bookingRequest), "Artist booked successfully");
     }

@@ -23,7 +23,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -34,6 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @RestControllerAdvice
@@ -162,15 +168,73 @@ public class GlobalExceptionHandler extends BaseController {
         return errorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
     }
 
+    /*
+     * The four below all used to fall through to the catch-all and come back as
+     * 500 "An unexpected error occurred". A caller could not tell a mistake of their own from a
+     * broken server, and every malformed request landed in the logs looking like an incident.
+     */
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<GlobalErrorResponse> handleMissingParameter(MissingServletRequestParameterException exception) {
+        log.warn("Missing request parameter: {}", exception.getParameterName());
+        return errorResponse(HttpStatus.BAD_REQUEST,
+                "Required parameter '" + exception.getParameterName() + "' is missing.", exception);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<GlobalErrorResponse> handleUnreadableBody(HttpMessageNotReadableException exception) {
+        // The cause carries the useful detail - which field, and what could not be parsed - while
+        // the top-level message leaks the deserializer's class names.
+        Throwable cause = exception.getMostSpecificCause();
+        log.warn("Unreadable request body: {}", cause.getMessage());
+        return errorResponse(HttpStatus.BAD_REQUEST,
+                "The request body could not be read: " + cause.getMessage(), exception);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<GlobalErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        log.warn("Parameter type mismatch on '{}': {}", exception.getName(), exception.getValue());
+        return errorResponse(HttpStatus.BAD_REQUEST,
+                "Parameter '" + exception.getName() + "' has the wrong type.", exception);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ResponseEntity<GlobalErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException exception) {
+        log.warn("Method not supported: {}", exception.getMethod());
+        return errorResponse(HttpStatus.METHOD_NOT_ALLOWED,
+                "The " + exception.getMethod() + " method is not supported on this endpoint.", exception);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<GlobalErrorResponse> handleNoResourceFound(NoResourceFoundException exception) {
+        log.warn("No handler for {}", exception.getResourcePath());
+        return errorResponse(HttpStatus.NOT_FOUND, "No such endpoint.", exception);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<GlobalErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException exception) {
-        log.error(EXCEPTION, exception);
+        // A rejected field is the caller's mistake, not an incident. Logged at warn, and without
+        // the stack trace that used to accompany every mistyped form.
+        List<String> problems = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
+        log.warn("Rejected request: {}", problems);
 
-        // Get the validation message from the annotation
-        String validationMessage = Objects.requireNonNull(exception.getBindingResult().getFieldError()).getDefaultMessage();
+        // The first message is the headline; the rest are listed so a caller fixing a form does
+        // not have to submit it once per invalid field. `exception.getMessage()` is deliberately
+        // not used - it dumps the controller signature and every field's message codes.
+        String headline = exception.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(org.springframework.validation.FieldError::getDefaultMessage)
+                .orElse("The request is not valid.");
 
-        return errorResponse(HttpStatus.BAD_REQUEST, validationMessage, exception);
+        return errorResponse(HttpStatus.BAD_REQUEST, headline, String.join("; ", problems));
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)

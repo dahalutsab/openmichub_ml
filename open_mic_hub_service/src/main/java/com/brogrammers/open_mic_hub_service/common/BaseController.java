@@ -38,9 +38,20 @@ public class BaseController {
     }
 
     public ResponseEntity<GlobalErrorResponse> errorResponse(HttpStatus status, String message, Exception exception) {
-        GlobalErrorResponse response = new GlobalErrorResponse(LocalDateTime.now(), message, exception.getMessage(), status.name());
+        return errorResponse(status, message, exception.getMessage());
+    }
+
+    /**
+     * Error response with the detail spelled out rather than taken from the exception.
+     *
+     * <p>Some framework exceptions carry a message that is a debugging dump — bean validation's
+     * runs to a page of controller signatures, field codes and package names. That is not
+     * something to hand a client, so those handlers build their own detail and use this.
+     */
+    public ResponseEntity<GlobalErrorResponse> errorResponse(HttpStatus status, String message, String error) {
+        GlobalErrorResponse response = new GlobalErrorResponse(LocalDateTime.now(), message, error, status.name());
         response.setMessage(message);
-        response.setError(exception.getMessage());
+        response.setError(error);
         return ResponseEntity.status(status).body(response);
     }
 }
