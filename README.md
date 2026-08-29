@@ -73,6 +73,27 @@ They fall back to the plain artist listing if the ML service is unreachable, so 
 degrades rather than breaking. The response `strategy` field says which ranker produced the
 ordering.
 
+### Suggestions that know who is asking
+
+Both endpoints are public, but not anonymous. A signed-in visitor's token is honoured when the
+browser sends one, and two things follow from that.
+
+**What they do is recorded.** Searches, browse filters and opened profiles go to
+`user_interaction`; bookings were already in `booking`. Profile views are de-duplicated within
+half an hour, an unfiltered browse is ignored, and writing the row happens on another thread and
+can never fail a search. Nothing at all is recorded for a visitor who is not signed in.
+
+**The ranking uses it.** The ML service builds a taste profile per person — a preference vector
+over the artists they engaged with and the searches they typed, plus genre, city and price
+tendencies — and blends it into the ordering. A browse also *retrieves* against it, since
+re-ranking cannot promote an artist that retrieval never returned. Old events decay rather than
+falling out of a window, a typed query keeps most of the say over the results, and someone with
+almost no history gets the ordinary ranking rather than a guess.
+
+Each ranked artist comes back with the reason it was raised — "you have booked them before",
+"you keep coming back to Jazz" — and the cards show it. `GET /users/{id}/taste` on the ML service
+shows what the service believes about someone, including when it is too thin to use.
+
 To get a demo catalogue and trained models on a fresh install:
 
 ```bash
@@ -169,12 +190,15 @@ refused outright rather than reassigned.
 ## Tests
 
 ```bash
-# Backend — 66 tests
+# Backend — 85 tests
 docker compose up -d postgres                     # optional; see below
 cd open_mic_hub_service && ./mvnw test
 
-# Frontend — 68 tests
+# Frontend — 78 tests
 cd open_mic_hub_ui && CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless
+
+# ML — 19 tests, inside the running container
+docker compose exec ml python -m pytest tests -q
 ```
 
 The JDK on a current Arch box is newer than Lombok supports, so the backend suite usually runs in
@@ -202,6 +226,8 @@ What is covered, and why those parts:
 | `OAuth2UserDetailsTest` | Google's OIDC claims versus Facebook's Graph fields, and that an absent verification flag never reads as verified |
 | `ProfileCompletionServiceTest` | The one-time setup answer, and that it stays one-time |
 | `ProfileCompletenessServiceTest` | The artist checklist: that availability alone decides bookability, and that a placeholder bio or a zero rate does not count as done |
+| `InteractionServiceImplTest` | What reaches the interaction log and what does not: an anonymous visitor, a blank query and an unfiltered browse are never recorded, a reloaded profile counts once, and a write that fails stays invisible to the person searching |
+| `test_personalization.py` (ML) | Recency decay, how a history turns into genre, city and price tendencies, the floor below which nobody is personalised, and that a stronger affinity reorders a list without overturning the model's ranking |
 | `social.component.spec.ts` | The sign-in fragment, including the malformed shapes — an empty role list is refused rather than stored |
 | `complete-profile.component.spec.ts` | The submit guard and the payload it builds |
 | `login.component.social.spec.ts` | That only the providers the backend reports are offered |

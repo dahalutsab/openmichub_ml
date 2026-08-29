@@ -8,6 +8,9 @@ Two capabilities, behind one small API:
                     candidates by predicted fit for the specific request
   segmentation      k-means over the same embeddings, grouping the catalogue
                     into segments and answering "more artists like this one"
+  personalisation   a taste profile built from one person's own searches,
+                    profile views and past bookings, which adjusts the ranking
+                    for them and leaves it alone for everyone else
 
 Retrieval and ranking are deliberately separate. Vector similarity is good at
 "is this the right kind of artist" and blind to whether they are affordable,
@@ -22,9 +25,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
-from app import ranker, search, segments
+from app import personalization, ranker, search, segments
 from app.config import get_settings
 from app.db import connection, init_schema
+from app.embedder import embed_one
 from app.repository import fetch_artists, genre_vocabulary
 from app.schemas import (
     ArtistHit, HealthResponse, RebuildResponse, RecommendRequest,
@@ -56,9 +60,11 @@ app = FastAPI(
 )
 
 
-def _to_hits(candidates: list[dict], scores) -> list[ArtistHit]:
+def _to_hits(candidates: list[dict], scores,
+             reasons: list[list[str]] | None = None) -> list[ArtistHit]:
     hits = []
-    for artist, score in zip(candidates, scores):
+    for index, (artist, score) in enumerate(zip(candidates, scores)):
+        why = reasons[index] if reasons else []
         hits.append(ArtistHit(
             artist_id=artist["artist_id"],
             slug=artist.get("slug"),
@@ -74,9 +80,20 @@ def _to_hits(candidates: list[dict], scores) -> list[ArtistHit]:
             profile_image=artist.get("profile_image"),
             score=float(score),
             similarity=artist.get("similarity"),
+            # True for every hit in a personalised list, including the ones the
+            # profile had nothing particular to say about — the ordering around
+            # them still moved.
+            personalized=reasons is not None,
+            reasons=why,
         ))
     hits.sort(key=lambda hit: -hit.score)
     return hits
+
+
+def _strategy(profile) -> str:
+    """What produced this ordering, said plainly enough to print in the UI."""
+    base = ranker.model_info()["strategy"]
+    return f"{base} + your history" if profile is not None else base
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -123,9 +140,20 @@ def semantic_search(request: SearchRequest) -> SearchResponse:
         event_type=request.event_type, wanted_genre=wanted_genre,
     )
     scores = ranker.score(frame)
-    hits = _to_hits(candidates, scores)[: request.limit]
+
+    # Retrieval stays untouched here. Someone who has typed a sentence has just
+    # said what they want, and their history is context for ordering the results
+    # rather than grounds for returning different ones.
+    profile = personalization.profile_for(request.user_id)
+    reasons = None
+    if profile is not None:
+        scores, reasons = personalization.rerank(
+            profile, candidates, scores, get_settings().taste_alpha_search)
+
+    hits = _to_hits(candidates, scores, reasons)[: request.limit]
     return SearchResponse(query=request.query, total=len(hits),
-                          strategy=ranker.model_info()["strategy"], results=hits)
+                          strategy=_strategy(profile), personalized=profile is not None,
+                          results=hits)
 
 
 @app.post("/recommend", response_model=SearchResponse)
@@ -141,8 +169,21 @@ def recommend(request: RecommendRequest) -> SearchResponse:
     settings = get_settings()
     pseudo_query = search.requirement_query(
         request.genre, request.event_type, request.city)
+    profile = personalization.profile_for(request.user_id)
 
-    if pseudo_query:
+    if profile is not None and profile.vector is not None:
+        # A browse has no words, so re-ranking alone would only reorder whatever
+        # generic pool retrieval happened to return. Here the taste profile is
+        # allowed into retrieval itself, blended with the stated filters when
+        # there are any. The reported similarity is still measured against the
+        # filters alone, so the ranker's `text_similarity` keeps meaning what it
+        # was calibrated to mean.
+        query_vector = embed_one(pseudo_query) if pseudo_query else None
+        candidates = search.candidates_near(
+            personalization.retrieval_vector(profile, query_vector),
+            limit=settings.candidate_pool_size, city=request.city,
+            on_profile_vectors=True, similarity_vector=query_vector)
+    elif pseudo_query:
         candidates = search.vector_candidates(
             pseudo_query, limit=settings.candidate_pool_size, city=request.city)
     else:
@@ -157,15 +198,23 @@ def recommend(request: RecommendRequest) -> SearchResponse:
                           if (a.get("city") or "").strip().lower() == wanted]
 
     if not candidates:
-        return SearchResponse(total=0, strategy=ranker.model_info()["strategy"], results=[])
+        return SearchResponse(total=0, strategy=_strategy(profile),
+                              personalized=profile is not None, results=[])
 
     frame = ranker.build_candidate_frame(
         candidates, city=request.city, budget_per_hour=request.budget_per_hour,
         event_type=request.event_type, wanted_genre=request.genre,
     )
     scores = ranker.score(frame)
-    hits = _to_hits(candidates, scores)[: request.limit]
-    return SearchResponse(total=len(hits), strategy=ranker.model_info()["strategy"], results=hits)
+
+    reasons = None
+    if profile is not None:
+        scores, reasons = personalization.rerank(
+            profile, candidates, scores, settings.taste_alpha_browse)
+
+    hits = _to_hits(candidates, scores, reasons)[: request.limit]
+    return SearchResponse(total=len(hits), strategy=_strategy(profile),
+                          personalized=profile is not None, results=hits)
 
 
 @app.post("/embeddings/rebuild", response_model=RebuildResponse)
@@ -270,6 +319,17 @@ def list_segments() -> dict:
 def segments_report() -> dict:
     """Full report, including the metric sweep across every k considered."""
     return segments.report()
+
+
+@app.get("/users/{user_id}/taste")
+def user_taste(user_id: int) -> dict:
+    """What the service believes about one person, and whether it is enough to use.
+
+    Built fresh rather than read from the cache, and returned even when it is too
+    thin to personalise from — the point is to be able to check the input to a
+    ranking rather than infer it from the ranking.
+    """
+    return personalization.build_profile(user_id).describe()
 
 
 @app.get("/artists/{artist_id}/segment")

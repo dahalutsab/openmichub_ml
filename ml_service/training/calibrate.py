@@ -19,6 +19,13 @@ against every artist, and split the cosines by whether the artist actually plays
 that genre. The gap between those two distributions is the encoder's real
 discriminability.
 
+A third number is measured the same way for personalisation. A taste vector is
+built out of *profile* vectors rather than query text, and profile-to-profile
+cosines sit higher and tighter than query-to-profile ones — feeding them through
+the query band would report almost every artist as a strong personal match. So
+the same split is run over artist pairs: artists who share a parent genre
+against artists who do not.
+
     docker compose exec ml python -m training.calibrate
 
 Prints the settings to paste into `app/config.py`. Re-run after changing
@@ -107,6 +114,54 @@ def measure() -> dict:
     }
 
 
+def measure_taste() -> dict:
+    """The band for cosines between two profile vectors.
+
+    Split by whether a pair of artists share a parent genre, which is the same
+    question personalisation asks of a taste vector: does this artist belong
+    with the ones this person has been engaging with?
+    """
+    from app.embedder import embed
+    from app.repository import fetch_artists, profile_document
+
+    artists = fetch_artists()
+    if len(artists) < 20:
+        raise RuntimeError(f"Only {len(artists)} artists; too few to calibrate against.")
+
+    vectors = embed([profile_document(a) for a in artists])
+    parents = [frozenset(a.get("parent_genres") or []) for a in artists]
+
+    # Unit vectors, so the Gram matrix is the cosine matrix. Only the upper
+    # triangle: a pair is one observation, and an artist against themselves is
+    # a 1.0 that means nothing.
+    cosines = vectors @ vectors.T
+    rows, cols = np.triu_indices(len(artists), k=1)
+    shared = np.array([bool(parents[i] & parents[j]) for i, j in zip(rows, cols)])
+    pair_cosines = cosines[rows, cols]
+
+    match, non_match = pair_cosines[shared], pair_cosines[~shared]
+    if match.size < 10 or non_match.size < 10:
+        raise RuntimeError("Not enough artist pairs on either side to calibrate against.")
+
+    separation = float(match.mean() - non_match.mean())
+    if separation <= 1e-6:
+        raise RuntimeError(
+            "Profile vectors do not separate artists who share a genre from those who do not."
+        )
+
+    scale = (TARGET_MATCH_MEAN - TARGET_NONMATCH_MEAN) / separation
+    low = float(non_match.mean() - TARGET_NONMATCH_MEAN / scale)
+
+    return {
+        "pairs": int(pair_cosines.size),
+        "match_mean": float(match.mean()),
+        "non_match_mean": float(non_match.mean()),
+        "separation": separation,
+        "taste_cos_low": low,
+        "taste_cos_high": float(low + 1.0 / scale),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Measure the encoder's similarity calibration.")
     parser.parse_args()
@@ -124,6 +179,17 @@ def main() -> None:
     print(f"    similarity_cos_low: float = {result['similarity_cos_low']:.4f}")
     print(f"    similarity_cos_high: float = {result['similarity_cos_high']:.4f}")
     print(f"    similarity_noise_sd: float = {result['similarity_noise_sd']:.3f}")
+
+    taste = measure_taste()
+    print()
+    print(f"artist pairs       {taste['pairs']:,}")
+    print(f"shared genre       mean {taste['match_mean']:.4f}")
+    print(f"no shared genre    mean {taste['non_match_mean']:.4f}")
+    print(f"separation         {taste['separation']:.4f}")
+    print()
+    print("Paste into app/config.py:")
+    print(f"    taste_cos_low: float = {taste['taste_cos_low']:.4f}")
+    print(f"    taste_cos_high: float = {taste['taste_cos_high']:.4f}")
 
 
 if __name__ == "__main__":

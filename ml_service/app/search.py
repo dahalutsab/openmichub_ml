@@ -73,11 +73,44 @@ def vector_candidates(query_text: str, limit: int | None = None,
     ranker can use closeness as one signal among several rather than as the
     final answer.
     """
+    query_vector = embed_one(query_text)
+    return candidates_near(query_vector, limit=limit, city=city,
+                           max_hourly_rate=max_hourly_rate,
+                           similarity_vector=query_vector)
+
+
+def candidates_near(retrieval_vector, limit: int | None = None,
+                    city: str | None = None,
+                    max_hourly_rate: float | None = None,
+                    *, on_profile_vectors: bool = False,
+                    similarity_vector=None) -> list[dict]:
+    """The same retrieval, from a vector that was not necessarily typed.
+
+    Split out because a browse surface has no words to embed: personalisation
+    retrieves against a taste vector built from what someone has been doing,
+    which is the only way a preference can reach the candidate pool at all —
+    re-ranking cannot promote an artist that retrieval never returned.
+
+    Two vectors, because they answer different questions. `retrieval_vector`
+    decides *which* artists come back. `similarity_vector` is what the reported
+    cosine is measured against, and it is the query vector or nothing: that
+    number becomes the ranker's `text_similarity`, which was calibrated on
+    query-to-profile cosines, and quietly handing it the distance to a taste
+    vector instead would feed the model a feature that no longer means what it
+    was trained on. A browse with no words reports no similarity at all, which
+    the ranker already handles as a withheld signal.
+
+    `on_profile_vectors` picks the column to search. A taste vector is built
+    from profile vectors — the ones with the stage name left out — so it is
+    matched against those; a typed query is matched against the search vectors,
+    which include the name, because looking an act up by name has to work.
+    """
     settings = get_settings()
     limit = limit or settings.candidate_pool_size
-    query_vector = embed_one(query_text)
+    column = ("COALESCE(ae.profile_embedding, ae.embedding)" if on_profile_vectors
+              else "ae.embedding")
 
-    filters, params = [], {"query_vector": query_vector, "limit": limit}
+    filters, params = [], {"retrieval_vector": retrieval_vector, "limit": limit}
     if city:
         filters.append("LOWER(u.location) = LOWER(%(city)s)")
         params["city"] = city
@@ -86,28 +119,37 @@ def vector_candidates(query_text: str, limit: int | None = None,
         params["max_rate"] = max_hourly_rate
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
 
+    if similarity_vector is None:
+        similarity = "NULL::float"
+    else:
+        similarity = "1 - (ae.embedding <=> %(similarity_vector)s)"
+        params["similarity_vector"] = similarity_vector
+
     sql = f"""
         SELECT ae.artist_id,
-               1 - (ae.embedding <=> %(query_vector)s) AS similarity
-        FROM {get_settings().db_schema}.artist_embedding ae
+               {similarity} AS similarity
+        FROM {settings.db_schema}.artist_embedding ae
         JOIN artists a ON a.id = ae.artist_id
         LEFT JOIN users u ON u.id = a.user_id
         {where}
-        ORDER BY ae.embedding <=> %(query_vector)s
+        ORDER BY {column} <=> %(retrieval_vector)s
         LIMIT %(limit)s
     """
 
     with connection() as conn, conn.cursor() as cur:
         cur.execute(sql, params)
-        hits = {row[0]: float(row[1]) for row in cur.fetchall()}
+        # Retrieval order is kept: it is the answer to "who is closest", and on a
+        # personalised browse it is the only place the taste vector shows up.
+        hits = {row[0]: (None if row[1] is None else float(row[1])) for row in cur.fetchall()}
 
     if not hits:
         return []
 
+    order = {artist_id: position for position, artist_id in enumerate(hits)}
     artists = fetch_artists(list(hits))
     for artist in artists:
-        artist["similarity"] = hits.get(artist["artist_id"], 0.0)
-    artists.sort(key=lambda a: -a["similarity"])
+        artist["similarity"] = hits.get(artist["artist_id"])
+    artists.sort(key=lambda a: order.get(a["artist_id"], len(order)))
     return artists
 
 

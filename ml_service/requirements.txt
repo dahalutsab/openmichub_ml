@@ -19,3 +19,8 @@ numpy==2.2.1
 pandas==2.2.3
 scikit-learn==1.6.1
 joblib==1.4.2
+
+# Tests. Installed in the image so the suite runs in the same interpreter and
+# against the same versions the service runs on:
+#     docker compose exec ml python -m pytest tests -q
+pytest==8.3.4

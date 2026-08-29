@@ -13,6 +13,9 @@ class SearchRequest(BaseModel):
     budget_per_hour: float | None = Field(None, gt=0)
     genre: str | None = Field(None, description="Preferred genre or sub-genre")
     limit: int = Field(20, ge=1, le=100)
+    user_id: int | None = Field(
+        None, description="Who is asking. Personalises the ranking from their own history; "
+                          "absent for an anonymous visitor, who is ranked as before.")
 
 
 class RecommendRequest(BaseModel):
@@ -23,6 +26,7 @@ class RecommendRequest(BaseModel):
     budget_per_hour: float | None = Field(None, gt=0)
     genre: str | None = None
     limit: int = Field(20, ge=1, le=100)
+    user_id: int | None = None
 
 
 class ArtistHit(BaseModel):
@@ -44,11 +48,23 @@ class ArtistHit(BaseModel):
     score: float = Field(..., description="Ranking score; higher is better")
     similarity: float | None = Field(None, description="Cosine similarity to the query text")
 
+    personalized: bool = Field(
+        False, description="Whether this artist's position took the caller's own history "
+                           "into account")
+    reasons: list[str] = Field(
+        default_factory=list,
+        description="Why this artist was raised for this person, in their own terms. Empty "
+                    "when the ranking was not personalised, and never invented: each line "
+                    "comes from a signal that actually moved the score.")
+
 
 class SearchResponse(BaseModel):
     query: str | None = None
     total: int
     strategy: str = Field(..., description="Which ranker produced the ordering")
+    personalized: bool = Field(
+        False, description="Whether the caller's own history was used. False for an anonymous "
+                           "visitor and for anyone whose history is still too thin to use.")
     results: list[ArtistHit]
 
 

@@ -26,4 +26,13 @@ public class DiscoveryRequest {
 
     private String genre;
     private Integer limit;
+
+    /**
+     * Who is asking, when that is known.
+     *
+     * <p>Null for an anonymous visitor, and the ML service ranks exactly as it did before when it
+     * is. When it is set, the ranking is personalised from that person's own history.
+     */
+    @JsonProperty("user_id")
+    private Long userId;
 }

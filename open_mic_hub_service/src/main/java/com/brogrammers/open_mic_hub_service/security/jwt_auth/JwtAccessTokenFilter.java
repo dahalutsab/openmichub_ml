@@ -46,51 +46,79 @@ public class JwtAccessTokenFilter extends OncePerRequestFilter {
 //        logRequestDetails(request);
 
         String requestURI = request.getRequestURI();
-        if (isWhitelisted(request)) {
-            log.info("Skipping JWT filter for: {}", requestURI);
+        if (requestURI.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (requestURI.startsWith("/ws")) {
+        if (isWhitelisted(request)) {
+            // Public, but not necessarily anonymous.
+            //
+            // These paths never require a token and this filter used to stop here, which meant a
+            // signed-in person browsing the public pages arrived at the controller as nobody. That
+            // is fine for reading an artist profile and wrong for everything that wants to know
+            // who is asking - personalised ranking, and recording what someone looked at.
+            //
+            // So a token that happens to be there is honoured, and one that is absent, expired or
+            // forged is ignored rather than refused: the endpoint is public, and a stale token in
+            // an old tab must not turn browsing into a 401.
+            try {
+                authenticate(request);
+            } catch (Exception e) {
+                log.debug("[JwtAccessTokenFilter] Ignoring an unusable token on the public path {}: {}",
+                        requestURI, e.getMessage());
+            }
             filterChain.doFilter(request, response);
             return;
         }
 
         log.info("[JwtAccessTokenFilter] Filtering request: {}", requestURI);
 
-        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.error("[JwtAccessTokenFilter] Invalid or missing Authorization header");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        final String token = authHeader.substring(7);
-
         try {
-            // Decrypt AND verify the signature. Decryption alone would let anyone holding the
-            // public key mint a token for any subject.
-            JWTClaimsSet claims = jwtTokenDecoder.decodeAndVerify(token);
-
-            final String userName = jwtTokenUtils.getUserName(claims);
-            if (!userName.isEmpty() && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = jwtTokenUtils.userDetails(userName);
-                if (jwtTokenUtils.isTokenValid(claims, userDetails)) {
-                    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                    UsernamePasswordAuthenticationToken createdToken =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    createdToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    securityContext.setAuthentication(createdToken);
-                    SecurityContextHolder.setContext(securityContext);
-                }
-            }
+            authenticate(request);
         } catch (JwtTokenDecoder.InvalidAccessTokenException e) {
             log.warn("[JwtAccessTokenFilter] {}", e.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Puts the bearer token's user into the security context, if there is a usable one.
+     *
+     * <p>Does nothing when no bearer token is present. A token that is present but not valid raises
+     * {@link JwtTokenDecoder.InvalidAccessTokenException}, which a protected path turns into a 401
+     * and a public path ignores.
+     */
+    private void authenticate(HttpServletRequest request) {
+        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return;
+        }
+
+        // Decrypt AND verify the signature. Decryption alone would let anyone holding the
+        // public key mint a token for any subject.
+        JWTClaimsSet claims = jwtTokenDecoder.decodeAndVerify(authHeader.substring(7));
+
+        final String userName = jwtTokenUtils.getUserName(claims);
+        if (userName.isEmpty() || isAlreadyAuthenticated()) {
+            return;
+        }
+
+        UserDetails userDetails = jwtTokenUtils.userDetails(userName);
+        if (jwtTokenUtils.isTokenValid(claims, userDetails)) {
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            UsernamePasswordAuthenticationToken createdToken =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            createdToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            securityContext.setAuthentication(createdToken);
+            SecurityContextHolder.setContext(securityContext);
+        }
+    }
+
+    private boolean isAlreadyAuthenticated() {
+        return SecurityContextHolder.getContext().getAuthentication() != null;
     }
 
     /**

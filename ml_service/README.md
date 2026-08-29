@@ -10,6 +10,7 @@ first.
 | Similar artists | Real catalogue | No — nearest neighbours over those vectors |
 | **Artist segmentation** | **Real catalogue** | **Yes** — k-means fitted on the live catalogue |
 | **Search ranker** | **Synthetic** | Yes, but on simulated preferences |
+| Personalisation | Real user history | No — weighted aggregation, no fitted parameters |
 
 The ranker is a real learned model — it fits weights, it is validated on a
 held-out split, it beats every baseline it is measured against. What it has
@@ -406,6 +407,82 @@ else, so this is a sequential scan. Exact and instant at 300 rows. Past roughly
 
 ---
 
+## 5. Personalisation
+
+Everything above ranks a *request*. Two people planning the same event get the
+same list, however differently they have behaved on the platform. This is the
+part that reads the person.
+
+**What it reads.** Four sources, all already on the platform, none of them new
+tracking beyond the interaction log the API now writes:
+
+| Source | Table | Weight before decay |
+|---|---|---|
+| Confirmed or completed booking | `booking` | 1.0 |
+| Booking request, not yet answered | `booking` | 0.6 |
+| Booking the artist declined | `booking` | 0.45 |
+| Profile view | `user_interaction` | 0.45 |
+| Search, with its text | `user_interaction` | 0.35 |
+| Browse with filters | `user_interaction` | 0.25 |
+
+Only signed-in visitors are recorded. An anonymous one is not identified across
+requests and is served exactly as before.
+
+**Recency decays rather than cutting off.** Every event halves in weight each
+`taste_half_life_days` (45). A window with a hard edge would make someone's
+ranking jump on the day an old booking fell out of it.
+
+**What it builds.** One `TasteProfile` per person, cached for two minutes:
+
+- a **preference vector** — the weighted centre of the profile vectors of
+  artists they engaged with, plus the embedded text of their recent searches,
+  re-normalised to unit length
+- **genre and city affinities**, relative, scaled so the strongest is 1.0
+- a **typical rate**, from rates actually paid and budgets actually typed
+- the artists they have **booked** and **read**
+
+**Where it applies.** Two places, deliberately different:
+
+| Surface | Retrieval | Re-ranking |
+|---|---|---|
+| `/search` — words were typed | untouched | 25% of the final score |
+| `/recommend` — browse | taste vector, blended 35% with any stated filters | 40% |
+
+Re-ranking alone cannot fix a browse surface: it can only reorder whatever pool
+retrieval returned, so on a surface with no words the taste vector is allowed
+into retrieval itself. A typed query is left alone — somebody who searches "dj
+for a club night" gets DJs, however much jazz they have booked.
+
+The model's score and the affinity are blended after mapping the score onto 0-1
+with a logistic on its standardised value. Min-max would pin the top candidate
+to exactly 1.0 and the last to 0.0 on every request, which throws away how far
+apart they actually were.
+
+**Below `taste_min_signal` (0.75 of decayed weight) nothing happens at all.** One
+profile view is worth 0.45; a person with a single click gets the ordinary
+ranking rather than a taste profile inferred from nothing.
+
+**Reasons are emitted by the component that moved the score**, not written
+afterwards — "you have booked them before", "you keep coming back to Jazz",
+"around what you usually pay". At most two per artist reach the card.
+
+**Calibration.** The cosine between a taste vector and an artist's profile
+vector runs higher and tighter than a query-to-profile cosine, so it has its own
+band (`taste_cos_low`/`taste_cos_high`), measured the same way and printed by the
+same command:
+
+```bash
+docker compose exec ml python -m training.calibrate
+```
+
+**Not a trained model.** Nothing here is fitted. The weights above are a stated
+policy about what a booking is worth relative to a click, and they are in one
+place — `app/personalization.py` — precisely so they can be argued with. What
+would make this learned is the same missing ingredient the ranker needs: an
+impression log with positions and clicks.
+
+---
+
 ## Endpoints
 
 | Method | Path | Purpose |
@@ -420,6 +497,11 @@ else, so this is a sequential scan. Exact and instant at 300 rows. Past roughly
 | GET | `/segments`, `/segments/report` | Segments and their metrics |
 | GET | `/artists/{id}/segment` | One artist's segment |
 | GET | `/artists/{id}/similar` | Nearest neighbours |
+| GET | `/users/{id}/taste` | One person's taste profile, and whether it is usable |
+
+`/search` and `/recommend` accept an optional `user_id`. With one, the response
+carries `personalized: true` and each hit carries the `reasons` behind its
+position; without one, both endpoints behave exactly as they did before.
 
 Search responses carry a `strategy` field naming the ranker that produced the
 order. The API degrades to the plain artist listing when this service is
@@ -446,7 +528,15 @@ This is the open work, and it is blocked on data rather than modelling.
 
 **What is needed:** a search interaction log — the query, the artists shown, the
 positions they occupied, which were clicked, which led to a booking request.
-That is the label LambdaRank wants, and the platform records none of it.
+That is the label LambdaRank wants.
+
+`user_interaction` is now half of it. Searches, browse filters and profile views
+are recorded per user, which is what personalisation runs on — but it records
+what someone *did*, not what they were *shown*. Without the impressions and the
+positions they occupied, a click cannot be told apart from an artist who simply
+happened to be first, and that distinction is the whole of what LambdaRank
+learns. Logging the returned ids and their ranks alongside the search row is the
+remaining step, and it is a small one.
 
 **What will not substitute:**
 
@@ -474,6 +564,7 @@ app/
   features.py    the 13 features, and the similarity calibration
   taxonomy.py    genres, cities and event fit — one copy, shared with training
   segments.py    segment lookups and similarity
+  personalization.py  taste profiles from one person's own history
   embedder.py    fastembed / ONNX
   repository.py  catalogue reads, document assembly
   db.py          pool, pgvector registration, schema

@@ -108,6 +108,17 @@ export class ArtistCardComponent {
     return Math.round(Math.min(1, Math.max(0, this.artist.similarity)) * 100);
   }
 
+  /**
+   * The one line explaining why this act is in front of this person.
+   *
+   * The service can return two; the card shows the first. A card is scanned in
+   * about a second, and a second reason reads as an argument rather than a
+   * note. The rest is in the payload for anyone who wants it.
+   */
+  get reason(): string | null {
+    return this.artist.reasons?.[0] ?? null;
+  }
+
   get genres(): string[] {
     const subs = this.artist.subGenres?.filter(Boolean) ?? [];
     return subs.length ? subs.slice(0, 2) : (this.artist.parentGenres ?? []).slice(0, 2);

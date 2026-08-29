@@ -8,6 +8,8 @@ import com.brogrammers.open_mic_hub_service.social_feed.service.PostService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.dto.response.ArtistResponse;
 import com.brogrammers.open_mic_hub_service.user_management.user.service.UserService;
+import com.brogrammers.open_mic_hub_service.discovery.service.InteractionService;
+import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,8 @@ public class PublicController extends BaseController {
     private final ArtistService artistService;
     private final PublicService publicService;
     private final PostService postService;
+    private final InteractionService interactionService;
+    private final LoggedInUserUtil loggedInUserUtil;
 
     @GetMapping("/artists")
     public ResponseEntity<GlobalApiResponse> getAllArtists(
@@ -61,6 +65,11 @@ public class PublicController extends BaseController {
         ArtistResponse artist = handle.matches("\\d+")
                 ? artistService.getArtistById(Long.valueOf(handle))
                 : artistService.getArtistBySlug(handle);
+
+        // Who read whose profile is the signal discovery was missing: it is most of what a person
+        // does before booking, and until now none of it was kept. Recorded only for a signed-in
+        // visitor, on another thread, and de-duplicated so a page that reloads twice counts once.
+        interactionService.recordProfileView(loggedInUserUtil.currentUserIdOrNull(), artist.getArtistId());
 
         return successResponse(artist, "Fetched artist successfully.");
     }

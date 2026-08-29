@@ -51,6 +51,50 @@ class Settings(BaseSettings):
     # model to hand `text_similarity` 54% of its gain.
     similarity_noise_sd: float = 0.314
 
+    # ----------------------------------------------------------------- taste --
+    # Personalisation reads one person's own history: their searches, the
+    # profiles they opened, the filters they browsed with, and their bookings.
+
+    # How far back that history is read, and how much of it. Both are bounds on
+    # the query rather than opinions about relevance - the decay below is what
+    # decides how much an old event actually counts for.
+    taste_window_days: int = 180
+    taste_max_events: int = 300
+
+    # After this many days an event counts half as much. Six weeks: long enough
+    # that a wedding booked last month still shapes the list, short enough that
+    # last spring's festival hunt does not outweigh what someone is doing today.
+    taste_half_life_days: float = 45.0
+
+    # Total decayed weight needed before any personalisation is applied. Below
+    # it a person is treated as new and gets the unpersonalised ranking, because
+    # a taste profile built from one profile view is a guess dressed up as data.
+    taste_min_signal: float = 0.75
+
+    # How far personalisation is allowed to move the ranking, as a share of the
+    # final score. Lower when someone typed a query: they have just said what
+    # they want, and their history is context rather than a correction.
+    taste_alpha_search: float = 0.25
+    taste_alpha_browse: float = 0.40
+
+    # Share of the retrieval vector that comes from the taste profile when
+    # browse filters were also stated. The filters keep the majority.
+    taste_retrieval_share: float = 0.35
+
+    # Cosine band between a taste vector and an artist's profile vector, mapped
+    # onto 0-1 the same way `similarity_cos_*` is, and for the same reason: raw
+    # cosines from this encoder sit in a narrow band, and a fixed map keeps the
+    # number meaning the same thing for every user. Profile-to-profile cosines
+    # run higher than query-to-profile ones, so the band is its own measurement:
+    # `python -m training.calibrate` prints both.
+    taste_cos_low: float = 0.55
+    taste_cos_high: float = 0.80
+
+    # A taste profile is rebuilt at most this often per user. Long enough to
+    # spare the database a history scan per keystroke, short enough that the
+    # artist someone just opened counts towards their next search.
+    taste_cache_ttl_seconds: float = 120.0
+
     @property
     def dsn(self) -> str:
         # search_path puts this service's schema first, so unqualified writes land

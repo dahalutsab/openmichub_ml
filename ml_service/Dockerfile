@@ -37,6 +37,7 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.t
 
 COPY app ./app
 COPY training ./training
+COPY tests ./tests
 
 # Pre-download the embedding model so the first request does not stall on a
 # network fetch, and so the container works with no outbound access.

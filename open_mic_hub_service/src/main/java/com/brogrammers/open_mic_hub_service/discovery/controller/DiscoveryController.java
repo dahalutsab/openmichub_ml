@@ -5,7 +5,9 @@ import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.discovery.client.MlServiceClient;
 import com.brogrammers.open_mic_hub_service.discovery.dto.DiscoveryRequest;
 import com.brogrammers.open_mic_hub_service.discovery.dto.SearchResult;
+import com.brogrammers.open_mic_hub_service.discovery.service.InteractionService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
+import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,11 @@ import static com.brogrammers.open_mic_hub_service.common.constants.APIConstants
  * a trained ranker orders the results by fit for the specific request — genre,
  * budget, location, rating and track record weighed together.
  *
+ * <p>These endpoints are public, but not anonymous: a signed-in visitor's token is honoured when
+ * one is sent, which does two things. What they search for and open is recorded, and the ranking
+ * they get is personalised from that history plus their past bookings. An anonymous visitor is not
+ * recorded, and gets the same ranking the platform served before any of this existed.
+ *
  * <p>If the ML service is unreachable these fall back to the plain artist
  * listing, so discovery degrades rather than breaking.
  */
@@ -43,6 +50,8 @@ public class DiscoveryController extends BaseController {
 
     private final MlServiceClient mlServiceClient;
     private final ArtistService artistService;
+    private final LoggedInUserUtil loggedInUserUtil;
+    private final InteractionService interactionService;
 
     @Operation(summary = "Search for artists",
             description = "Describe what you need in plain language. Results are retrieved by "
@@ -57,6 +66,7 @@ public class DiscoveryController extends BaseController {
             @RequestParam(required = false) String genre,
             @RequestParam(defaultValue = "20") int limit) {
 
+        Long userId = loggedInUserUtil.currentUserIdOrNull();
         DiscoveryRequest request = DiscoveryRequest.builder()
                 .query(q)
                 .city(city)
@@ -64,7 +74,12 @@ public class DiscoveryController extends BaseController {
                 .budgetPerHour(budgetPerHour)
                 .genre(genre)
                 .limit(Math.min(Math.max(limit, 1), MAX_LIMIT))
+                .userId(userId)
                 .build();
+
+        // Recorded after the request is built, so this search informs the next one rather than
+        // itself. It runs on another thread and cannot delay or fail the response.
+        interactionService.recordSearch(userId, q, genre, city, eventType, budgetPerHour);
 
         return mlServiceClient.search(request)
                 .map(result -> successResponse(result, "Artists found"))
@@ -73,7 +88,8 @@ public class DiscoveryController extends BaseController {
 
     @Operation(summary = "Recommended artists",
             description = "Ranked artists for a set of requirements, with no text query. "
-                    + "Used for browse and filter surfaces.")
+                    + "Used for browse and filter surfaces. Personalised from the caller's own "
+                    + "searches, profile views and past bookings when they are signed in.")
     @GetMapping("/recommendations")
     public ResponseEntity<GlobalApiResponse> recommendations(
             @RequestParam(required = false) String city,
@@ -82,13 +98,17 @@ public class DiscoveryController extends BaseController {
             @RequestParam(required = false) String genre,
             @RequestParam(defaultValue = "20") int limit) {
 
+        Long userId = loggedInUserUtil.currentUserIdOrNull();
         DiscoveryRequest request = DiscoveryRequest.builder()
                 .city(city)
                 .eventType(eventType)
                 .budgetPerHour(budgetPerHour)
                 .genre(genre)
                 .limit(Math.min(Math.max(limit, 1), MAX_LIMIT))
+                .userId(userId)
                 .build();
+
+        interactionService.recordBrowse(userId, genre, city, eventType, budgetPerHour);
 
         return mlServiceClient.recommend(request)
                 .map(result -> successResponse(result, "Recommended artists"))

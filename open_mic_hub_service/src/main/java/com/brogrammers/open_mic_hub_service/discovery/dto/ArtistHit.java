@@ -54,4 +54,13 @@ public class ArtistHit {
 
     /** Cosine similarity to the query text, absent when there was no text query. */
     private Double similarity;
+
+    /** Whether this position took the caller's own history into account. */
+    private Boolean personalized;
+
+    /**
+     * Why this artist was raised for this person, in their own terms — "you have booked them
+     * before", "you keep coming back to Jazz". Empty when the ranking was not personalised.
+     */
+    private List<String> reasons;
 }

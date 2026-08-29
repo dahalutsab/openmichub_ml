@@ -83,6 +83,8 @@ export class DiscoverComponent implements OnInit {
    */
   featured: ArtistHit[] = [];
   featuredLoading = false;
+  /** Whether that strip came from this visitor's own history rather than the roster. */
+  featuredPersonalized = false;
 
   ngOnInit(): void {
     // Read state back out of the URL, so a result page can be shared, bookmarked
@@ -109,8 +111,14 @@ export class DiscoverComponent implements OnInit {
       .subscribe({
         // A quiet failure is right here: the roster strip is a bonus, and an
         // error banner over an otherwise working search box would be noise.
-        next: result => (this.featured = result.results ?? []),
-        error: () => (this.featured = []),
+        next: result => {
+          this.featured = result.results ?? [];
+          this.featuredPersonalized = !!result.personalized && this.featured.length > 0;
+        },
+        error: () => {
+          this.featured = [];
+          this.featuredPersonalized = false;
+        },
       });
   }
 

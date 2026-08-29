@@ -16,6 +16,12 @@ public class SearchResult {
     /** Which ranker produced the ordering: the trained model, or the cold-start heuristic. */
     private String strategy;
 
+    /**
+     * Whether the caller's own searches, profile views and bookings shaped this list. False for an
+     * anonymous visitor, and for a signed-in one whose history is still too thin to use.
+     */
+    private boolean personalized;
+
     private List<ArtistHit> results = new ArrayList<>();
 
     public static SearchResult empty(String query, String strategy) {

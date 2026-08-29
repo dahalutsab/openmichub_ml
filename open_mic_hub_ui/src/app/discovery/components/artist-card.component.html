@@ -78,6 +78,14 @@
       <span class="shrink-0">{{ artist.completedBookings }} gigs</span>
     </div>
 
+    <!-- Why this act is here, when the ranking used the viewer's own history.
+         Stated in their terms rather than the model's: nobody books a band
+         because a feature weight moved. -->
+    <p *ngIf="reason" class="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-ink-soft">
+      <span aria-hidden="true" class="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-stage"></span>
+      <span class="line-clamp-2">{{ reason }}</span>
+    </p>
+
     <div class="mt-2.5 flex items-center gap-1.5">
       <div class="flex gap-px" role="img" [attr.aria-label]="artist.rating + ' out of 5'">
         <svg *ngFor="let filled of stars" class="h-3 w-3" viewBox="0 0 16 16"
@@ -142,6 +150,7 @@
       <span class="h-0.5 w-0.5 shrink-0 rounded-full bg-muted"></span>
       <span class="truncate">{{ genres.join(' · ') }}</span>
     </div>
+    <p *ngIf="reason" class="mt-1 truncate text-[11px] text-ink-soft">{{ reason }}</p>
   </div>
 
   <div class="hidden shrink-0 items-center gap-1.5 sm:flex">

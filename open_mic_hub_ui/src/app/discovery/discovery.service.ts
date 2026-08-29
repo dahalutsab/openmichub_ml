@@ -23,6 +23,13 @@ export interface ArtistHit {
   score: number;
   /** Cosine similarity to the query text; absent when there was no text query. */
   similarity?: number;
+  /** Whether this position took the signed-in visitor's own history into account. */
+  personalized?: boolean;
+  /**
+   * Why this act was raised for this person — "you have booked them before",
+   * "you keep coming back to Jazz". Empty unless the ranking was personalised.
+   */
+  reasons?: string[];
 }
 
 export interface DiscoveryResult {
@@ -30,6 +37,8 @@ export interface DiscoveryResult {
   total: number;
   /** Which ranker produced the ordering — surfaced so the UI can be honest about it. */
   strategy: string;
+  /** Whether this list was shaped by the viewer's own searches, views and bookings. */
+  personalized?: boolean;
   results: ArtistHit[];
 }
 
@@ -102,6 +111,7 @@ export class DiscoveryService {
     return {
       query,
       strategy: fallback?.strategy ?? 'unranked listing',
+      personalized: false,
       total: fallback?.artists?.length ?? 0,
       results: [],
     };

@@ -91,9 +91,16 @@
 
   <!-- ===================== on the roster (idle) ===================== -->
   <section *ngIf="state === 'idle'" class="omh-container pt-10">
+    <!-- The heading changes with the list underneath it. A strip picked from
+         someone's own history is not "the roster", and saying so is what makes
+         the reason lines on the cards make sense. -->
     <div class="omh-rule mb-5">
-      <h2 class="omh-display shrink-0 text-[15px] uppercase tracking-[0.14em]">On the roster</h2>
-      <span class="shrink-0 text-[12px] text-muted">Highest rated right now</span>
+      <h2 class="omh-display shrink-0 text-[15px] uppercase tracking-[0.14em]">
+        {{ featuredPersonalized ? 'Picked for you' : 'On the roster' }}
+      </h2>
+      <span class="shrink-0 text-[12px] text-muted">
+        {{ featuredPersonalized ? 'From what you have searched for and booked' : 'Highest rated right now' }}
+      </span>
     </div>
 
     <div *ngIf="featuredLoading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
