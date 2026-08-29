@@ -28,6 +28,16 @@ export function currentRoles(): string[] {
   }
 }
 
+/** Forgets the session in this browser. The token expires server-side on its own. */
+export function signOut(): void {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ROLES_KEY);
+  } catch {
+    // Nothing was stored to begin with if storage is unavailable.
+  }
+}
+
 /** Whether this account is allowed to raise a booking. */
 export function canBook(): boolean {
   const roles = currentRoles();

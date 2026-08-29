@@ -11,6 +11,7 @@ import { ReviewListComponent } from '../../../shared/reviews';
 import { BookingDialogComponent } from '../../../shared/booking/booking-dialog.component';
 import { canBook, isSignedIn } from '../../../shared/session';
 import { MediaUrlPipe } from '../../../shared/media-url.pipe';
+import { PublicNavComponent } from '../../../shared/public-nav/public-nav.component';
 
 /**
  * An artist's public profile.
@@ -23,7 +24,7 @@ import { MediaUrlPipe } from '../../../shared/media-url.pipe';
 @Component({
   selector: 'app-view-artist',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReviewListComponent, BookingDialogComponent, MediaUrlPipe],
+  imports: [CommonModule, RouterModule, ReviewListComponent, BookingDialogComponent, MediaUrlPipe, PublicNavComponent],
   templateUrl: './view-artist.component.html',
 })
 export class ViewArtistComponent implements OnInit {

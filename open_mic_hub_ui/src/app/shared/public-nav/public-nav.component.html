@@ -1,0 +1,26 @@
+<nav class="sticky top-0 z-50 border-b border-white/10 bg-stage-ink/90 backdrop-blur-md">
+  <div class="omh-container flex h-16 items-center justify-between gap-6">
+    <a routerLink="/" class="flex items-center gap-2.5 no-underline">
+      <span class="grid h-8 w-8 place-items-center rounded-[5px] bg-hot font-display text-[15px] font-extrabold text-white">O</span>
+      <span class="font-display text-[15px] font-bold tracking-tight text-on-stage">OpenMicHub</span>
+    </a>
+
+    <div class="hidden items-center gap-1 md:flex">
+      <a routerLink="/discover" routerLinkActive="is-active" class="omh-navlink">Find artists</a>
+      <a routerLink="/" class="omh-navlink">Home</a>
+    </div>
+
+    <!-- A visitor needs a way in; someone already signed in needs their own area instead. -->
+    <div class="flex items-center gap-2">
+      <ng-container *ngIf="!signedIn">
+        <a routerLink="/auth/login" class="omh-navlink">Log in</a>
+        <a routerLink="/auth/register" class="omh-btn-primary !py-2 no-underline">Join free</a>
+      </ng-container>
+
+      <ng-container *ngIf="signedIn">
+        <a [routerLink]="homeLink" class="omh-btn-primary !py-2 no-underline">My area</a>
+        <button type="button" class="omh-navlink" (click)="signOut()">Sign out</button>
+      </ng-container>
+    </div>
+  </div>
+</nav>

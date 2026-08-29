@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { PublicNavComponent } from '../shared/public-nav/public-nav.component';
 import { ArtistCardComponent } from './components/artist-card.component';
 import { ArtistHit, DiscoveryService } from './discovery.service';
 
@@ -14,7 +15,7 @@ type Layout = 'grid' | 'list';
 @Component({
   selector: 'omh-discover',
   standalone: true,
-  imports: [CommonModule, FormsModule, ArtistCardComponent],
+  imports: [CommonModule, FormsModule, ArtistCardComponent, PublicNavComponent],
   templateUrl: './discover.component.html',
 })
 export class DiscoverComponent implements OnInit {
