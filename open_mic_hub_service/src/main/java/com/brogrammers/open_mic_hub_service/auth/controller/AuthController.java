@@ -16,7 +16,9 @@ import com.brogrammers.open_mic_hub_service.security.ratelimit.RateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import com.brogrammers.open_mic_hub_service.security.oauth.SocialProviderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +34,7 @@ import static com.brogrammers.open_mic_hub_service.common.constants.APIConstants
 public class AuthController extends BaseController {
 
     private final AuthService authService;
+    private final SocialProviderService socialProviderService;
     private final RateLimiter rateLimiter;
 
     /** Online guessing budget for credential and token endpoints. */
@@ -61,6 +64,23 @@ public class AuthController extends BaseController {
                 AuthResponseMessages.USER_AUTHENTICATED);
     }
 
+
+    /**
+     * The social sign-in providers this deployment can actually use.
+     *
+     * <p>Public, and deliberately says nothing beyond the names: it is read before anyone has
+     * signed in, to decide which buttons to draw.
+     */
+    @Operation(
+            summary = "Available social sign-in providers",
+            description = "Registration ids with complete credentials configured, e.g. [\"google\"]. "
+                    + "Empty when social sign-in is off."
+    )
+    @GetMapping("/providers")
+    public ResponseEntity<GlobalApiResponse> socialProviders() {
+        return successResponse(Map.of("providers", socialProviderService.enabledProviders()),
+                "Social sign-in providers fetched successfully");
+    }
 
     //register
     @Operation(

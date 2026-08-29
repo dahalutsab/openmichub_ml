@@ -135,8 +135,9 @@ http://localhost:8181/login/oauth2/code/facebook
 | Google | console.cloud.google.com -> APIs & Services -> Credentials -> OAuth client ID -> Web application |
 | Facebook | developers.facebook.com -> My Apps -> Create App -> Facebook Login -> Settings |
 
-Put the pairs in `.env`, then set `socialSignIn: true` in
-`open_mic_hub_ui/src/app/environment/environment.ts` so the buttons appear:
+Put the pairs in `.env` and restart. That is the only step — the sign-in page asks the backend
+which providers it can use (`GET /api/v1/auth/providers`) and draws a button for each, so a
+provider you have not configured is never offered:
 
 ```bash
 GOOGLE_CLIENT_ID=...
@@ -146,7 +147,7 @@ FACEBOOK_CLIENT_SECRET=...
 ```
 
 Set both halves of a pair or neither — a client id without its secret fails fast at startup rather
-than offering a button that cannot work. Facebook requires HTTPS for anyone outside your app's own
+than offering a button that cannot work. Configure only Google and only a Google button appears. Facebook requires HTTPS for anyone outside your app's own
 test users, so localhost works for you and not for them.
 
 ### What happens to the account

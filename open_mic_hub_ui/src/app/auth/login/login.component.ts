@@ -15,11 +15,10 @@ export class LoginComponent implements OnInit {
 
   readonly currentYear = new Date().getFullYear();
 
-  // The handshake starts at the backend, not at the provider: Spring builds the authorization URL,
-  // attaches the state and PKCE challenge, and redirects on. These are the paths it listens on.
-  readonly socialSignInEnabled = environment.socialSignIn;
-  readonly googleSignInUrl = `${environment.host}/oauth2/authorization/google`;
-  readonly facebookSignInUrl = `${environment.host}/oauth2/authorization/facebook`;
+  // Filled from the backend, which is the only place that knows whether a provider's credentials
+  // are set. Empty until it answers, and stays empty if it cannot — a missing button is a better
+  // failure than one that leads nowhere.
+  socialProviders: string[] = [];
 
   loginError: boolean = false;
   loginForm: any;
@@ -33,7 +32,38 @@ export class LoginComponent implements OnInit {
     private toast: ToastrService
   ) {}
 
+  /** The path Spring listens on to begin a provider's handshake. */
+  signInUrl(provider: string): string {
+    return `${environment.host}/oauth2/authorization/${provider}`;
+  }
+
+  /** Capitalised for display; the ids come back lowercase. */
+  providerLabel(provider: string): string {
+    return provider.charAt(0).toUpperCase() + provider.slice(1);
+  }
+
+  /** Bootstrap icon name per provider, falling back to a generic one. */
+  providerIcon(provider: string): string {
+    return provider === 'google' ? 'bi-google'
+      : provider === 'facebook' ? 'bi-facebook'
+      : 'bi-box-arrow-in-right';
+  }
+
+  private loadSocialProviders(): void {
+    this.authService.socialProviders().subscribe({
+      next: (response: any) => {
+        this.socialProviders = response?.data?.providers ?? [];
+      },
+      error: () => {
+        // Social sign-in simply is not offered. Password sign-in is unaffected, and there is
+        // nothing here worth interrupting someone with a toast about.
+        this.socialProviders = [];
+      },
+    });
+  }
+
   ngOnInit(): void {
+    this.loadSocialProviders();
     this.loginForm = new FormGroup({
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [Validators.required, Validators.minLength(6)])
