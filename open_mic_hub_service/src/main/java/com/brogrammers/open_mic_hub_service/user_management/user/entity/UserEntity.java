@@ -60,6 +60,15 @@ public class UserEntity extends Auditable {
     @Column(name = "provider_id", length = 191)
     private String providerId;
 
+    /**
+     * Whether this account still owes the one question a provider cannot answer: book or perform.
+     *
+     * <p>Set when an account is created through a social provider, cleared the moment the person
+     * answers. False everywhere else — registering through a form is itself the answer.
+     */
+    @Column(name = "onboarding_required", nullable = false)
+    private boolean onboardingRequired = false;
+
     @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 

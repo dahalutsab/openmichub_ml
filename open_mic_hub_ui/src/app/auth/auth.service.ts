@@ -34,6 +34,20 @@ export class AuthService {
     return this.httpClient.get<any>(`${this.baseUrl}/auth/providers`);
   }
 
+  /** Whether this account still owes the book-or-perform answer. */
+  profileCompletionStatus(): Observable<any> {
+    return this.httpClient.get<any>(`${this.baseUrl}/account/complete-profile`);
+  }
+
+  /** Answers it. Accepted once per account. */
+  completeProfile(payload: any): Observable<any> {
+    return this.httpClient.post<any>(`${this.baseUrl}/account/complete-profile`, payload);
+  }
+
+  genres(): Observable<any> {
+    return this.httpClient.get<any>(`${this.baseUrl}/genre`);
+  }
+
 registerUser(formData: FormData): Observable<any> {
     return this.httpClient.post(`${this.baseUrl}/auth/register/user`, formData);
   }

@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { OtpComponent } from './otp/otp.component';
 import { SocialComponent } from './social/social.component';
+import { CompleteProfileComponent } from './complete-profile/complete-profile.component';
 
 const routes: Routes = [
     {
@@ -24,7 +25,10 @@ const routes: Routes = [
 { path: 'verify-email', component: OtpComponent },
 
   // Landing point for Google and Facebook sign-in; the backend redirects here.
-  { path: 'social', component: SocialComponent }
+  { path: 'social', component: SocialComponent },
+
+  // Asked once, after a first social sign-in.
+  { path: 'complete-profile', component: CompleteProfileComponent }
 
  
 

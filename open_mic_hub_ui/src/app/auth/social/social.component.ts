@@ -47,6 +47,13 @@ export class SocialComponent implements OnInit {
     // Drop the fragment before navigating, so the token is not left in history.
     history.replaceState(null, '', window.location.pathname);
 
+    // A first sign-in has an account but has not said what it is for. Google can supply a name,
+    // an address and a picture; it cannot say whether this person books artists or performs.
+    if (fragment.get('onboarding') === 'true') {
+      this.router.navigate(['/auth/complete-profile']);
+      return;
+    }
+
     this.redirectUser(roles);
   }
 

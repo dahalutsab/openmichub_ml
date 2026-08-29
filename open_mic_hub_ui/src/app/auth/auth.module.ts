@@ -7,6 +7,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { OtpComponent } from './otp/otp.component';
 import { SocialComponent } from './social/social.component';
+import { CompleteProfileComponent } from './complete-profile/complete-profile.component';
+import { FormsModule } from '@angular/forms';
 
 
 @NgModule({
@@ -15,12 +17,14 @@ import { SocialComponent } from './social/social.component';
     RegisterComponent,
     OtpComponent,
     SocialComponent,
+    CompleteProfileComponent,
 
   ],
   imports: [
     CommonModule,
     AuthRoutingModule,
     ReactiveFormsModule,
+    FormsModule,
     HttpClientModule,
     
   ]

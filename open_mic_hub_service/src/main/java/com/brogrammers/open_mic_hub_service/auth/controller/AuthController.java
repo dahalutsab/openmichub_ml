@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import com.brogrammers.open_mic_hub_service.security.oauth.SocialProviderService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -42,6 +42,7 @@ public class OAuth2SecurityConfig {
     static final String[] HANDSHAKE_PATHS = {"/oauth2/authorization/**", "/login/oauth2/code/**"};
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final OAuth2LoginSuccessHandler successHandler;
     private final OAuth2LoginFailureHandler failureHandler;
 
@@ -79,7 +80,13 @@ public class OAuth2SecurityConfig {
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth
                         .clientRegistrationRepository(registrations)
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        // Both, deliberately. `userService` covers plain OAuth2 providers and
+                        // `oidcUserService` covers those asking for the `openid` scope; Google is
+                        // the second kind, so registering only the first meant its sign-ins never
+                        // reached the account provisioning at all.
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                                .oidcUserService(customOidcUserService))
                         .successHandler(successHandler)
                         .failureHandler(failureHandler))
                 .build();

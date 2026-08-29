@@ -1,6 +1,8 @@
 package com.brogrammers.open_mic_hub_service.security.oauth;
 
 import com.brogrammers.open_mic_hub_service.security.jwt_auth.JwtTokenGenerator;
+import com.brogrammers.open_mic_hub_service.user_management.user.entity.UserEntity;
+import com.brogrammers.open_mic_hub_service.user_management.user.repository.UserInfoRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +35,15 @@ import java.util.stream.Collectors;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenGenerator jwtTokenGenerator;
+    private final UserInfoRepository userInfoRepository;
     private final String redirectUri;
 
     public OAuth2LoginSuccessHandler(JwtTokenGenerator jwtTokenGenerator,
+                                     UserInfoRepository userInfoRepository,
                                      @Value("${frontend.domain}") String frontendDomain,
                                      @Value("${frontend.oauth_redirect}") String oauthRedirectPath) {
         this.jwtTokenGenerator = jwtTokenGenerator;
+        this.userInfoRepository = userInfoRepository;
         this.redirectUri = frontendDomain + oauthRedirectPath;
     }
 
@@ -49,9 +54,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             log.warn("Response already committed; cannot complete the sign-in redirect");
             return;
         }
-
-        String accessToken = jwtTokenGenerator.generateAccessToken(authentication);
-        log.info("Social sign-in completed for {}", authentication.getName());
 
         // The handshake needed a session to hold the authorization request across the round trip
         // to the provider. It has served its purpose; leaving it would be a second way to
@@ -69,9 +71,37 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 .map(authority -> authority.substring("ROLE_".length()))
                 .collect(Collectors.joining(","));
 
+        // No platform role means the principal never went through account provisioning, so no
+        // account exists behind it. That is how a missing oidcUserService registration failed
+        // once: the handshake completed, a token was minted for a subject with no row, and the
+        // client was handed an empty role list it could do nothing with. Fail loudly instead.
+        if (roles.isEmpty()) {
+            log.error("Social sign-in produced no platform role for {}; refusing to issue a token",
+                    authentication.getName());
+            getRedirectStrategy().sendRedirect(request, response,
+                    UriComponentsBuilder.fromUriString(redirectUri)
+                            .fragment("error=" + URLEncoder.encode(
+                                    "Sign-in could not be completed. Please try again.",
+                                    StandardCharsets.UTF_8))
+                            .build().toUriString());
+            return;
+        }
+
+        String accessToken = jwtTokenGenerator.generateAccessToken(authentication);
+
+        // A brand-new account has not said whether it is here to book or to perform. The client
+        // sends it to the setup page instead of a dashboard; every later sign-in skips this.
+        boolean needsSetup = userInfoRepository.findByEmailId(authentication.getName())
+                .map(UserEntity::isOnboardingRequired)
+                .orElse(false);
+
+        log.info("Social sign-in completed for {}{}", authentication.getName(),
+                needsSetup ? " (new account, setup pending)" : "");
+
         String target = UriComponentsBuilder.fromUriString(redirectUri)
                 .fragment("token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
                           + "&roles=" + URLEncoder.encode(roles, StandardCharsets.UTF_8)
+                          + "&onboarding=" + needsSetup
                           + "&expiresIn=" + (150 * 60))
                 .build().toUriString();
 

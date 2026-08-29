@@ -1,0 +1,11 @@
+-- One question a social sign-in cannot answer for itself: is this person here to book artists, or
+-- to perform?
+--
+-- A password sign-up says so by choosing a form — /auth/register/user or /auth/register/artist —
+-- and the artist form collects a stage name, a bio and genres along the way. A provider hands over
+-- a name, an address and a picture and nothing else, so the first sign-in has to ask.
+--
+-- The flag is what makes that a one-time question rather than a permanent one. It is set when an
+-- account is created through a provider, and cleared as soon as the answer is given. Existing
+-- rows are false: they have already answered, by registering.
+ALTER TABLE users ADD COLUMN onboarding_required BOOLEAN NOT NULL DEFAULT FALSE;
