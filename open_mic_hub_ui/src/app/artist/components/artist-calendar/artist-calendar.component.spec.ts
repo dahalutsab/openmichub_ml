@@ -1,3 +1,5 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { commonTestProviders } from '../../../testing/test-providers';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ArtistCalendarComponent } from './artist-calendar.component';
@@ -8,7 +10,9 @@ describe('ArtistCalendarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ArtistCalendarComponent]
+      declarations: [ArtistCalendarComponent],
+      providers: [...commonTestProviders],
+      schemas: [NO_ERRORS_SCHEMA]
     })
     .compileComponents();
 

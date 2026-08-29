@@ -1,3 +1,5 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { commonTestProviders } from '../../../testing/test-providers';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { BookingsComponent } from './bookings.component';
@@ -8,7 +10,9 @@ describe('BookingsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [BookingsComponent]
+      declarations: [BookingsComponent],
+      providers: [...commonTestProviders],
+      schemas: [NO_ERRORS_SCHEMA]
     })
     .compileComponents();
 

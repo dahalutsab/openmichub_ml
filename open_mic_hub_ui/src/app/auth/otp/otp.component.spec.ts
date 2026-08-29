@@ -1,3 +1,5 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { commonTestProviders } from '../../testing/test-providers';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { OtpComponent } from './otp.component';
@@ -8,7 +10,9 @@ describe('OtpComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [OtpComponent]
+      declarations: [OtpComponent],
+      providers: [...commonTestProviders],
+      schemas: [NO_ERRORS_SCHEMA]
     })
     .compileComponents();
 

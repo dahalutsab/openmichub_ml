@@ -166,6 +166,51 @@ is refused. Without that check, anyone who could set an arbitrary address on a p
 could take over an existing user here. An address already claimed by a *different* provider is
 refused outright rather than reassigned.
 
+## Tests
+
+```bash
+# Backend — 66 tests
+docker compose up -d postgres                     # optional; see below
+cd open_mic_hub_service && ./mvnw test
+
+# Frontend — 68 tests
+cd open_mic_hub_ui && CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless
+```
+
+The JDK on a current Arch box is newer than Lombok supports, so the backend suite usually runs in
+a container instead:
+
+```bash
+docker run --rm -v "$PWD/open_mic_hub_service":/app -v "$HOME/.m2":/root/.m2 --network host \
+  -w /app maven:3.9-eclipse-temurin-21 mvn test
+```
+
+Everything except the context test is a unit test with no external dependency.
+`OpenMicHubServiceApplicationTests` boots the whole application — which runs every migration and
+then has Hibernate validate its mappings against the result — so it needs a real Postgres, and
+`--network host` is what lets the container reach the one `docker compose` started. Without a
+database it **skips** rather than fails, so the suite stays green either way. An in-memory database
+would not do: the migrations use partial indexes and pgvector.
+
+What is covered, and why those parts:
+
+| Area | Covers |
+|---|---|
+| `BookingServiceImplTest` | Pricing (whole, part and sub-hour slots), and every refusal — reversed times, past dates, outside the availability window, blackout dates, double bookings |
+| `LocalTimeDeserializerTest` | Both time formats, and a clear rejection of something that is not a time |
+| `OAuth2AccountServiceTest` | Which account a social profile resolves to, including the linking guards that stop an unverified address taking over an existing user |
+| `OAuth2UserDetailsTest` | Google's OIDC claims versus Facebook's Graph fields, and that an absent verification flag never reads as verified |
+| `ProfileCompletionServiceTest` | The one-time setup answer, and that it stays one-time |
+| `social.component.spec.ts` | The sign-in fragment, including the malformed shapes — an empty role list is refused rather than stored |
+| `complete-profile.component.spec.ts` | The submit guard and the payload it builds |
+| `login.component.social.spec.ts` | That only the providers the backend reports are offered |
+
+The generated `should create` specs are kept and now pass. They had never run: all forty failed on
+a missing provider the first time the suite was executed, and one of them did not compile, which
+stopped the whole run. They prove only that a component can be constructed — thin, but that does
+catch a constructor asking for something its module never provides, which is a real way to break a
+lazy-loaded route. `src/app/testing/test-providers.ts` is what makes them cheap to keep.
+
 ## Roles
 
 | Role | Can do |

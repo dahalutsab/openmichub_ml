@@ -1,3 +1,5 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { commonTestProviders } from '../../../testing/test-providers';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { UserBaseComponent } from './user-base.component';
@@ -8,7 +10,9 @@ describe('UserBaseComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [UserBaseComponent]
+      declarations: [UserBaseComponent],
+      providers: [...commonTestProviders],
+      schemas: [NO_ERRORS_SCHEMA]
     })
     .compileComponents();
 

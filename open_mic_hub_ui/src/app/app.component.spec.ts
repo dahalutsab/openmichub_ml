@@ -1,35 +1,39 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
+import { commonTestProviders } from './testing/test-providers';
 
+/**
+ * The root shell.
+ *
+ * This was CLI boilerplate asserting a `title` property and an `h1` greeting, neither of which
+ * this component has ever had. It did not merely fail — it failed to compile, and because Karma
+ * type-checks every spec before running any of them, one stale file kept the entire suite from
+ * running at all.
+ */
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        RouterModule.forRoot([])
-      ],
-      declarations: [
-        AppComponent
-      ],
+      imports: [RouterModule.forRoot([])],
+      declarations: [AppComponent],
+      providers: [...commonTestProviders],
+      // The shell hosts feature components declared in lazy modules — app-chatbot among them —
+      // which are not loaded here and do not need to be for this to mean anything.
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('creates the root shell', () => {
     const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it(`should have as title 'Brogrammers-Ui'`, () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('Brogrammers-Ui');
-  });
-
-  it('should render title', () => {
+  it('renders a router outlet for the feature modules to fill', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
+
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, Brogrammers-Ui');
+    expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });
