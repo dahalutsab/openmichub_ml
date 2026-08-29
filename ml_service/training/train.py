@@ -75,6 +75,10 @@ def add_baselines(frame: pd.DataFrame, seed: int) -> pd.DataFrame:
     frame["score_rating_only"] = frame["rating_norm"]
     frame["score_price_only"] = frame["price_fit"]
     frame["score_genre_only"] = frame["genre_match"]
+    # What shipping retrieval alone would give: order by the text signal and
+    # ignore price, distance and rating entirely. The ranker has to beat this or
+    # the second stage is not paying for itself.
+    frame["score_similarity_only"] = frame["text_similarity"]
     return frame
 
 
@@ -139,6 +143,7 @@ def train(cfg: GeneratorConfig, out_dir: Path, num_rounds: int = 600) -> dict:
         "model (LambdaRank)": "score_model",
         "rating only": "score_rating_only",
         "genre only": "score_genre_only",
+        "similarity only": "score_similarity_only",
         "price only": "score_price_only",
         "random": "score_random",
     }

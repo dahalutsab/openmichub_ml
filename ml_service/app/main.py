@@ -130,15 +130,32 @@ def semantic_search(request: SearchRequest) -> SearchResponse:
 
 @app.post("/recommend", response_model=SearchResponse)
 def recommend(request: RecommendRequest) -> SearchResponse:
-    """Rank the catalogue for a set of requirements, with no text query."""
-    candidates = fetch_artists()
-    # No text query, so no similarity signal: leave it neutral for everyone
-    # rather than letting an absent feature skew the ordering.
-    for candidate in candidates:
-        candidate["similarity"] = None
-    if request.city:
-        wanted = request.city.strip().lower()
-        candidates = [a for a in candidates if (a.get("city") or "").strip().lower() == wanted]
+    """Rank the catalogue for a set of requirements the organizer did not type.
+
+    Browse filters are still a statement of intent, so they are turned back into
+    a query and run through the same retrieve-then-rank path as `/search`. That
+    matters more than it sounds: `text_similarity` carries the largest share of
+    the model's gain, and this endpoint used to hand it the same value for every
+    candidate, which left the trees with almost nothing to separate them.
+    """
+    settings = get_settings()
+    pseudo_query = search.requirement_query(
+        request.genre, request.event_type, request.city)
+
+    if pseudo_query:
+        candidates = search.vector_candidates(
+            pseudo_query, limit=settings.candidate_pool_size, city=request.city)
+    else:
+        # Nothing stated but a location, which is a filter rather than a taste.
+        # Similarity stays absent, and the model ranks on the other features.
+        candidates = fetch_artists()
+        for candidate in candidates:
+            candidate["similarity"] = None
+        if request.city:
+            wanted = request.city.strip().lower()
+            candidates = [a for a in candidates
+                          if (a.get("city") or "").strip().lower() == wanted]
+
     if not candidates:
         return SearchResponse(total=0, strategy=ranker.model_info()["strategy"], results=[])
 

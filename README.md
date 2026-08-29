@@ -110,6 +110,11 @@ Until that log exists, describe the ranker as bootstrapped on synthetic preferen
 trained on platform data. The distinction matters and `training/generate.py` states its whole
 generative process in the first thirty lines precisely so the claim can be checked.
 
+One part of that simulation is no longer a guess. How well the text embedding separates a
+genre match from a non-match is measured against the real catalogue by `training/calibrate.py`
+and fed back into the generator, so the ranker is at least fitted against an encoder as noisy as
+the one it will actually be given. See `ml_service/README.md` for the measurement.
+
 ## Roles
 
 | Role | Can do |

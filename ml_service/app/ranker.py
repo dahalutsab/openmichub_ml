@@ -16,33 +16,17 @@ import numpy as np
 import pandas as pd
 
 from app.config import get_settings
-from app.features import FEATURE_COLUMNS, build_frame, genre_match, price_fit
+from app.features import (
+    FEATURE_COLUMNS, build_frame, calibrate_similarity, genre_match, price_fit,
+)
+from app.repository import genre_taxonomy
+from app.taxonomy import PROVINCE, event_fit
 
 log = logging.getLogger(__name__)
 
 _booster = None
 _meta: dict | None = None
 _lock = threading.Lock()
-
-# Rough distance tiers, used when a query names a city.
-_PROVINCE = {
-    "Kathmandu": "Bagmati", "Lalitpur": "Bagmati", "Bhaktapur": "Bagmati",
-    "Chitwan": "Bagmati", "Pokhara": "Gandaki", "Butwal": "Lumbini",
-    "Nepalgunj": "Lumbini", "Biratnagar": "Koshi", "Dharan": "Koshi",
-    "Janakpur": "Madhesh",
-}
-
-_EVENT_GENRE_FIT = {
-    "Wedding":      {"Folk": 1.0, "Pop": 0.9, "Classical": 0.9, "Jazz": 0.7},
-    "Corporate":    {"Jazz": 1.0, "Classical": 0.9, "Pop": 0.7},
-    "Festival":     {"Rock": 1.0, "Electronic": 0.9, "Pop": 0.9, "Hip-Hop": 0.8},
-    "Birthday":     {"Pop": 1.0, "Hip-Hop": 0.8, "Rock": 0.8},
-    "Club Night":   {"Electronic": 1.0, "Hip-Hop": 0.9, "Pop": 0.7},
-    "Open Mic":     {"Folk": 1.0, "Blues": 0.9, "Hip-Hop": 0.8},
-    "Charity Gala": {"Classical": 1.0, "Jazz": 0.9, "Folk": 0.8},
-    "Restaurant":   {"Jazz": 1.0, "Blues": 0.9, "Folk": 0.9, "Classical": 0.8},
-}
-_NEUTRAL_EVENT_FIT = 0.5
 
 
 def infer_genre(query_text: str | None, vocabulary: list[str]) -> str | None:
@@ -110,29 +94,30 @@ def _location_match(query_city: str | None, artist_city: str | None) -> float:
         return 0.35
     if query_city.strip().lower() == artist_city.strip().lower():
         return 1.0
-    query_province = _PROVINCE.get(query_city.title())
-    artist_province = _PROVINCE.get(artist_city.title())
+    query_province = PROVINCE.get(query_city.title())
+    artist_province = PROVINCE.get(artist_city.title())
     if query_province and query_province == artist_province:
         return 0.65
     return 0.2
 
 
-def _normalised_similarity(candidates: list[dict]) -> list[float]:
-    """Rescales cosine similarity to [0, 1] across the candidate set.
+def _similarity_features(candidates: list[dict]) -> list[float]:
+    """Calibrated text similarity per candidate, or NaN when there was no query.
 
-    Raw cosine values from a sentence embedder sit in a narrow, model-specific
-    band — typically 0.4 to 0.8 here — while training saw the full range. What
-    carries the signal is an artist's position relative to the others retrieved
-    for the same query, so the pool is normalised rather than the absolute value
-    trusted. This also keeps the feature stable if the embedding model changes.
+    A browse or "similar artists" surface has no query text, so there is no
+    observation to calibrate. That is a missing feature, not a mediocre one, and
+    it is reported as NaN so LightGBM routes it down the branch it learned for
+    withheld signals. Handing the model a flat 0.5 instead — which is what this
+    used to do — pinned the feature carrying most of its gain to a constant, and
+    the trees collapsed: a hundred artists came back on thirty-six distinct
+    scores, the top ten sharing two.
     """
-    values = [float(c.get("similarity") or 0.0) for c in candidates]
-    if not values:
-        return []
-    low, high = min(values), max(values)
-    if high - low < 1e-6:
-        return [0.5] * len(values)
-    return [(v - low) / (high - low) for v in values]
+    values = []
+    for candidate in candidates:
+        similarity = candidate.get("similarity")
+        values.append(float("nan") if similarity is None
+                      else calibrate_similarity(float(similarity)))
+    return values
 
 
 def build_candidate_frame(candidates: list[dict], *, city: str | None,
@@ -140,7 +125,7 @@ def build_candidate_frame(candidates: list[dict], *, city: str | None,
                           wanted_genre: str | None) -> pd.DataFrame:
     """Turns retrieved artists plus the query into the model's feature frame."""
     budget = budget_per_hour or 0.0
-    similarities = _normalised_similarity(candidates)
+    similarities = _similarity_features(candidates)
     rows = []
 
     # NaN, not zero, when the organizer stated nothing. LightGBM was trained with
@@ -149,19 +134,17 @@ def build_candidate_frame(candidates: list[dict], *, city: str | None,
     genre_known = bool(wanted_genre)
     budget_known = bool(budget_per_hour)
 
+    # One name comes in; the model wants the sub-genre and the parent separately.
+    wanted_sub, wanted_parent = genre_taxonomy().resolve(wanted_genre)
+
     for artist, similarity in zip(candidates, similarities):
         subs = [s for s in (artist.get("sub_genres") or []) if s]
         parents = [p for p in (artist.get("parent_genres") or []) if p]
-        parent = parents[0] if parents else None
-
-        fit = _NEUTRAL_EVENT_FIT
-        if event_type:
-            fit = _EVENT_GENRE_FIT.get(event_type, {}).get(parent, _NEUTRAL_EVENT_FIT)
 
         rows.append({
             "query_id": 0,
             "artist_id": artist["artist_id"],
-            "genre_match": (genre_match(wanted_genre, wanted_genre, subs, parent)
+            "genre_match": (genre_match(wanted_sub, wanted_parent, subs, parents)
                             if genre_known else float("nan")),
             "text_similarity": similarity,
             "price_fit": (price_fit(budget, artist["hourly_rate"])
@@ -169,7 +152,7 @@ def build_candidate_frame(candidates: list[dict], *, city: str | None,
             "rating_norm": (float(artist["rating"]) - 1.0) / 4.0,
             "location_match": _location_match(city, artist.get("city")),
             "experience": min(1.0, np.log1p(artist["completed_bookings"]) / np.log1p(120)),
-            "event_fit": fit,
+            "event_fit": event_fit(event_type, parents),
             "responsiveness": float(artist["response_rate"]),
             "hourly_rate": float(artist["hourly_rate"]),
             "completed_bookings": int(artist["completed_bookings"]),
@@ -192,9 +175,10 @@ def score(frame: pd.DataFrame) -> np.ndarray:
     # sum to NaN.
     genre = frame["genre_match"].fillna(0.4)
     price = frame["price_fit"].fillna(0.5)
+    similarity = frame["text_similarity"].fillna(0.5)
     return (
         0.24 * genre
-        + 0.16 * frame["text_similarity"]
+        + 0.16 * similarity
         + 0.18 * price
         + 0.13 * frame["rating_norm"]
         + 0.13 * frame["location_match"]

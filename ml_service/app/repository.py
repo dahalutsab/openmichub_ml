@@ -11,6 +11,9 @@ signals the model uses are not stored directly and are derived instead:
 from __future__ import annotations
 
 import logging
+import threading
+import time
+from typing import NamedTuple
 
 from app.db import connection
 
@@ -111,15 +114,97 @@ def _document(artist: dict, include_name: bool) -> str:
     return ". ".join(part for part in parts if part)
 
 
-_VOCAB_QUERY = """
-SELECT DISTINCT name FROM category WHERE active
-UNION
-SELECT DISTINCT name FROM genre WHERE active
+_TAXONOMY_QUERY = """
+SELECT g.name AS parent, c.name AS sub
+FROM genre_categories gc
+JOIN genre g    ON g.id = gc.genre_id
+JOIN category c ON c.id = gc.categories_id
+WHERE g.active AND c.active
 """
+
+_ORPHAN_SUBS_QUERY = """
+SELECT c.name FROM category c
+WHERE c.active AND NOT EXISTS (
+    SELECT 1 FROM genre_categories gc WHERE gc.categories_id = c.id
+)
+"""
+
+# The taxonomy changes when an admin edits it, which is rare, and it was being
+# re-read from the database on every single search. Cached with an expiry rather
+# than forever, so an edit shows up without a restart.
+_TAXONOMY_TTL_SECONDS = 300.0
+_taxonomy_cache: dict | None = None
+_taxonomy_cached_at = 0.0
+_taxonomy_lock = threading.Lock()
+
+
+class Taxonomy(NamedTuple):
+    """The genre tree, in the two shapes the ranker needs."""
+
+    parent_of: dict[str, str]   # sub-genre -> its parent
+    parents: frozenset[str]     # every parent genre name
+    vocabulary: list[str]       # every name, parent and sub alike
+
+    def resolve(self, wanted: str | None) -> tuple[str | None, str | None]:
+        """Splits a requested genre into (sub-genre, parent genre).
+
+        The organizer picks one name from one list and the model wants both
+        halves. "Bebop" is a sub-genre of Jazz, so a Jazz act that does not list
+        Bebop should still score a partial match; "Jazz" is a parent, so nothing
+        can score an exact sub-genre match against it.
+
+        Passing the same string as both — which is what this code used to do —
+        meant a sub-genre request scored any other act in the same parent genre
+        at zero, indistinguishable from a completely unrelated one.
+        """
+        if not wanted:
+            return None, None
+        name = wanted.strip()
+        if not name:
+            return None, None
+        if name in self.parents:
+            return None, name
+        parent = self.parent_of.get(name)
+        if parent:
+            return name, parent
+        # Unknown to the catalogue: treat it as a sub-genre and let the match
+        # fall through to zero rather than inventing a parent for it.
+        return name, None
+
+
+def genre_taxonomy() -> Taxonomy:
+    """The genre tree, cached briefly."""
+    global _taxonomy_cache, _taxonomy_cached_at
+
+    now = time.monotonic()
+    cached = _taxonomy_cache
+    if cached is not None and now - _taxonomy_cached_at < _TAXONOMY_TTL_SECONDS:
+        return cached["taxonomy"]
+
+    with _taxonomy_lock:
+        # Another thread may have refreshed it while this one waited.
+        cached = _taxonomy_cache
+        if cached is not None and time.monotonic() - _taxonomy_cached_at < _TAXONOMY_TTL_SECONDS:
+            return cached["taxonomy"]
+
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute(_TAXONOMY_QUERY)
+            rows = cur.fetchall()
+            cur.execute(_ORPHAN_SUBS_QUERY)
+            orphans = [row[0] for row in cur.fetchall() if row[0]]
+
+        parent_of = {sub: parent for parent, sub in rows if sub and parent}
+        parents = frozenset(parent for parent, _ in rows if parent)
+        vocabulary = sorted(set(parent_of) | parents | set(orphans))
+
+        taxonomy = Taxonomy(parent_of=parent_of, parents=parents, vocabulary=vocabulary)
+        _taxonomy_cache = {"taxonomy": taxonomy}
+        _taxonomy_cached_at = time.monotonic()
+        log.info("Genre taxonomy loaded: %d parents, %d sub-genres",
+                 len(parents), len(parent_of))
+        return taxonomy
 
 
 def genre_vocabulary() -> list[str]:
     """Every genre and sub-genre name the catalogue knows about."""
-    with connection() as conn, conn.cursor() as cur:
-        cur.execute(_VOCAB_QUERY)
-        return [row[0] for row in cur.fetchall() if row[0]]
+    return genre_taxonomy().vocabulary

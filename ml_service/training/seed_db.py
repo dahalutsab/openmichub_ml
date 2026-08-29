@@ -20,7 +20,8 @@ import math
 import numpy as np
 
 from app.db import connection
-from training.generate import CITIES, GENRES, GeneratorConfig, generate_artists
+from app.taxonomy import CITIES, GENRES
+from training.generate import GeneratorConfig, generate_artists
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)-5s %(message)s")

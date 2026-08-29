@@ -81,7 +81,7 @@ the *order* of a result list directly, which is what a search page needs.
 | Min data in leaf | 20 |
 | Feature / bagging fraction | 0.9 / 0.9 (freq 1) |
 | L2 | 1.0 |
-| **Best iteration** | **40** (early-stopped from 600) |
+| **Best iteration** | **87** (early-stopped from 600) |
 | Model file | `models/ranker.txt` + `ranker_meta.json` |
 
 ### Training data — synthetic, and stated in full
@@ -105,17 +105,45 @@ u = 0.24 * genre_match        exact sub-genre, same parent, or neither
 |---|---|
 | Artists | 600 |
 | Queries | 5,000 |
-| Candidate pairs | 123,723 |
+| Candidate pairs | 123,799 |
 | Candidates per query | 25 |
 | Noise sd | 0.12 |
+| Similarity noise sd | 0.314 — **measured**, see below |
+| Genre / budget / text withheld | 45% / 35% / 20% of queries |
 | Split | 3,500 train / 750 val / 750 test, **split by query** |
 
-Two design points make this an honest exercise rather than a circular one.
+Three design points make this an honest exercise rather than a circular one.
 
 **`style_affinity` is latent.** It is 16% of true utility and the model never
 sees it. What it sees instead is `text_similarity`, a noisy observation of the
 same thing. The model therefore cannot reach perfect ranking, which is correct —
 neither can a real one.
+
+**How noisy that observation is, is measured rather than assumed.** This is the
+part that used to be wrong. The generator simulated `text_similarity` with a
+noise sd of 0.10, which made a genre match separate from a non-match more than
+twice as cleanly in training as the real encoder manages on the real catalogue:
+
+| | genre-matching | non-matching | separation / pooled sd |
+|---|---|---|---|
+| `bge-small-en-v1.5`, live catalogue | 0.5953 ± 0.0438 | 0.5246 ± 0.0410 | **1.67** |
+| generator, noise sd 0.10 | 0.775 ± 0.142 | 0.225 ± 0.142 | **3.88** |
+| generator, noise sd 0.314 | 0.775 ± 0.330 | 0.225 ± 0.330 | **1.67** |
+
+The model had learned to trust a signal that clean and gave `text_similarity`
+54% of its total gain — weight the feature cannot possibly earn in production,
+where it is half as informative. `training/calibrate.py` measures the real
+figure against the live catalogue and prints the constants; re-run it after
+changing `embedding_model`.
+
+**The text signal is withheld on 20% of queries.** Browse and "similar artists"
+surfaces rank with no query text at all, so `text_similarity` is genuinely
+absent there, in the same way `genre_match` is absent when nobody picked a
+genre. Every training row used to carry it, leaving the model no branch for its
+absence — and serving passed a flat 0.5 for every candidate, which pinned the
+most important feature to a constant and collapsed the trees onto a handful of
+leaves. A hundred artists came back on thirty-six distinct scores, the top ten
+sharing two between them.
 
 **The split is by query, not by row.** All 25 candidates for a query live on the
 same side of the split. Splitting by row would leak: the model would train on
@@ -143,65 +171,124 @@ some candidates for a query it is then tested on.
 
 | Ranker | NDCG@10 | NDCG@5 | NDCG@3 | MAP@10 | P@3 |
 |---|---|---|---|---|---|
-| **LambdaRank** | **0.774** | **0.702** | **0.642** | **0.644** | **0.760** |
-| Genre only | 0.595 | 0.490 | 0.411 | 0.438 | 0.519 |
-| Price only | 0.511 | 0.406 | 0.350 | 0.339 | 0.436 |
-| Rating only | 0.411 | 0.318 | 0.276 | 0.237 | 0.337 |
-| Random | 0.346 | 0.259 | 0.215 | 0.187 | 0.272 |
+| **LambdaRank** | **0.720** | **0.648** | **0.594** | **0.571** | **0.702** |
+| Genre only | 0.603 | 0.503 | 0.430 | 0.443 | 0.548 |
+| Similarity only | 0.535 | 0.433 | 0.379 | 0.358 | 0.475 |
+| Price only | 0.529 | 0.424 | 0.369 | 0.349 | 0.444 |
+| Rating only | 0.414 | 0.330 | 0.286 | 0.242 | 0.349 |
+| Random | 0.341 | 0.255 | 0.214 | 0.185 | 0.269 |
 
 The baselines are the point. A ranking number alone says nothing — NDCG@10 of
-0.774 could be excellent or embarrassing depending on how hard the task is.
-Random scores 0.346, so the floor is high, and the best single-signal heuristic
-(genre) reaches 0.595. The model's contribution is the gap from **0.595 to
-0.774**: what it adds over the most obvious rule anyone would write by hand.
+0.720 could be excellent or embarrassing depending on how hard the task is.
+Random scores 0.341, so the floor is high, and the best single-signal heuristic
+(genre) reaches 0.603. The model's contribution is the gap from **0.603 to
+0.720**: what it adds over the most obvious rule anyone would write by hand.
+
+**Similarity only** is the baseline that matters most for this architecture. It
+is what shipping retrieval on its own would give: order by the text signal and
+ignore price, distance and rating entirely. It reaches 0.535, so the ranking
+stage earns its place — but note how close that is to the other single signals.
+Vector similarity is one opinion among several, not the answer.
+
+> **These numbers are lower than the 0.774 this file used to report, and that is
+> the improvement.** The old figure was measured against a generator whose
+> simulated embedding was twice as discriminative as the real one, with the text
+> signal present on every row. The model was being graded on an easier task than
+> the one it actually faces. Fixing the simulation made the benchmark harder and
+> the model honest; the live results got better at the same time. The two
+> numbers are not comparable, and only the second describes production.
 
 ### Overfitting
 
-Early stopping picked iteration **40** of a possible 600.
+Early stopping picked iteration **87** of a possible 600.
 
 | Iteration | Train NDCG@10 | Val NDCG@10 | Gap |
 |---|---|---|---|
-| 1 | 0.7279 | 0.7257 | 0.002 |
-| 10 | 0.7674 | 0.7585 | 0.009 |
-| 40 (**chosen**) | 0.7807 | 0.7652 | **0.015** |
-| 90 | 0.7925 | 0.7677 | 0.025 |
+| 1 | 0.6879 | 0.6876 | 0.000 |
+| 10 | 0.7147 | 0.7113 | 0.003 |
+| 40 | 0.7258 | 0.7188 | 0.007 |
+| 87 (**chosen**) | 0.7374 | 0.7226 | **0.015** |
+| 137 | 0.7471 | 0.7216 | 0.026 |
 
-Train and validation separate slowly and never dramatically. Running to 90
-iterations would buy 0.0025 of validation NDCG while doubling the gap — a
-textbook picture of a model that is capacity-limited rather than data-limited,
-which is what you would expect with 123k pairs and 31 leaves.
+Train and validation separate slowly and never dramatically. Past 87 the
+validation curve turns over — 137 iterations is worse on validation while the
+gap has nearly doubled — so the stopping point is a real optimum rather than a
+budget running out.
+
+The model now needs 87 iterations where it used to stop at 40. That is the
+expected consequence of a harder, more realistic task: with the text signal
+noisier and sometimes absent, the remaining features have to be combined in more
+ways, and there is more structure left to fit.
 
 ### What the model actually learned
 
-Share of total split gain:
+Share of total split gain, before and after the calibration fix:
 
-| Feature | Share |
-|---|---|
-| `text_similarity` | 53.7% |
-| `genre_match` | 16.1% |
-| `rate_to_budget_ratio` | 9.9% |
-| `price_fit` | 9.9% |
-| `location_match` | 6.2% |
-| `rating_norm` | 2.0% |
-| everything else | < 1% each |
+| Feature | Before | **After** |
+|---|---|---|
+| `genre_match` | 16.1% | **44.6%** |
+| `text_similarity` | 53.7% | **14.8%** |
+| `rate_to_budget_ratio` | 9.9% | **14.4%** |
+| `price_fit` | 9.9% | **10.9%** |
+| `location_match` | 6.2% | **8.1%** |
+| `rating_norm` | 2.0% | **3.5%** |
+| `log_hourly_rate` | < 1% | 1.5% |
+| `experience` | < 1% | 1.1% |
+| everything else | < 1% each | < 1% each |
 
-Read this against the true weights above and it is informative rather than
-flattering. The generator gave `genre_match` the largest weight at 0.24, but the
-model leans hardest on `text_similarity` — because that is its only window onto
-the latent `style_affinity`, worth another 0.16. Together those two account for
-40% of true utility and 70% of the model's gain. That is the model recovering
-the structure it was given, through the noisy channel it was given it through.
+The two columns are the whole story of what was wrong. The generator gives
+`genre_match` the largest true weight at 0.24, and the model now agrees with it.
+Before, the model leaned hardest on `text_similarity` — not because it was the
+strongest signal, but because the simulation made it twice as reliable as the
+real encoder is. Trained against a realistic encoder, the model puts the text
+signal back where it belongs: a useful third opinion at 14.8%, not the whole
+answer at 54%.
 
-`rating_norm` gets 13% of true weight but only 2% of gain. Ratings in the
-generator are near-uniform and weakly separating; the trees find cheaper splits
-elsewhere. The three binary features contribute nothing measurable, being
-largely redundant with `location_match`.
+Everything else moved in the same direction. Price, distance and rating all rose
+as the model stopped spending its splits on a feature that could not carry them.
+`rating_norm` still gets 13% of true weight for only 3.5% of gain — ratings in
+the generator are near-uniform and weakly separating, so the trees find cheaper
+splits elsewhere. The three binary features contribute nothing measurable, being
+largely redundant with `location_match`; they are the first candidates to drop
+if the feature set is ever pruned.
+
+`event_fit` earns 0.1% of gain against 4% of true weight, which is honest but
+unflattering: the event-genre table is coarse enough that the model can mostly
+infer it from `genre_match` and does.
+
+### Serving must compute these the same way
+
+A ranking model is only as good as the features it is handed at request time,
+and four of these were being computed differently at serving than in training.
+All four are fixed; they are worth naming because each is easy to reintroduce.
+
+| | Was | Now |
+|---|---|---|
+| `text_similarity` on search | Min-max normalised across the retrieved pool, so the top hit always scored exactly 1.0 and the last exactly 0.0 — a restatement of the retrieval order, stretching a 0.08-wide cosine band over the full range | Fixed affine map from the measured cosine band (`similarity_cos_low`/`high`), so the same cosine means the same thing on every query |
+| `text_similarity` on browse | Flat 0.5 for every candidate, pinning 54% of the model's gain to a constant | NaN — a withheld feature, which the model is now trained to handle — and `/recommend` builds a query from the filters so it usually is not withheld at all |
+| `genre_match` | One name passed as both sub-genre and parent, so a request for "Bebop" scored a Jazz act without it at 0.0, the same as a Techno act | Resolved through the catalogue's own taxonomy into a real (sub, parent) pair: 1.0 / 0.6 / 0.0 |
+| `event_fit` | Serving's copy of the event table listed 3–4 genres per event instead of 8; the rest silently took the 0.5 default | One table in `app/taxonomy.py`, imported by both sides |
+
+The genre and event tables now have a single definition that training and
+serving both import, and `genre_match` and `price_fit` are single functions
+called from both. Two copies of a scoring rule is how the first three of those
+happened.
 
 ### Retrain
 
 ```bash
 curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
 ```
+
+Re-measure the encoder first if the embedding model or the catalogue has changed
+materially — the generator reads `similarity_noise_sd` from settings, so a stale
+value silently trains against the wrong encoder:
+
+```bash
+docker compose exec ml python -m training.calibrate   # prints the constants
+```
+
+Paste the three numbers it prints into `app/config.py`, rebuild, then retrain.
 
 ---
 
@@ -384,13 +471,15 @@ app/
   main.py        FastAPI routes
   search.py      retrieval
   ranker.py      LightGBM load and score
-  features.py    the 13 features
+  features.py    the 13 features, and the similarity calibration
+  taxonomy.py    genres, cities and event fit — one copy, shared with training
   segments.py    segment lookups and similarity
   embedder.py    fastembed / ONNX
   repository.py  catalogue reads, document assembly
   db.py          pool, pgvector registration, schema
 training/
   generate.py    the synthetic process, stated in full
+  calibrate.py   measures the encoder's real accuracy, for the generator
   train.py       ranker training and evaluation
   segment.py     k sweep, fitting, labelling
   seed_world.py  demo catalogue with a history

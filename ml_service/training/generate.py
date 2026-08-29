@@ -55,51 +55,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# --- catalogue -------------------------------------------------------------
-
-CITIES = {
-    # city: (province, latitude, longitude)
-    "Kathmandu": ("Bagmati", 27.7172, 85.3240),
-    "Lalitpur": ("Bagmati", 27.6644, 85.3188),
-    "Bhaktapur": ("Bagmati", 27.6710, 85.4298),
-    "Pokhara": ("Gandaki", 28.2096, 83.9856),
-    "Chitwan": ("Bagmati", 27.5291, 84.3542),
-    "Butwal": ("Lumbini", 27.7006, 83.4484),
-    "Nepalgunj": ("Lumbini", 28.0500, 81.6167),
-    "Biratnagar": ("Koshi", 26.4525, 87.2718),
-    "Dharan": ("Koshi", 26.8065, 87.2846),
-    "Janakpur": ("Madhesh", 26.7288, 85.9266),
-}
-
-GENRES = {
-    "Rock": ["Classic Rock", "Indie Rock", "Alternative", "Punk"],
-    "Jazz": ["Bebop", "Smooth Jazz", "Fusion", "Swing"],
-    "Folk": ["Nepali Folk", "Acoustic Folk", "Storytelling", "Bluegrass"],
-    "Pop": ["Nepali Pop", "Synth Pop", "Acoustic Pop", "Dance Pop"],
-    "Classical": ["Hindustani", "Sitar", "Flute", "Chamber"],
-    "Hip-Hop": ["Nepali Rap", "Boom Bap", "Trap", "Lyrical"],
-    "Electronic": ["House", "Techno", "Ambient", "Drum and Bass"],
-    "Blues": ["Delta Blues", "Electric Blues", "Soul Blues"],
-}
-
-EVENT_TYPES = [
-    "Wedding", "Corporate", "Festival", "Birthday",
-    "Club Night", "Open Mic", "Charity Gala", "Restaurant",
-]
-
-# How well each parent genre suits each event, 0-1. Deliberately not uniform:
-# this is the kind of structure a ranker should pick up and a rating-only
-# baseline cannot.
-EVENT_GENRE_FIT = {
-    "Wedding":     {"Folk": 1.0, "Pop": 0.9, "Classical": 0.9, "Jazz": 0.7, "Blues": 0.5, "Rock": 0.4, "Hip-Hop": 0.3, "Electronic": 0.3},
-    "Corporate":   {"Jazz": 1.0, "Classical": 0.9, "Pop": 0.7, "Folk": 0.6, "Blues": 0.6, "Electronic": 0.4, "Rock": 0.3, "Hip-Hop": 0.2},
-    "Festival":    {"Rock": 1.0, "Electronic": 0.9, "Pop": 0.9, "Hip-Hop": 0.8, "Folk": 0.7, "Blues": 0.5, "Jazz": 0.5, "Classical": 0.3},
-    "Birthday":    {"Pop": 1.0, "Hip-Hop": 0.8, "Rock": 0.8, "Electronic": 0.7, "Folk": 0.6, "Jazz": 0.5, "Blues": 0.4, "Classical": 0.3},
-    "Club Night":  {"Electronic": 1.0, "Hip-Hop": 0.9, "Pop": 0.7, "Rock": 0.6, "Blues": 0.3, "Jazz": 0.3, "Folk": 0.2, "Classical": 0.1},
-    "Open Mic":    {"Folk": 1.0, "Blues": 0.9, "Hip-Hop": 0.8, "Rock": 0.7, "Jazz": 0.7, "Pop": 0.6, "Classical": 0.4, "Electronic": 0.3},
-    "Charity Gala":{"Classical": 1.0, "Jazz": 0.9, "Folk": 0.8, "Pop": 0.7, "Blues": 0.6, "Rock": 0.4, "Electronic": 0.3, "Hip-Hop": 0.3},
-    "Restaurant":  {"Jazz": 1.0, "Blues": 0.9, "Folk": 0.9, "Classical": 0.8, "Pop": 0.6, "Rock": 0.3, "Electronic": 0.3, "Hip-Hop": 0.2},
-}
+from app.config import get_settings
+from app.features import genre_match as _genre_match_feature
+from app.features import price_fit as _price_fit_feature
+from app.taxonomy import CITIES, EVENT_TYPES, GENRES, event_fit
 
 # Weights of the true utility function. The evaluation reports how closely the
 # trained model's feature importances line up with these.
@@ -116,9 +75,19 @@ TRUE_WEIGHTS = {
 
 NOISE_SD = 0.12
 
-# How faithfully the embedding reflects the latent style fit. Larger means the
-# text signal is less trustworthy, and the ranker should lean on it less.
-SIMILARITY_NOISE_SD = 0.10
+
+def similarity_noise_sd() -> float:
+    """How faithfully the embedding actually reflects the latent style fit.
+
+    Measured against the live catalogue by `training.calibrate`, not assumed.
+    This was hard-coded at 0.10, which made the simulated text signal separate
+    a genre match from a non-match more than twice as cleanly as the real
+    encoder manages. The model learned to trust it accordingly and handed
+    `text_similarity` 54% of its gain — weight it could not earn in production,
+    where the same feature is far noisier. Larger means less trustworthy, and
+    the ranker should lean on it less.
+    """
+    return get_settings().similarity_noise_sd
 
 # Fraction of queries where the organizer states no genre / no budget.
 #
@@ -135,6 +104,17 @@ SIMILARITY_NOISE_SD = 0.10
 # learns to lean on text similarity instead when the explicit signal is missing.
 GENRE_UNSPECIFIED_RATE = 0.45
 BUDGET_UNSPECIFIED_RATE = 0.35
+
+# Fraction of queries with no text at all.
+#
+# Browse and "similar artists" surfaces rank without a query, so there is no
+# cosine to observe and `text_similarity` is genuinely absent — not mediocre.
+# Every training row used to carry it, which left the model with no branch for
+# its absence; serving passed a flat 0.5 instead and the trees collapsed onto a
+# handful of leaves. Withholding it on a share of rows, the way genre and budget
+# already are, is what teaches the model to rank on the other twelve features
+# when that is all it has.
+SIMILARITY_UNSPECIFIED_RATE = 0.20
 
 
 @dataclass
@@ -213,6 +193,7 @@ def generate_queries(cfg: GeneratorConfig, rng: np.random.Generator) -> pd.DataF
             "query_id": query_id,
             "genre_stated": bool(rng.random() > GENRE_UNSPECIFIED_RATE),
             "budget_stated": bool(rng.random() > BUDGET_UNSPECIFIED_RATE),
+            "text_stated": bool(rng.random() > SIMILARITY_UNSPECIFIED_RATE),
             "wanted_parent_genre": parent,
             "wanted_sub_genre": wanted_sub,
             "city": city,
@@ -226,25 +207,22 @@ def generate_queries(cfg: GeneratorConfig, rng: np.random.Generator) -> pd.DataF
 
 
 def _genre_match(query: dict, artist: dict) -> float:
-    if query["wanted_sub_genre"] in artist["sub_genres"]:
-        return 1.0
-    if query["wanted_parent_genre"] == artist["parent_genre"]:
-        return 0.6
-    return 0.0
+    """Delegates to the serving implementation.
+
+    These used to be two functions with the same intent, and they diverged: the
+    serving side passed one name as both the sub-genre and the parent, so a
+    request for "Bebop" scored a Jazz act without that sub-genre at zero, where
+    training said 0.6. Sharing the function is what keeps the label and the
+    feature the same quantity.
+    """
+    return _genre_match_feature(
+        query["wanted_sub_genre"], query["wanted_parent_genre"],
+        artist["sub_genres"], [artist["parent_genre"]],
+    )
 
 
 def _price_fit(budget: float, rate: float) -> float:
-    """Peaks slightly under budget.
-
-    Cheap is not automatically better — organizers read a very low rate as low
-    quality — and anything over budget falls away fast.
-    """
-    if budget <= 0:
-        return 0.0
-    ratio = rate / budget
-    if ratio > 1.0:
-        return float(max(0.0, 1.0 - 2.2 * (ratio - 1.0)))
-    return float(math.exp(-((ratio - 0.85) ** 2) / (2 * 0.28 ** 2)))
+    return float(_price_fit_feature(budget, rate))
 
 
 def _location_match(query: dict, artist: dict) -> float:
@@ -267,6 +245,7 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
     a first-pass retrieval layer would surface. Sampling purely at random would
     make almost every candidate irrelevant and the ranking task degenerate.
     """
+    noise_sd = similarity_noise_sd()
     artist_records = artists.to_dict("records")
     by_parent: dict[str, list[dict]] = {}
     for record in artist_records:
@@ -299,7 +278,7 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
             rating_norm = (artist["rating"] - 1.0) / 4.0
             location_match = _location_match(query, artist)
             experience = min(1.0, math.log1p(artist["completed_bookings"]) / math.log1p(120))
-            event_fit = EVENT_GENRE_FIT[query["event_type"]].get(artist["parent_genre"], 0.5)
+            event_fit_value = event_fit(query["event_type"], [artist["parent_genre"]])
             responsiveness = artist["response_rate"]
 
             # Latent: how well this act actually suits what was asked for. Genre
@@ -307,9 +286,10 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
             style_affinity = float(np.clip(
                 0.55 * genre_match + 0.45 * rng.beta(2.0, 2.0), 0.0, 1.0))
 
-            # Observed: what the embedding reports about that fit.
+            # Observed: what the embedding reports about that fit, at the
+            # accuracy the real encoder was measured to have.
             text_similarity = float(np.clip(
-                style_affinity + rng.normal(0.0, SIMILARITY_NOISE_SD), 0.0, 1.0))
+                style_affinity + rng.normal(0.0, noise_sd), 0.0, 1.0))
 
             signals = {
                 "genre_match": genre_match,
@@ -318,7 +298,7 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
                 "rating_norm": rating_norm,
                 "location_match": location_match,
                 "experience": experience,
-                "event_fit": event_fit,
+                "event_fit": event_fit_value,
                 "responsiveness": responsiveness,
             }
             utility = sum(TRUE_WEIGHTS[k] * v for k, v in signals.items())
@@ -330,6 +310,7 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
             # an unstated genre is a bad match.
             observed_genre_match = genre_match if query["genre_stated"] else float("nan")
             observed_price_fit = price_fit if query["budget_stated"] else float("nan")
+            observed_similarity = text_similarity if query["text_stated"] else float("nan")
 
             rows.append({
                 "query_id": query["query_id"],
@@ -341,13 +322,15 @@ def build_pairs(artists: pd.DataFrame, queries: pd.DataFrame,
                 "wanted_parent_genre": query["wanted_parent_genre"],
                 "wanted_sub_genre": query["wanted_sub_genre"],
                 "utility": utility,
-                "text_similarity": text_similarity,
+                "text_similarity": observed_similarity,
                 "genre_stated": query["genre_stated"],
                 "budget_stated": query["budget_stated"],
+                "text_stated": query["text_stated"],
                 **signals,
                 # Overwrite the two the model may not see in full.
                 "genre_match": observed_genre_match,
                 "price_fit": observed_price_fit,
+                "true_text_similarity": text_similarity,
                 "true_genre_match": genre_match,
                 "true_price_fit": price_fit,
             })

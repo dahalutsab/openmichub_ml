@@ -111,6 +111,33 @@ def vector_candidates(query_text: str, limit: int | None = None,
     return artists
 
 
+def requirement_query(genre: str | None, event_type: str | None,
+                      city: str | None) -> str | None:
+    """A query built from browse filters, phrased the way artists are embedded.
+
+    Browse surfaces have no text box, but they are not without intent: an
+    organizer filtering to Jazz for a Corporate event has said what they want as
+    plainly as if they had typed it. Turning those filters back into a sentence
+    gives retrieval something to match on, and gives the ranker the text feature
+    that carries most of its gain — which was otherwise fed a flat constant for
+    every candidate, leaving the model unable to separate them.
+
+    A city on its own returns nothing. Location is already a hard filter and a
+    feature of its own; embedding "in Pokhara" alone would add noise, not taste.
+    """
+    if not genre and not event_type:
+        return None
+
+    parts = []
+    if genre:
+        parts.append(genre)
+    if event_type:
+        parts.append(f"for a {event_type} event")
+    if city:
+        parts.append(f"in {city}")
+    return " ".join(parts)
+
+
 def embedding_count() -> int:
     with connection() as conn, conn.cursor() as cur:
         cur.execute(f"SELECT COUNT(*) FROM {get_settings().db_schema}.artist_embedding")

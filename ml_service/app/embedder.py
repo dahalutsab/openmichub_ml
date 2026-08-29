@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from functools import lru_cache
 
 import numpy as np
 
@@ -49,5 +50,22 @@ def embed(texts: list[str]) -> np.ndarray:
     return vectors / np.clip(norms, 1e-9, None)
 
 
-def embed_one(text: str) -> np.ndarray:
+@lru_cache(maxsize=1024)
+def _embed_one_cached(text: str) -> np.ndarray:
     return embed([text])[0]
+
+
+def embed_one(text: str) -> np.ndarray:
+    """Embeds a single query, remembering recent ones.
+
+    Encoding one short string costs about 45ms, which is most of a search
+    request. Browse surfaces repeat themselves hard — `/recommend` turns its
+    filters back into a query, and there are only so many genre-event-city
+    combinations — so the same text arrives over and over. Text searches repeat
+    too, if less reliably.
+
+    The vector is handed out shared rather than copied, so callers must treat it
+    as read-only. Every caller here either passes it to psycopg or reads it in a
+    dot product.
+    """
+    return _embed_one_cached(text)
