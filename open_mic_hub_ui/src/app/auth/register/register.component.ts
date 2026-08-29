@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth.service';
@@ -38,6 +38,7 @@ export class RegisterComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private fb: FormBuilder,
     private authService: AuthService,
     private http: HttpClient,
@@ -57,6 +58,12 @@ export class RegisterComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Which tab to open on. "List your act" on the landing page means the person has already said
+    // they are here to perform; making them say it again on arrival is asking twice.
+    if (this.route.snapshot.queryParamMap.get('as') === 'artist') {
+      this.setRole('artist');
+    }
+
     this.fetchGenres();
   }
 

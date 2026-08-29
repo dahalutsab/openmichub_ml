@@ -340,6 +340,17 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     this.router.navigate([`/${path}`]);
   }
 
+  /**
+   * Sends someone to registration already on the tab they asked for.
+   *
+   * "List your act" and "Join free" both landed on the same form defaulted to booking, so anyone
+   * arriving to perform had to notice a tab and switch it before the form asked for any of the
+   * things a performer needs. The button said what they wanted; it just was not carried over.
+   */
+  registerAs(role: 'user' | 'artist') {
+    this.router.navigate(['/auth/register'], { queryParams: { as: role } });
+  }
+
   scrollToSection(sectionId: string) {
     const element = document.getElementById(sectionId);
     if (element) {
