@@ -6,6 +6,7 @@ import {
   TransactionApiResponse,
 } from './transaction.service';
 import { visiblePages } from '../../../shared/pagination';
+import { canDisburse } from '../../../shared/session';
 
 @Component({
   selector: 'app-transactions-list',
@@ -39,7 +40,24 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
 
   /** The row awaiting withdrawal confirmation, or null when the modal is shut. */
   pendingWithdrawal: TransactionResponse | null = null;
+  /** The row awaiting a decline confirmation. */
+  pendingDecline: TransactionResponse | null = null;
   processing = false;
+
+  /**
+   * Withdrawal requests still waiting on a decision.
+   *
+   * Loaded from their own endpoint rather than filtered out of the ledger below. Withdrawals are a
+   * sliver of a table that runs to thousands of rows, and this page only ever loaded the first
+   * thousand of them — which contained no withdrawal at all, so the queue looked empty while
+   * twenty-seven artists waited.
+   */
+  withdrawals: TransactionResponse[] = [];
+  withdrawalsLoading = false;
+  withdrawalsTotal = 0;
+
+  /** Only the platform owner can move money; staff see the queue read-only. */
+  readonly canDisburse = canDisburse();
 
   constructor(private transactionService: TransactionService) {
     // Setup artist search with debounce
@@ -53,6 +71,7 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.loadWithdrawals();
     this.loadTransactions();
   }
 
@@ -83,7 +102,55 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
   }
 
   refreshTransactions() {
+    this.loadWithdrawals();
     this.loadTransactions();
+  }
+
+  loadWithdrawals() {
+    this.withdrawalsLoading = true;
+
+    this.transactionService.getWithdrawalRequests(0, 50)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          this.withdrawals = response.data.content ?? [];
+          this.withdrawalsTotal = response.data.totalElements;
+          this.withdrawalsLoading = false;
+        },
+        error: error => {
+          this.withdrawalsLoading = false;
+          this.error = 'Failed to load withdrawal requests. Please try again.';
+          console.error('Error loading withdrawal requests:', error);
+        },
+      });
+  }
+
+  /** How long a request has been waiting, for the queue's age column. */
+  waitingFor(transaction: TransactionResponse): string {
+    if (!transaction.createdDate) {
+      return '—';
+    }
+    const days = Math.floor(
+      (Date.now() - new Date(transaction.createdDate).getTime()) / 86_400_000);
+    if (days < 1) return 'today';
+    if (days === 1) return '1 day';
+    return `${days} days`;
+  }
+
+  statusClass(status?: string): string {
+    switch (status) {
+      case 'APPROVED': return 'omh-status-positive';
+      case 'PENDING': return 'omh-status-pending';
+      case 'DECLINED': return 'omh-status-critical';
+      default: return 'omh-status-neutral';
+    }
+  }
+
+  /** Only a request still awaiting a decision can be paid or refused. */
+  isActionable(transaction: TransactionResponse): boolean {
+    return transaction.transactionPurpose === 'WITHDRAWAL_REQUEST'
+      && transaction.status === 'PENDING'
+      && this.canDisburse;
   }
 
   onFilterChange() {
@@ -207,6 +274,37 @@ export class TransactionsListComponent implements OnInit, OnDestroy {
 
   askWithdrawal(transaction: TransactionResponse) {
     this.pendingWithdrawal = transaction;
+  }
+
+  askDecline(transaction: TransactionResponse) {
+    this.pendingDecline = transaction;
+  }
+
+  confirmDecline() {
+    const transaction = this.pendingDecline;
+    if (!transaction || this.processing) {
+      return;
+    }
+
+    this.processing = true;
+    this.error = '';
+
+    this.transactionService.declineWithdrawal(transaction.transactionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.processing = false;
+          this.pendingDecline = null;
+          // The artist's balance has changed as well as the row's status.
+          this.refreshTransactions();
+        },
+        error: error => {
+          this.processing = false;
+          this.pendingDecline = null;
+          this.error = 'Failed to decline the withdrawal. Please try again.';
+          console.error('Error declining withdrawal:', error);
+        },
+      });
   }
 
   confirmWithdrawal() {

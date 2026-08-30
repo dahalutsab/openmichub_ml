@@ -6,6 +6,7 @@ import com.brogrammers.open_mic_hub_service.user_management.artist.artist.reposi
 import com.brogrammers.open_mic_hub_service.user_management.user.entity.UserEntity;
 import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.TransactionRequest;
+import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.TransactionResponse;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.WithDrawRequest;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Status;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Transaction;
@@ -20,6 +21,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
+import java.util.List;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,6 +40,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -175,5 +185,110 @@ class TransactionServiceImplTest {
 
         assertThat(wallet.getBalance()).isEqualTo(50_000.0);
         assertThat(hold.getStatus()).isEqualTo(Status.DECLINED);
+    }
+
+    // ------------------------------------------------------------- the payout queue --
+    //
+    // A withdrawal an admin cannot see is a withdrawal that never gets paid. These cover the two
+    // ways that happened: the queue being read out of the ledger rather than queried, and a
+    // response that carried no status for anyone to act on.
+
+    private Transaction pendingWithdrawal(double amount) {
+        Transaction transaction = new Transaction();
+        transaction.setTransactionId(99L);
+        transaction.setAmount(amount);
+        transaction.setVirtualCoin(wallet);
+        transaction.setTransactionType(TransactionType.DEBIT);
+        transaction.setTransactionPurpose(TransactionPurpose.WITHDRAWAL_REQUEST);
+        transaction.setStatus(Status.PENDING);
+        return transaction;
+    }
+
+    @Test
+    @DisplayName("the withdrawal queue asks the database for withdrawals, newest first")
+    void withdrawalQueueIsQueriedNotFiltered() {
+        ArgumentCaptor<Pageable> paging = ArgumentCaptor.forClass(Pageable.class);
+        when(transactionRepository.findWithdrawalRequests(eq(Status.PENDING), paging.capture()))
+                .thenReturn(new PageImpl<>(List.of(pendingWithdrawal(5_000.0))));
+
+        Page<TransactionResponse> page = service.getWithdrawalRequests(Status.PENDING, Pageable.ofSize(20));
+
+        assertThat(page.getContent()).hasSize(1);
+        // Newest first, or a request raised a minute ago sits behind three thousand older rows.
+        assertThat(paging.getValue().getSort().getOrderFor("transactionId"))
+                .isNotNull()
+                .satisfies(order -> assertThat(order.isDescending()).isTrue());
+        // And never by paging the whole ledger.
+        verify(transactionRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("a caller's own sort is respected")
+    void anExplicitSortIsLeftAlone() {
+        ArgumentCaptor<Pageable> paging = ArgumentCaptor.forClass(Pageable.class);
+        when(transactionRepository.findAll(paging.capture())).thenReturn(Page.empty());
+
+        service.getAllTransactions(PageRequest.of(0, 20, Sort.by("amount")));
+
+        assertThat(paging.getValue().getSort()).isEqualTo(Sort.by("amount"));
+    }
+
+    @Test
+    @DisplayName("a transaction reports its status, which is what makes it actionable")
+    void responseCarriesStatus() {
+        when(transactionRepository.findWithdrawalRequests(any(), any()))
+                .thenReturn(new PageImpl<>(List.of(pendingWithdrawal(5_000.0))));
+
+        TransactionResponse response =
+                service.getWithdrawalRequests(Status.PENDING, Pageable.ofSize(20)).getContent().get(0);
+
+        assertThat(response.getStatus()).isEqualTo("PENDING");
+        assertThat(response.getAmount()).isEqualTo(5_000.0);
+    }
+
+    @Test
+    @DisplayName("declining a request hands the money back and marks it declined")
+    void decliningReturnsTheHeldFunds() {
+        Transaction request = pendingWithdrawal(20_000.0);
+        wallet.setBalance(30_000.0);
+        when(transactionRepository.findById(99L)).thenReturn(Optional.of(request));
+
+        TransactionResponse response = service.declineWithdrawal(99L);
+
+        assertThat(wallet.getBalance()).isEqualTo(50_000.0);
+        assertThat(response.getStatus()).isEqualTo("DECLINED");
+    }
+
+    @Test
+    @DisplayName("a withdrawal already settled cannot be declined afterwards")
+    void aSettledWithdrawalCannotBeDeclined() {
+        Transaction request = pendingWithdrawal(20_000.0);
+        request.setStatus(Status.APPROVED);
+        wallet.setBalance(30_000.0);
+        when(transactionRepository.findById(99L)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.declineWithdrawal(99L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already APPROVED");
+
+        // Money already paid out must not be credited back a second time.
+        assertThat(wallet.getBalance()).isEqualTo(30_000.0);
+    }
+
+    @Test
+    @DisplayName("only a withdrawal request can be declined")
+    void aBookingCreditCannotBeDeclined() {
+        Transaction credit = new Transaction();
+        credit.setTransactionId(99L);
+        credit.setAmount(1_000.0);
+        credit.setVirtualCoin(wallet);
+        credit.setTransactionType(TransactionType.CREDIT);
+        credit.setTransactionPurpose(TransactionPurpose.BOOKING_PAYMENT);
+        credit.setStatus(Status.APPROVED);
+        when(transactionRepository.findById(99L)).thenReturn(Optional.of(credit));
+
+        assertThatThrownBy(() -> service.declineWithdrawal(99L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not a withdrawal request");
     }
 }

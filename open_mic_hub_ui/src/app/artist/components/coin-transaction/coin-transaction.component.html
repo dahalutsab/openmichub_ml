@@ -61,6 +61,7 @@
           <th class="omh-num">Amount</th>
           <th>Type</th>
           <th>Purpose</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -87,6 +88,13 @@
           </td>
 
           <td><span class="omh-chip">{{ formatPurpose(transaction.transactionPurpose) }}</span></td>
+
+          <!-- What tells an artist whether the payout they asked for has happened. Until this
+               column existed, a request that was still waiting and one already paid looked
+               identical on their own ledger. -->
+          <td>
+            <span [class]="statusClass(transaction.status)">{{ statusLabel(transaction) }}</span>
+          </td>
         </tr>
       </tbody>
     </table>

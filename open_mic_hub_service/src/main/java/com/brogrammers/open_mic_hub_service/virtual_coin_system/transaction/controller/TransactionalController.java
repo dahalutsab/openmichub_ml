@@ -3,6 +3,7 @@ package com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.con
 import com.brogrammers.open_mic_hub_service.common.BaseController;
 import com.brogrammers.open_mic_hub_service.common.constants.GlobalApiResponse;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.WithDrawRequest;
+import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Status;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionPurpose;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionType;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.service.TransactionService;
@@ -34,6 +35,36 @@ public class TransactionalController extends BaseController {
         return successResponse(
             transactionService.getAllLoggedInArtistTransaction(pageable, transactionType, transactionPurpose),
             "Fetched all transactions for logged-in artist successfully."
+        );
+    }
+
+    /**
+     * Withdrawal requests awaiting a decision, newest first.
+     *
+     * <p>Readable by any admin, because seeing the queue is not the same as paying it: only a
+     * SUPER_ADMIN can act on a row, through {@code POST /api/v1/artist/withdraw} to pay out or
+     * {@code /withdrawals/{id}/decline} to refuse.
+     *
+     * <p>{@code status=ALL} returns every withdrawal, settled ones included.
+     */
+    @PreAuthorize(UserRole.ANY_ADMIN)
+    @GetMapping("/withdrawals")
+    public ResponseEntity<GlobalApiResponse> getWithdrawalRequests(
+            Pageable pageable, @RequestParam(defaultValue = "PENDING") String status) {
+        Status wanted = "ALL".equalsIgnoreCase(status) ? null : Status.valueOf(status.toUpperCase());
+        return successResponse(
+            transactionService.getWithdrawalRequests(wanted, pageable),
+            "Fetched withdrawal requests successfully."
+        );
+    }
+
+    /** Refuses a pending withdrawal and returns the held funds. Moves money, so SUPER_ADMIN only. */
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PostMapping("/withdrawals/{transactionId}/decline")
+    public ResponseEntity<GlobalApiResponse> declineWithdrawal(@PathVariable Long transactionId) {
+        return successResponse(
+            transactionService.declineWithdrawal(transactionId),
+            "Withdrawal declined and the funds returned to the artist."
         );
     }
 

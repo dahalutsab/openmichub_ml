@@ -12,6 +12,9 @@ interface TransactionResponse {
   amount: number;
   transactionType: string;
   transactionPurpose: string;
+  /** PENDING, APPROVED or DECLINED — which is how an artist learns a payout went through. */
+  status?: string;
+  createdDate?: string;
 }
 
 interface PaginatedResponse {
@@ -100,6 +103,33 @@ export class CoinTransactionComponent implements OnInit {
 
   get endIndex(): number {
     return Math.min((this.currentPage + 1) * this.pageSize, this.totalElements);
+  }
+
+  statusClass(status?: string): string {
+    switch (status) {
+      case 'APPROVED': return 'omh-status-positive';
+      case 'PENDING': return 'omh-status-pending';
+      case 'DECLINED': return 'omh-status-critical';
+      default: return 'omh-status-neutral';
+    }
+  }
+
+  /**
+   * The status in the artist's terms rather than the ledger's.
+   *
+   * "Approved" is what the record says; "Paid" is what the artist wants to know. A booking credit
+   * is approved by definition and saying so on every row would be noise, so those read "Settled".
+   */
+  statusLabel(transaction: TransactionResponse): string {
+    if (transaction.transactionPurpose !== 'WITHDRAWAL_REQUEST') {
+      return transaction.status === 'APPROVED' ? 'Settled' : (transaction.status || '—');
+    }
+    switch (transaction.status) {
+      case 'APPROVED': return 'Paid';
+      case 'PENDING': return 'Awaiting payout';
+      case 'DECLINED': return 'Declined · funds returned';
+      default: return '—';
+    }
   }
 
   formatPurpose(purpose: string): string {

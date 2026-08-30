@@ -19,7 +19,9 @@ import com.brogrammers.open_mic_hub_service.virtual_coin_system.virtual_coin.rep
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
@@ -39,8 +41,66 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public Page<TransactionResponse> getAllTransactions(Pageable pageable) {
         log.info("Fetching all transactions with pagination: {}", pageable);
-        return transactionRepository.findAll(pageable)
+        return transactionRepository.findAll(newestFirst(pageable))
                 .map(TransactionResponse::new);
+    }
+
+    /**
+     * The withdrawal queue.
+     *
+     * <p>Its own query rather than a filter the caller applies afterwards. Withdrawals are a
+     * fraction of a percent of the ledger and sit among its newest rows, so pulling a page of
+     * everything and filtering it in the browser reliably found none of them — which is how
+     * twenty-seven pending requests came to be invisible on a screen built to show them.
+     */
+    @Override
+    public Page<TransactionResponse> getWithdrawalRequests(Status status, Pageable pageable) {
+        return transactionRepository.findWithdrawalRequests(status, newestFirst(pageable))
+                .map(TransactionResponse::new);
+    }
+
+    /**
+     * Refuses a pending withdrawal.
+     *
+     * <p>The other half of a payout queue. Funds are reserved the moment an artist asks, so without
+     * a way to say no, a request nobody intends to pay leaves that money held indefinitely -
+     * spendable by nobody, and with nothing on the artist's screen to explain why.
+     */
+    @Transactional
+    @Override
+    public TransactionResponse declineWithdrawal(Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Transaction not found with ID: " + transactionId));
+
+        if (transaction.getTransactionPurpose() != TransactionPurpose.WITHDRAWAL_REQUEST
+                || transaction.getTransactionType() != TransactionType.DEBIT) {
+            throw new IllegalArgumentException("That transaction is not a withdrawal request.");
+        }
+        if (transaction.getStatus() != Status.PENDING) {
+            throw new IllegalArgumentException(
+                    "This withdrawal is already " + transaction.getStatus() + ".");
+        }
+
+        releaseWithdrawalHold(transaction);
+        return new TransactionResponse(transaction);
+    }
+
+    /**
+     * The caller's paging, ordered newest first unless they asked for an order themselves.
+     *
+     * <p>{@code findAll} with no sort leaves the order to the database, which returns rows roughly
+     * as they sit on disk - so the first page was the oldest thousand transactions on the platform
+     * and a request raised a minute ago appeared nowhere. Sorted by id rather than by date:
+     * {@code createdDate} is nullable on rows that predate auditing, and those sort to the top of a
+     * descending order in Postgres.
+     */
+    private Pageable newestFirst(Pageable pageable) {
+        if (pageable.getSort().isSorted()) {
+            return pageable;
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "transactionId"));
     }
 
     /**
@@ -59,7 +119,9 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionType type = transactionType == TransactionType.ALL ? null : transactionType;
         TransactionPurpose purpose = transactionPurpose == TransactionPurpose.ALL ? null : transactionPurpose;
 
-        return transactionRepository.findForWallet(virtualCoin, type, purpose, pageable)
+        // Newest first here too: an artist opening their wallet is looking for the withdrawal they
+        // just raised, not the first gig they ever played.
+        return transactionRepository.findForWallet(virtualCoin, type, purpose, newestFirst(pageable))
                 .map(TransactionResponse::new);
     }
 

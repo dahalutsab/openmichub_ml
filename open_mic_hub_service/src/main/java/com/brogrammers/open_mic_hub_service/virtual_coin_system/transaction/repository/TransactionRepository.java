@@ -1,5 +1,6 @@
 package com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.repository;
 
+import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Status;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Transaction;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionPurpose;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionType;
@@ -31,6 +32,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                     @Param("type") TransactionType type,
                                     @Param("purpose") TransactionPurpose purpose,
                                     Pageable pageable);
+
+    /**
+     * Withdrawal requests, optionally narrowed to one status. A {@code null} status means all.
+     *
+     * <p>The admin screen used to look for these by paging the whole ledger and filtering in the
+     * browser. With three thousand transactions on the platform and a page size of a thousand, the
+     * withdrawal rows — which are a fraction of a percent of the table and among the most recent —
+     * fell outside the window every time, so the filter showed an empty table however many requests
+     * were waiting.
+     */
+    @Query("""
+            SELECT t FROM Transaction t
+            WHERE t.transactionPurpose = com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionPurpose.WITHDRAWAL_REQUEST
+              AND (:status IS NULL OR t.status = :status)
+            """)
+    Page<Transaction> findWithdrawalRequests(@Param("status") Status status, Pageable pageable);
 
     boolean existsByBookingIdAndTransactionPurpose(Long bookingId, TransactionPurpose transactionPurpose);
 

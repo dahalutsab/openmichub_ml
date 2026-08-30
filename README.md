@@ -195,7 +195,7 @@ refused outright rather than reassigned.
 ## Tests
 
 ```bash
-# Backend — 85 tests
+# Backend — 91 tests
 docker compose up -d postgres                     # optional; see below
 cd open_mic_hub_service && ./mvnw test
 
@@ -230,6 +230,7 @@ What is covered, and why those parts:
 | `OAuth2AccountServiceTest` | Which account a social profile resolves to, including the linking guards that stop an unverified address taking over an existing user |
 | `OAuth2UserDetailsTest` | Google's OIDC claims versus Facebook's Graph fields, and that an absent verification flag never reads as verified |
 | `ProfileCompletionServiceTest` | The one-time setup answer, and that it stays one-time |
+| `TransactionServiceImplTest` | Wallet arithmetic, the idempotent booking credit, that a withdrawal reserves funds up front — and the payout queue: that it is queried rather than filtered out of the ledger, ordered newest first, carries a status, and that declining returns the held funds exactly once |
 | `ProfileCompletenessServiceTest` | The artist checklist: that availability alone decides bookability, and that a placeholder bio or a zero rate does not count as done |
 | `InteractionServiceImplTest` | What reaches the interaction log and what does not: an anonymous visitor, a blank query and an unfiltered browse are never recorded, a reloaded profile counts once, and a write that fails stays invisible to the person searching |
 | `test_personalization.py` (ML) | Recency decay, how a history turns into genre, city and price tendencies, the floor below which nobody is personalised, and that a stronger affinity reorders a list without overturning the model's ranking. Also the four ways a fresh search used to get lost: falling below the floor, being averaged into a long booking history, being scaled through the wrong cosine band, and arriving after the profile the next page reads had already been cached |
@@ -263,6 +264,28 @@ The availability item is separated in the UI rather than listed with the rest, b
 different kind of gap: not "less visible" but "cannot be booked". The weights are a judgement about
 what gets someone booked, not a measurement, and they are stated in
 `ProfileCompletenessService` so they can be argued with.
+
+## Getting paid
+
+An artist's earnings accumulate in a wallet as bookings are paid for. Withdrawing is a request,
+not a transfer: the artist asks, the platform owner pays it out through Khalti, and only then does
+the money leave.
+
+| Step | Who | Where |
+|---|---|---|
+| Raise a request | Artist | Wallet → **Withdraw funds**. `POST /api/v1/transactions/withDraw` |
+| See its progress | Artist | Wallet ledger — *Awaiting payout*, *Paid*, or *Declined · funds returned* |
+| See the queue | Any admin | Admin → **Coin transactions**, at the top. `GET /api/v1/transactions/withdrawals` |
+| Pay it out | Owner only | **Pay out** on the queue, which opens Khalti. `POST /api/v1/artist/withdraw` |
+| Refuse it | Owner only | **Decline** on the queue. `POST /api/v1/transactions/withdrawals/{id}/decline` |
+
+The amount is **held the moment the request is raised** — debited from the balance, with the
+transaction left `PENDING`. That is what stops an artist filing the same withdrawal repeatedly and
+every copy passing the balance check. A payout that completes only flips the status; one that fails
+at the gateway, or is declined, returns the funds.
+
+Staff (`ADMIN`) can read the queue but not act on it: moving money is the `SUPER_ADMIN` role alone,
+enforced server-side and reflected in the buttons the UI offers.
 
 ## Roles
 

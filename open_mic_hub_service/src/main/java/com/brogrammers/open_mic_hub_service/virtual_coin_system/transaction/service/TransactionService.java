@@ -4,6 +4,7 @@ import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.TransactionResponse;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.WithDrawRequest;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.dto.WithDrawResponse;
+import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Status;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.Transaction;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionPurpose;
 import com.brogrammers.open_mic_hub_service.virtual_coin_system.transaction.entity.TransactionType;
@@ -20,4 +21,10 @@ public interface TransactionService {
     TransactionResponse createTransaction(TransactionRequest transactionRequest);
 
     WithDrawResponse withDraw(WithDrawRequest withDrawRequest);
+
+    /** Withdrawal requests for the admin queue. A {@code null} status means every status. */
+    Page<TransactionResponse> getWithdrawalRequests(Status status, Pageable pageable);
+
+    /** Refuses a pending withdrawal and returns the reserved funds to the artist. */
+    TransactionResponse declineWithdrawal(Long transactionId);
 }

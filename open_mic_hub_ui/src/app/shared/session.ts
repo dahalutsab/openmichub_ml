@@ -43,3 +43,14 @@ export function canBook(): boolean {
   const roles = currentRoles();
   return roles.includes('ORGANIZER') || roles.includes('USER');
 }
+
+/**
+ * Whether this account may move money — pay out or refuse a withdrawal.
+ *
+ * Platform staff can read the financial records and only the owner can disburse, so the queue is
+ * shown to both and the buttons only to one. The server enforces the same rule; this keeps an ADMIN
+ * from being offered an action that would come back 403.
+ */
+export function canDisburse(): boolean {
+  return currentRoles().includes('SUPER_ADMIN');
+}

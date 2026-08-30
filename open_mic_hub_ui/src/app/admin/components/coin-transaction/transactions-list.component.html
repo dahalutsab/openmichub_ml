@@ -18,6 +18,65 @@
   <button type="button" class="omh-btn-ghost omh-btn-sm" (click)="refreshTransactions()">Try again</button>
 </div>
 
+<!-- ===================== withdrawal queue ===================== -->
+<!-- Above the ledger, because it is the only part of this screen anyone has to
+     act on. It reads from its own endpoint: filtering the ledger for these in
+     the browser found none of them, since the page loads a thousand rows of a
+     table with thousands more and withdrawals are among the newest. -->
+<section class="omh-card mb-4" *ngIf="withdrawalsLoading || withdrawals.length">
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+    <div>
+      <h2 class="omh-display text-[15px]">Withdrawal requests</h2>
+      <p class="text-xs text-muted">Artists waiting to be paid. Funds are already held against each.</p>
+    </div>
+    <span class="omh-status-pending">{{ withdrawalsTotal }} awaiting a decision</span>
+  </div>
+
+  <div class="p-4" *ngIf="withdrawalsLoading">
+    <div class="omh-skeleton h-5 w-2/3"></div>
+  </div>
+
+  <div class="overflow-x-auto" *ngIf="!withdrawalsLoading && withdrawals.length">
+    <table class="omh-table">
+      <thead>
+        <tr>
+          <th>Request</th>
+          <th>Artist</th>
+          <th class="omh-num">Amount</th>
+          <th>Waiting</th>
+          <th class="text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let request of withdrawals; trackBy: trackByTransactionId">
+          <td class="font-mono text-xs">#{{ request.transactionId }}</td>
+          <td>
+            <div class="font-semibold text-ink">{{ request.artist?.artistStageName || '—' }}</div>
+            <div class="text-xs text-muted">{{ request.artist?.email }}</div>
+          </td>
+          <td class="omh-num font-display font-bold">NPR {{ request.amount | number:'1.2-2' }}</td>
+          <td class="text-sm text-muted">{{ waitingFor(request) }}</td>
+          <td class="text-right">
+            <div class="flex justify-end gap-2" *ngIf="canDisburse; else staffOnly">
+              <button type="button" class="omh-btn-primary omh-btn-sm"
+                      (click)="askWithdrawal(request)">
+                <i class="bi bi-cash-stack"></i> Pay out
+              </button>
+              <button type="button" class="omh-btn-ghost omh-btn-sm"
+                      (click)="askDecline(request)">
+                Decline
+              </button>
+            </div>
+            <ng-template #staffOnly>
+              <span class="text-xs text-muted">Owner approval required</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <!-- Filters -->
 <section class="omh-card mb-4 p-4">
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -110,6 +169,7 @@
           <th class="omh-num">Amount</th>
           <th>Type</th>
           <th>Purpose</th>
+          <th>Status</th>
           <th class="omh-num">Balance</th>
           <th></th>
         </tr>
@@ -135,16 +195,20 @@
 
           <td><span class="omh-chip">{{ formatPurpose(transaction.transactionPurpose) }}</span></td>
 
+          <td><span [class]="statusClass(transaction.status)">{{ transaction.status || '—' }}</span></td>
+
           <td class="omh-num font-display font-bold text-ink">
             {{ transaction.artist?.virtualCoinBalance | number:'1.2-2' }}
           </td>
 
           <td class="text-right">
+            <!-- A settled withdrawal used to offer this too, because the row carried no status
+                 to tell the two apart. -->
             <button type="button"
-                    *ngIf="transaction.transactionPurpose === 'WITHDRAWAL_REQUEST'"
+                    *ngIf="isActionable(transaction)"
                     class="omh-btn-secondary omh-btn-sm"
                     (click)="askWithdrawal(transaction)">
-              <i class="bi bi-cash-stack"></i> Withdraw
+              <i class="bi bi-cash-stack"></i> Pay out
             </button>
           </td>
         </tr>
@@ -208,6 +272,36 @@
 
 <!-- Withdrawal confirmation. Replaces window.confirm(), which no longer matched
      anything else in the product. -->
+<!-- Decline -->
+<div class="omh-modal-backdrop" *ngIf="pendingDecline" (click)="pendingDecline = null">
+  <div class="omh-modal" (click)="$event.stopPropagation()">
+    <div class="omh-modal-head">
+      <h2 class="omh-modal-title">Decline this withdrawal?</h2>
+      <button type="button" class="omh-btn-icon" aria-label="Close" (click)="pendingDecline = null">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="omh-modal-body">
+      <p>
+        Request #{{ pendingDecline.transactionId }} for
+        <strong class="font-display text-ink">NPR {{ pendingDecline.amount | number:'1.2-2' }}</strong>
+        from <strong class="text-ink">{{ pendingDecline.artist?.artistStageName }}</strong>.
+      </p>
+      <p class="mt-2 text-sm text-muted">
+        The amount was held when the request was made and goes straight back to their balance. They
+        can ask again.
+      </p>
+    </div>
+    <div class="omh-modal-foot">
+      <button type="button" class="omh-btn-secondary" (click)="pendingDecline = null">Cancel</button>
+      <button type="button" class="omh-btn-primary" [disabled]="processing" (click)="confirmDecline()">
+        <span class="omh-spinner-sm" *ngIf="processing"></span>
+        {{ processing ? 'Working…' : 'Decline and return the funds' }}
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="omh-modal-backdrop" *ngIf="pendingWithdrawal" (click)="pendingWithdrawal = null">
   <div class="omh-modal animate-slide-up" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
     <div class="omh-modal-head">

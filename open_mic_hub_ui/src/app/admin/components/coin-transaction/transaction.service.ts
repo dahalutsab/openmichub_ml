@@ -18,6 +18,9 @@ export interface TransactionResponse {
   amount: number;
   transactionType: string;
   transactionPurpose: string;
+  /** PENDING, APPROVED or DECLINED. Absent on responses from an older API. */
+  status?: string;
+  createdDate?: string;
 }
 
 export interface Sort {
@@ -148,6 +151,29 @@ export class TransactionService {
       .set('size', size.toString());
 
     return this.http.get<TransactionApiResponse>(`${this.apiUrl}/purpose`, { params });
+  }
+
+  /**
+   * Withdrawal requests awaiting a decision.
+   *
+   * <p>Its own endpoint rather than the ledger filtered in the browser. Withdrawals are a sliver of
+   * a ledger that runs to thousands of rows, and the page that used to filter client-side loaded
+   * only the first thousand of them — which never contained a single withdrawal, so the queue read
+   * as empty no matter how many artists were waiting.
+   */
+  getWithdrawalRequests(page: number = 0, size: number = 20,
+                        status: string = 'PENDING'): Observable<TransactionApiResponse> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('status', status);
+
+    return this.http.get<TransactionApiResponse>(`${this.apiUrl}/withdrawals`, { params });
+  }
+
+  /** Refuses a request and returns the held funds to the artist. */
+  declineWithdrawal(transactionId: number): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/withdrawals/${transactionId}/decline`, {});
   }
 
   processWithdrawal(transactionId: number): Observable<string> {
