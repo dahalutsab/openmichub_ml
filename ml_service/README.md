@@ -572,8 +572,11 @@ last month. An act rarely shown gains up to 6% of the final score over one shown
 constantly, decaying by half at 40 appearances. With no impressions logged yet,
 nobody gets the bonus, because a bonus everyone gets is no bonus.
 
-**Skips.** An act near the top of `skip_threshold` (3) of one person's lists in
-three weeks, never opened or booked, loses up to 10% of the final score. Shown
+**Skips.** An act near the top of one person's lists on `skip_threshold` (3)
+separate visits in three weeks — half-hour buckets, so reloading a page is one
+look, not several — and never opened or booked, loses up to 25% of the final
+score. That is enough to move it off a first screen, where personalised scores
+span about 0.13; the first value, 10%, never did in a browser test. Shown
 lower, not hidden.
 
 **The blend** (`app/blend.py`) folds these in last, per surface:

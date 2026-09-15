@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { PublicNavComponent } from '../shared/public-nav/public-nav.component';
+import { isSignedIn } from '../shared/session';
 import { ArtistCardComponent } from './components/artist-card.component';
 import { ArtistHit, DiscoveryService } from './discovery.service';
 
@@ -87,6 +88,16 @@ export class DiscoverComponent implements OnInit {
   featuredLoading = false;
   /** Whether that strip came from this visitor's own history rather than the roster. */
   featuredPersonalized = false;
+
+  /**
+   * What a personalised strip was built from, in the viewer's terms. A visitor who has not signed
+   * in cannot have booked anyone, and telling them otherwise makes the rest of the line suspect.
+   */
+  get personalSource(): string {
+    return isSignedIn()
+      ? 'From what you have searched for, opened and booked'
+      : 'From what you have searched for and opened on this browser';
+  }
 
   /** The served lists' ids, sent back with a click. */
   private featuredRequestId?: string;

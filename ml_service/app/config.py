@@ -174,12 +174,16 @@ class Settings(BaseSettings):
     # Exposure at which half of that bonus is gone.
     exploration_half_exposure: float = 40.0
 
-    # An artist shown near the top this many times to the same person, and never
-    # opened, starts to give way to others. Stated as a count of served lists.
+    # An artist shown near the top on this many separate visits (half-hour
+    # buckets) to the same person, and never opened, starts to give way to others.
     skip_threshold: int = 3
     skip_window_days: int = 21
-    # And the most it can be pushed down by, as a share of the final score.
-    skip_penalty: float = 0.10
+    # And the most it can be pushed down by, as a share of the final score,
+    # reached three visits past the threshold. 0.25, not the 0.10 first written:
+    # in a browser test an act ignored at the top of six front pages kept its
+    # slot, because personalised scores on one first screen span about 0.13 and
+    # a 0.10 penalty could never move anything off it.
+    skip_penalty: float = 0.25
 
     # Maximal-marginal-relevance on browse surfaces: the share of each pick that
     # is relevance, the rest being difference from what is already on the page.

@@ -318,16 +318,22 @@ ORDER BY created_date DESC
 LIMIT %(limit)s
 """
 
-# Artists near the top of this person's recent lists, by how many lists showed
-# them. Whether they were then opened is decided in code against the history.
+# Artists near the top of this person's recent lists, by how many separate visits
+# showed them. Whether they were then opened is decided in code against the history.
+#
+# Counted in half-hour buckets, not per list: reloading the front page four times
+# in a minute is one look, not four decisions against every act on it. The first
+# version counted lists, and a browser test that reloaded a page turned the acts
+# on it into "skipped" within thirty seconds.
 _SHOWN_SQL = """
-SELECT shown.artist_id, COUNT(DISTINCT d.request_id)
+SELECT shown.artist_id,
+       COUNT(DISTINCT FLOOR(EXTRACT(EPOCH FROM d.created_date) / 1800))
 FROM discovery_impression d,
      UNNEST(d.artist_ids[1:%(top)s]) AS shown(artist_id)
 WHERE d.{owner} = %(owner)s
   AND d.created_date > NOW() - (%(days)s * INTERVAL '1 day')
 GROUP BY shown.artist_id
-HAVING COUNT(DISTINCT d.request_id) >= %(threshold)s
+HAVING COUNT(DISTINCT FLOOR(EXTRACT(EPOCH FROM d.created_date) / 1800)) >= %(threshold)s
 """
 
 _BOOKINGS_SQL = """
