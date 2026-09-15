@@ -57,6 +57,33 @@ public class MlServiceClient {
         return get("/artists/" + artistId + "/similar?limit=" + limit, "similar");
     }
 
+    /**
+     * Artists that the same people chose alongside this one - booked, or opened - which is a
+     * different question from "whose profile reads the same". Empty when there is too little
+     * history to say, or when the ML service is down.
+     */
+    public List<Map<String, Object>> alsoChosen(long artistId, int limit) {
+        return get("/artists/" + artistId + "/also-chosen?limit=" + limit, "alsoChosen");
+    }
+
+    /**
+     * Drops the ML service's cached taste profile for one account.
+     *
+     * <p>Called after a visitor's history has moved onto an account, so the first page they see
+     * signed in reflects it rather than a profile cached a moment before the move. Best-effort.
+     */
+    public void forgetProfile(long userId) {
+        try {
+            webClient.post()
+                    .uri("/users/" + userId + "/forget")
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block(timeout);
+        } catch (Exception e) {
+            log.debug("Could not clear the cached profile for user {}: {}", userId, e.getMessage());
+        }
+    }
+
     /** The segmentation overview, for the admin board. */
     public List<Map<String, Object>> segments() {
         return get("/segments", "segments");

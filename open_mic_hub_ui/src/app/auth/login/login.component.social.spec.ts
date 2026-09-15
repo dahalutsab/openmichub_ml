@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../auth.service';
+import { DiscoveryService } from '../../discovery/discovery.service';
 import { environment } from '../../environment/environment';
 import { LoginComponent } from './login.component';
 
@@ -31,6 +32,10 @@ describe('LoginComponent social sign-in', () => {
         { provide: Router, useValue: jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']) },
         { provide: ToastrService, useValue: jasmine.createSpyObj('ToastrService', ['error']) },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        {
+          provide: DiscoveryService,
+          useValue: jasmine.createSpyObj('DiscoveryService', { claimVisitorHistory: Promise.resolve() }),
+        },
       ],
     }).overrideTemplate(LoginComponent, '').compileComponents();
 

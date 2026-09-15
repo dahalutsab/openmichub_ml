@@ -13,6 +13,9 @@ public enum WHITE_LIST_URLS {
     PUBLIC_APIS("/api/v1/public/**", new HttpMethod[]{HttpMethod.GET}),
     // Browsing and searching for artists is what brings organizers to the site.
     DISCOVERY("/api/v1/discover/**", new HttpMethod[]{HttpMethod.GET}),
+    // Which result someone chose, from a visitor as much as from an account. Checked against the
+    // served list before it is kept. Claiming a visitor's history is NOT here: it needs an account.
+    DISCOVERY_CLICKS("/api/v1/discover/clicks", new HttpMethod[]{HttpMethod.POST}),
     FILES("/media/**", new HttpMethod[]{HttpMethod.GET}),
     // Liveness probe for the container orchestrator. Details are never shown.
     HEALTH("/actuator/health", new HttpMethod[]{HttpMethod.GET}),

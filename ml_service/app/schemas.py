@@ -14,8 +14,11 @@ class SearchRequest(BaseModel):
     genre: str | None = Field(None, description="Preferred genre or sub-genre")
     limit: int = Field(20, ge=1, le=100)
     user_id: int | None = Field(
-        None, description="Who is asking. Personalises the ranking from their own history; "
-                          "absent for an anonymous visitor, who is ranked as before.")
+        None, description="Who is asking. Personalises the ranking from their own history.")
+    visitor_id: str | None = Field(
+        None, max_length=64,
+        description="A signed-out visitor's browser id. Personalises from that browser's own "
+                    "searches and views. Ignored when user_id is set.")
 
 
 class RecommendRequest(BaseModel):
@@ -27,6 +30,7 @@ class RecommendRequest(BaseModel):
     genre: str | None = None
     limit: int = Field(20, ge=1, le=100)
     user_id: int | None = None
+    visitor_id: str | None = Field(None, max_length=64)
 
 
 class ArtistHit(BaseModel):
@@ -53,9 +57,10 @@ class ArtistHit(BaseModel):
                            "into account")
     reasons: list[str] = Field(
         default_factory=list,
-        description="Why this artist was raised for this person, in their own terms. Empty "
-                    "when the ranking was not personalised, and never invented: each line "
-                    "comes from a signal that actually moved the score.")
+        description="Why this artist was raised, in the reader's own terms. Mostly about "
+                    "this person's history, plus platform-wide lines such as demand, and "
+                    "never invented: each line comes from a signal that actually moved the "
+                    "score.")
 
 
 class SearchResponse(BaseModel):

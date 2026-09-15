@@ -18,6 +18,9 @@ lightgbm==4.5.0
 numpy==2.2.1
 pandas==2.2.3
 scikit-learn==1.6.1
+# Already present as scikit-learn's dependency; pinned because app/signals.py
+# uses its sparse matrices directly for co-choice.
+scipy==1.18.1
 joblib==1.4.2
 
 # Tests. Installed in the image so the suite runs in the same interpreter and

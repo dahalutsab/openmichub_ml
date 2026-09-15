@@ -1,6 +1,6 @@
 # OpenMicHub ML
 
-Four things live behind this service. They are not equally "trained", and the
+Several things live behind this service. They are not equally "trained", and the
 difference matters more than any single number in this document, so it comes
 first.
 
@@ -11,6 +11,8 @@ first.
 | **Artist segmentation** | **Real catalogue** | **Yes** — k-means fitted on the live catalogue |
 | **Search ranker** | **Synthetic** | Yes, but on simulated preferences |
 | Personalisation | Real user history | No — weighted aggregation, no fitted parameters |
+| Co-choice, demand, exposure | Real platform history | No — similarities and decayed counts |
+| Blend weights | Real platform history | Chosen on a validation window, not fitted |
 
 The ranker is a real learned model — it fits weights, it is validated on a
 held-out split, it beats every baseline it is measured against. What it has
@@ -425,8 +427,11 @@ tracking beyond the interaction log the API now writes:
 | Search, with its text | `user_interaction` | 0.35 towards taste, and its own intent weight |
 | Browse with filters | `user_interaction` | 0.25 |
 
-Only signed-in visitors are recorded. An anonymous one is not identified across
-requests and is served exactly as before.
+A person is an account or a browser. A visitor who has not signed in is the
+random id their browser keeps (`X-Visitor-Id` at the API, `visitor_id` here) and
+builds a profile from their own searches and views the same way — without
+bookings, which need an account. Signing in moves that history onto the account.
+A request with neither is served the ordinary ranking.
 
 **Recency decays rather than cutting off.** Every event halves in weight each
 `taste_half_life_days` (45). A window with a hard edge would make someone's
@@ -458,8 +463,8 @@ accident of how much history someone happens to have.
 | Surface | Retrieval | Re-ranking |
 |---|---|---|
 | `/search` — words were typed | untouched | 25% of the final score |
-| `/recommend` — browse with filters | two pools: 35% taste, 65% filters+intent | 40% |
-| `/recommend` — browse with nothing stated | same split | 60% |
+| `/recommend` — browse with filters | three pools: 25% co-choice, then 35% taste / 65% filters+intent of the rest | 40% |
+| `/recommend` — browse with nothing stated | same split | 90% |
 
 Re-ranking alone cannot fix a browse surface: it can only reorder whatever pool
 retrieval returned, so on a surface with no words the profile is allowed into
@@ -510,8 +515,13 @@ to 6 and 7. Their booking history still shows, which is the intended balance
 rather than a shortfall: one search should bend the list, not replace it.
 
 **Reasons are emitted by the component that moved the score**, not written
-afterwards — "you have booked them before", "you keep coming back to Jazz",
-"around what you usually pay". At most two per artist reach the card.
+afterwards — "you have booked them before", "often picked alongside The Velvet
+Club", "you keep coming back to Jazz". At most two reach the card, most specific
+first (`REASON_PRIORITY`): a line that names an act says something about *this*
+card, where "close to your taste" could be said of half a personalised page. The
+vaguer lines also need a close match before they are claimed — at the old
+threshold, one search for a DJ put "matches what you have been searching for" on
+Jazz and Folk acts too.
 
 **Calibration.** The cosine between a taste vector and an artist's profile
 vector runs higher and tighter than a query-to-profile cosine, so it has its own
@@ -524,9 +534,167 @@ docker compose exec ml python -m training.calibrate
 
 **Not a trained model.** Nothing here is fitted. The weights above are a stated
 policy about what a booking is worth relative to a click, and they are in one
-place — `app/personalization.py` — precisely so they can be argued with. What
-would make this learned is the same missing ingredient the ranker needs: an
-impression log with positions and clicks.
+place — `app/personalization.py` — precisely so they can be argued with. Two of
+them — the unfiltered browse share and front-page demand — were chosen by
+measurement; see section 7. What would make this learned is an impression log
+with positions and clicks, which now exists (section 8).
+
+---
+
+## 6. Platform signals
+
+Personalisation reads one person. `app/signals.py` reads everyone, and adds what
+no single history can say. Rebuilt from a bounded window at most every five
+minutes, on a background thread once a first set exists, in about 55 ms for this
+catalogue.
+
+**Co-choice — "often picked alongside".** Item-to-item collaborative filtering:
+a people × artists matrix of bookings (weighted by status, 180-day half-life)
+and profile views (0.3, 60-day half-life), damped with `log1p`, then cosine
+between artist columns. Every similarity is shrunk by support / (support + 4),
+and a pair chosen together by fewer than two people is not a tie at all. Forty
+neighbours are kept per artist. Sparse throughout, so only co-occurring pairs are
+ever materialised.
+
+It does four jobs: a retrieval pool for personalised browse (25% of slots), an
+affinity component (18%), a reason that names the act it came from, and
+`/artists/{id}/also-chosen`, the strip on every artist profile. That strip is a
+different question from `/similar` — "who ends up on the same shortlists", not
+"whose profile reads the same" — and crosses genres whenever bookings do.
+
+**Demand — "in demand this month".** Booking requests (1.0), profile views
+(0.25) and clicks on served lists (0.25), on a 21-day half-life inside a 90-day
+window, log-scaled against the busiest act. Forty bookings last year count for
+nothing here; six requests this month count in full.
+
+**Exposure.** How many served lists showed an artist in their top eight over the
+last month. An act rarely shown gains up to 6% of the final score over one shown
+constantly, decaying by half at 40 appearances. With no impressions logged yet,
+nobody gets the bonus, because a bonus everyone gets is no bonus.
+
+**Skips.** An act near the top of `skip_threshold` (3) of one person's lists in
+three weeks, never opened or booked, loses up to 10% of the final score. Shown
+lower, not hidden.
+
+**The blend** (`app/blend.py`) folds these in last, per surface:
+
+| | demand | exploration | variety | known acts on first screen |
+|---|---|---|---|---|
+| Front page (nothing stated) | 10% | up to 6% | MMR, λ 0.8 | at most 3 of 8 |
+| Browse with filters | 10% | up to 6% | MMR, λ 0.8 | at most 3 of 8 |
+| Search | 4% | none | none | no limit |
+
+Variety is maximal marginal relevance over profile vectors: each pick trades a
+little score for being unlike what is already on the page. A search is left as
+ranked — someone who typed "jazz trio" wants jazz trios, not a sampler.
+
+A front page for a visitor with no history also gets a nudge of at most ±0.01,
+deterministic per visitor per day, so acts the model genuinely cannot separate
+do not appear in the same order for everyone, every day.
+
+**Two catalogue fixes ride along.** Ratings are shrunk towards the catalogue
+mean as if every act had five extra reviews at it (`rating_smoothed`), so one
+5-star review no longer outranks forty at 4.6 — ranking reads the shrunk value,
+cards still show the real one. And `completed_bookings` now counts `COMPLETED`
+gigs, not only `CONFIRMED` ones: an act with forty gigs played and two ahead used
+to look as if it had played two, and as if it had ignored the other forty
+requests.
+
+---
+
+## 7. Measuring recommendations
+
+```bash
+docker compose exec ml python -m training.evaluate_recs
+```
+
+A time-split replay. Everything before a cutoff builds profiles, co-choice and
+demand exactly as serving would have on that day; the question is whether each
+strategy's top ten contains what people chose after it. Organizers are replayed
+from 45 days ago against the artists they requested since; signed-out visitors
+from 14 days ago against the acts they opened since. Every strategy scores the
+whole catalogue.
+
+**Organizers — only acts new to them** (the discovery question)
+
+| strategy | hit rate@10 | recall@10 | NDCG@10 | catalogue coverage |
+|---|---|---|---|---|
+| random | 0.279 | 0.044 | 0.038 | 99% |
+| most booked ever | 0.110 | 0.017 | 0.015 | 6% |
+| front page before | 0.132 | 0.019 | 0.017 | 5% |
+| personalised before | 0.390 | 0.067 | 0.070 | 58% |
+| co-choice alone | 0.397 | 0.084 | 0.076 | 71% |
+| **personalised now** | **0.478** | **0.105** | **0.109** | **77%** |
+
+**Organizers — every act they requested, rebookings included**
+
+| strategy | hit rate@10 | recall@10 | NDCG@10 |
+|---|---|---|---|
+| personalised before | 0.566 | 0.126 | 0.131 |
+| co-choice alone | 0.581 | 0.144 | 0.133 |
+| **personalised now** | **0.574** | **0.122** | **0.128** |
+| personalised now, no limit on known acts | 0.669 | 0.176 | 0.166 |
+
+**Signed-out visitors**
+
+| strategy | hit rate@10 | recall@10 | NDCG@10 | catalogue coverage |
+|---|---|---|---|---|
+| front page before — identical for every visitor | 0.117 | 0.029 | 0.023 | 4% |
+| front page now, no history used | 0.137 | 0.034 | 0.027 | 6% |
+| **personalised now** | **0.254** | **0.088** | **0.061** | **77%** |
+
+Four things to read out of these, in order of importance.
+
+**What they are evidence of.** The demo history is generated by
+`training/behaviour.py`, a stated model of how organizers choose — occasion,
+genre taste, home city, budget, word-of-mouth circles, loyalty, and a tenth of
+choices at random. These numbers measure how well each strategy recovers *those*
+mechanisms. Strategies are compared fairly — every one sees the same past — but
+none of this forecasts lift on real traffic, and the circles in particular are
+the kind of structure co-choice exists to find. Pointed at a database with real
+history, the same script measures the real thing.
+
+**The limit on known acts is a choice with a measured cost.** Letting a front
+page fill with acts someone already booked scores best on "every act", because
+rebooking is common and easy to predict (NDCG 0.166). It also shows them nothing
+new. Capping known acts at three of eight keeps discovery — the first table —
+at its best, and gives up that rebooking gain. `familiar_share_first_screen` is
+the dial; 1.0 turns it off.
+
+**Why random beats every unpersonalised list on hit rate.** A single list shown
+to everyone can only contain ten acts, and people's futures are spread across
+three hundred; random lists at least spread their guesses. That is the case for
+personalising at all, not a flaw in the popular lists.
+
+**How the weights were chosen.** Not on these numbers. `training/tune_recs.py`
+runs a small grid on an earlier window — organizers from 90 to 45 days ago,
+visitors from 30 to 14 — and the two settings it changed were applied by hand
+before this evaluation ran:
+
+| | validation mean NDCG@10 |
+|---|---|
+| as first written: personal share 0.60, front-page demand 0.25 | 0.076 |
+| personal share 0.80 | 0.118 |
+| **personal share 0.90, demand 0.10 (chosen)** | **0.123** |
+| personal share 1.00, demand 0.10 | 0.125 |
+
+The personal share on an unfiltered page was the only lever that mattered;
+demand, variety and the co-choice share moved the result by less than the noise
+between neighbouring settings. 1.0 scored within that noise of 0.9 and would
+switch the model off entirely, so 0.9 keeps it as the tie-breaker. The filtered
+browse and search shares were not tuned: this replays a front page, not searches.
+
+The first version of this blend, before tuning, was *worse* for organizers than
+what it replaced (NDCG 0.095 against 0.131) — demand at 25% pulled people with a
+clear taste towards whatever was popular. That is the reason this section exists.
+
+**Why the data had to change first.** The previous seeder picked the organizer
+for every booking uniformly at random, so no organizer preferred anything: the
+share of a typical organizer's bookings in their most-booked genre was 22.7%,
+which is what thirty random draws look like. Now it is 40.4%, and the demo
+organizer's profile reads back as what was put in — Jazz first, Folk present,
+Kathmandu, a typical rate of NPR 4,478 against a stated 4,200. No recommender can
+look sensible on data with nothing in it to find.
 
 ---
 
@@ -545,10 +713,15 @@ impression log with positions and clicks.
 | GET | `/artists/{id}/segment` | One artist's segment |
 | GET | `/artists/{id}/similar` | Nearest neighbours |
 | GET | `/users/{id}/taste` | One person's taste profile, and whether it is usable |
+| GET | `/visitors/{id}/taste` | The same, for a signed-out browser |
+| POST | `/users/{id}/forget` | Drop one account's cached profile |
+| GET | `/artists/{id}/also-chosen` | Acts people who chose this one also chose |
+| GET | `/signals` | Platform-wide signals; `?refresh=true` rebuilds them |
 
-`/search` and `/recommend` accept an optional `user_id`. With one, the response
-carries `personalized: true` and each hit carries the `reasons` behind its
-position; without one, both endpoints behave exactly as they did before.
+`/search` and `/recommend` accept an optional `user_id` or `visitor_id`. With
+either, and enough history behind it, the response carries `personalized: true`.
+Hits carry the `reasons` behind their position — from the person's history, and
+for anyone, "in demand this month".
 
 Search responses carry a `strategy` field naming the ranker that produced the
 order. The API degrades to the plain artist listing when this service is
@@ -563,13 +736,16 @@ docker compose exec ml python -m training.seed_world --artists 300 --wipe
 curl -X POST localhost:8000/embeddings/rebuild
 docker compose exec ml python -m training.segment
 curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
+curl "localhost:8000/signals?refresh=true"
+docker compose exec ml python -m training.evaluate_recs
 ```
 
-Order matters: segmentation reads embeddings, so re-embed first.
+Order matters: segmentation reads embeddings, so re-embed first. Signals rebuild
+on their own within five minutes; the refresh only saves the wait.
 
 ---
 
-## Retraining the ranker on real data
+## 8. Retraining the ranker on real data
 
 This is the open work, and it is blocked on data rather than modelling.
 
@@ -577,13 +753,16 @@ This is the open work, and it is blocked on data rather than modelling.
 positions they occupied, which were clicked, which led to a booking request.
 That is the label LambdaRank wants.
 
-`user_interaction` is now half of it. Searches, browse filters and profile views
-are recorded per user, which is what personalisation runs on — but it records
-what someone *did*, not what they were *shown*. Without the impressions and the
-positions they occupied, a click cannot be told apart from an artist who simply
-happened to be first, and that distinction is the whole of what LambdaRank
-learns. Logging the returned ids and their ranks alongside the search row is the
-remaining step, and it is a small one.
+Both halves are now recorded. `user_interaction` holds what someone *did* —
+searches, filters, profile views, and clicks carrying the list and position they
+came from. `discovery_impression` holds what they were *shown*: one row per
+served list, the artist ids in order, the surface and the query. Joined on
+`request_id`, a click on position one can finally be told apart from an artist
+who simply happened to be first, which is the whole of what LambdaRank learns.
+
+What is missing now is volume. The seeded demo has no impressions at all — they
+accumulate from real use — and the exploration bonus and skip demotion are inert
+until they do.
 
 **What will not substitute:**
 
@@ -612,6 +791,8 @@ app/
   taxonomy.py    genres, cities and event fit — one copy, shared with training
   segments.py    segment lookups and similarity
   personalization.py  taste profiles from one person's own history
+  signals.py     co-choice, demand and exposure, from everyone's history
+  blend.py       demand, exploration, skips, variety, and the final order
   embedder.py    fastembed / ONNX
   repository.py  catalogue reads, document assembly
   db.py          pool, pgvector registration, schema
@@ -621,6 +802,9 @@ training/
   train.py       ranker training and evaluation
   segment.py     k sweep, fitting, labelling
   seed_world.py  demo catalogue with a history
+  behaviour.py   how the demo's organizers and visitors choose, stated in full
+  evaluate_recs.py  time-split replay: does it recommend what people chose
+  tune_recs.py   the blend weights, chosen on an earlier window
   world.py       names, bios, venues, review text
   artwork.py     generated cover art
 models/

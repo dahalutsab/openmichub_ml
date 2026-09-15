@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { environment } from '../environment/environment';
+import { rotateVisitorId } from '../shared/visitor';
 
 /** One ranked artist, as returned by /api/v1/discover. */
 export interface ArtistHit {
@@ -23,11 +24,11 @@ export interface ArtistHit {
   score: number;
   /** Cosine similarity to the query text; absent when there was no text query. */
   similarity?: number;
-  /** Whether this position took the signed-in visitor's own history into account. */
+  /** Whether this position took the visitor's own history into account, signed in or not. */
   personalized?: boolean;
   /**
-   * Why this act was raised for this person — "you have booked them before",
-   * "you keep coming back to Jazz". Empty unless the ranking was personalised.
+   * Why this act was raised — "you have booked them before", "you keep coming back to Jazz",
+   * or for anyone, "in demand this month". Never invented; often empty.
    */
   reasons?: string[];
 }
@@ -40,6 +41,8 @@ export interface DiscoveryResult {
   /** Whether this list was shaped by the viewer's own searches, views and bookings. */
   personalized?: boolean;
   results: ArtistHit[];
+  /** Identifies this served list, so a click can say which list and position it came from. */
+  requestId?: string;
 }
 
 export interface DiscoveryFilters {
@@ -89,6 +92,37 @@ export class DiscoveryService {
     return this.http
       .get<ApiEnvelope<DiscoveryResult | FallbackPayload>>(`${this.base}/recommendations`, { params })
       .pipe(map(response => this.normalise(response.data)));
+  }
+
+  /**
+   * Tells discovery which artist was chosen from a list, and from where in it.
+   *
+   * Fire-and-forget: it must never delay opening the profile, and a lost click costs one signal.
+   * `position` is the artist's place in the list as the server ordered it, not after a client-side
+   * sort - a click on the cheapest act is not evidence about the first-ranked one.
+   */
+  recordClick(requestId: string | undefined, artistId: number, position: number): void {
+    if (!requestId || position < 0) return;
+    this.http
+      .post(`${this.base}/clicks`, { requestId, artistId, position })
+      .subscribe({ error: () => undefined });
+  }
+
+  /**
+   * Moves what this browser did while signed out onto the account that just signed in, then
+   * starts a fresh visitor id. Called once, straight after a successful sign-in; resolves either
+   * way, because failing to carry history over is no reason to hold up the sign-in.
+   */
+  claimVisitorHistory(): Promise<void> {
+    return new Promise(resolve => {
+      this.http.post(`${this.base}/visitor/claim`, {}).subscribe({
+        next: () => {
+          rotateVisitorId();
+          resolve();
+        },
+        error: () => resolve(),
+      });
+    });
   }
 
   private applyFilters(params: HttpParams, filters: DiscoveryFilters): HttpParams {

@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Role } from '../../shared/role';
 import { ToastrService } from 'ngx-toastr';
+import { DiscoveryService } from '../../discovery/discovery.service';
 
 /**
  * Where the browser lands after signing in with Google or Facebook.
@@ -18,6 +19,8 @@ import { ToastrService } from 'ngx-toastr';
 })
 export class SocialComponent implements OnInit {
   error: string | null = null;
+
+  private readonly discovery = inject(DiscoveryService);
 
   constructor(
     private router: Router,
@@ -46,6 +49,10 @@ export class SocialComponent implements OnInit {
 
     // Drop the fragment before navigating, so the token is not left in history.
     history.replaceState(null, '', window.location.pathname);
+
+    // Carry over what this browser did while signed out. Not awaited: onboarding and the dashboard
+    // do not depend on it, and the move is idempotent if it lands a moment later.
+    this.discovery.claimVisitorHistory();
 
     // A first sign-in has an account but has not said what it is for. Google can supply a name,
     // an address and a picture; it cannot say whether this person books artists or performs.

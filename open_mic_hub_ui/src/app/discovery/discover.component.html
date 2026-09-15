@@ -96,10 +96,10 @@
          the reason lines on the cards make sense. -->
     <div class="omh-rule mb-5">
       <h2 class="omh-display shrink-0 text-[15px] uppercase tracking-[0.14em]">
-        {{ featuredPersonalized ? 'Picked for you' : 'On the roster' }}
+        {{ featuredPersonalized ? 'Picked for you' : 'In demand' }}
       </h2>
       <span class="shrink-0 text-[12px] text-muted">
-        {{ featuredPersonalized ? 'From what you have searched for and booked' : 'Highest rated right now' }}
+        {{ featuredPersonalized ? 'From what you have searched for, opened and booked' : 'What organizers are booking this month' }}
       </span>
     </div>
 
@@ -118,7 +118,7 @@
       <omh-artist-card *ngFor="let artist of featured; let i = index; trackBy: trackByArtist"
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i * 55"
-                       [artist]="artist" layout="grid" (open)="openArtist($event)" />
+                       [artist]="artist" layout="grid" (open)="openArtist($event, 'featured')" />
     </div>
   </section>
 
@@ -219,7 +219,7 @@
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i < 12 ? i * 45 : 0"
                        [artist]="artist" [rank]="i + 1" layout="grid"
-                       (open)="openArtist($event)" />
+                       (open)="openArtist($event, 'results')" />
     </div>
 
     <!-- list -->
@@ -228,7 +228,7 @@
                        class="animate-rise-in block"
                        [style.animation-delay.ms]="i < 14 ? i * 28 : 0"
                        [artist]="artist" [rank]="i + 1" layout="list"
-                       (open)="openArtist($event)" />
+                       (open)="openArtist($event, 'results')" />
     </div>
 
     <!-- empty -->

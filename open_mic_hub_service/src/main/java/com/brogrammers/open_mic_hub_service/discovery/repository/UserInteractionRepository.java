@@ -3,6 +3,9 @@ package com.brogrammers.open_mic_hub_service.discovery.repository;
 import com.brogrammers.open_mic_hub_service.discovery.entity.InteractionKind;
 import com.brogrammers.open_mic_hub_service.discovery.entity.UserInteraction;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -26,4 +29,19 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      */
     boolean existsByUserIdAndArtistIdAndKindAndCreatedDateAfter(
             Long userId, Long artistId, InteractionKind kind, LocalDateTime since);
+
+    /** The same check for a visitor who has not signed in. */
+    boolean existsByVisitorIdAndArtistIdAndKindAndCreatedDateAfter(
+            String visitorId, Long artistId, InteractionKind kind, LocalDateTime since);
+
+    /** Moves a browser's unclaimed history onto the account that just signed in on it. */
+    @Modifying
+    @Query("UPDATE UserInteraction i SET i.userId = :userId, i.visitorId = null "
+            + "WHERE i.visitorId = :visitorId AND i.userId IS NULL")
+    int claimVisitorHistory(@Param("visitorId") String visitorId, @Param("userId") Long userId);
+
+    /** Retention: history nobody signed in to claim. */
+    @Modifying
+    @Query("DELETE FROM UserInteraction i WHERE i.userId IS NULL AND i.createdDate < :before")
+    int deleteUnclaimedBefore(@Param("before") LocalDateTime before);
 }

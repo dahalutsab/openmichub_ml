@@ -73,6 +73,8 @@ def test_an_undated_row_is_treated_as_old_rather_than_new():
 def _install_history(monkeypatch, interactions, bookings, artists, vectors=None,
                      genres=("Jazz", "Blues", "Electronic", "House")):
     def rows(sql, params):
+        if "discovery_impression" in sql:
+            return []
         return interactions if "FROM user_interaction" in sql else bookings
 
     monkeypatch.setattr(personalization, "_rows", rows)
@@ -484,7 +486,8 @@ def test_a_fresh_search_outweighs_a_long_history_in_the_score_too():
 
     assert intent > taste + genre
     assert (intent + taste + genre + personalization.W_FAMILIARITY
-            + personalization.W_BUDGET + personalization.W_CITY) == pytest.approx(1.0)
+            + personalization.W_BUDGET + personalization.W_CITY
+            + personalization.W_CO_CHOICE) == pytest.approx(1.0)
 
 
 def test_a_fresh_search_is_not_buried_by_a_long_booking_history():

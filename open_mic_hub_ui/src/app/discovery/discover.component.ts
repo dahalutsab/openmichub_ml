@@ -79,12 +79,18 @@ export class DiscoverComponent implements OnInit {
    * Landing on a search box above an empty screen tells a first-time visitor
    * nothing about whether the platform has anyone worth booking. A live slice of
    * the roster answers that before they type, and doubles as a worked example of
-   * what results look like.
+   * what results look like. For a visitor with no history it is who organizers
+   * are booking this month; once they have searched or opened a few acts, signed
+   * in or not, it is picked from that.
    */
   featured: ArtistHit[] = [];
   featuredLoading = false;
   /** Whether that strip came from this visitor's own history rather than the roster. */
   featuredPersonalized = false;
+
+  /** The served lists' ids, sent back with a click. */
+  private featuredRequestId?: string;
+  private resultsRequestId?: string;
 
   ngOnInit(): void {
     // Read state back out of the URL, so a result page can be shared, bookmarked
@@ -113,6 +119,7 @@ export class DiscoverComponent implements OnInit {
         // error banner over an otherwise working search box would be noise.
         next: result => {
           this.featured = result.results ?? [];
+          this.featuredRequestId = result.requestId;
           this.featuredPersonalized = !!result.personalized && this.featured.length > 0;
         },
         error: () => {
@@ -259,7 +266,16 @@ export class DiscoverComponent implements OnInit {
    * is bounced to sign-in and returned here afterwards — booking needs an
    * account anyway, and the route guard already carries the returnUrl.
    */
-  openArtist(artist: ArtistHit): void {
+  openArtist(artist: ArtistHit, list: 'featured' | 'results' = 'results'): void {
+    // Which list it came from and where it stood there, as the server ordered it. This is what
+    // lets discovery learn from a choice rather than only from an action: first of eight on the
+    // front page, and twentieth of a search sorted by price, are different evidence.
+    if (list === 'featured') {
+      this.discovery.recordClick(this.featuredRequestId, artist.artistId, this.featured.indexOf(artist));
+    } else {
+      this.discovery.recordClick(this.resultsRequestId, artist.artistId, this.ranked.indexOf(artist));
+    }
+
     // Slug where the catalogue has one; the numeric route still resolves.
     this.router.navigate(['/artists', artist.slug || artist.artistId]);
   }
@@ -310,6 +326,7 @@ export class DiscoverComponent implements OnInit {
       .subscribe({
         next: result => {
           this.ranked = result.results ?? [];
+          this.resultsRequestId = result.requestId;
           this.total = result.total ?? this.ranked.length;
           this.strategy = result.strategy ?? '';
           this.applySort();

@@ -9,8 +9,11 @@ Two capabilities, behind one small API:
   segmentation      k-means over the same embeddings, grouping the catalogue
                     into segments and answering "more artists like this one"
   personalisation   a taste profile built from one person's own searches,
-                    profile views and past bookings, which adjusts the ranking
-                    for them and leaves it alone for everyone else
+                    profile views and past bookings - an account's, or a
+                    signed-out browser's - which adjusts the ranking for them
+  platform signals  what everyone's behaviour says: acts chosen together,
+                    acts in demand this month, and how often each has been shown
+                    (app/signals.py), folded in last with variety (app/blend.py)
 
 Retrieval and ranking are deliberately separate. Vector similarity is good at
 "is this the right kind of artist" and blind to whether they are affordable,
@@ -23,9 +26,10 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
+import numpy as np
 from fastapi import FastAPI, HTTPException
 
-from app import personalization, ranker, search, segments
+from app import blend, personalization, ranker, search, segments, signals
 from app.config import get_settings
 from app.db import connection, init_schema
 from app.embedder import embed_one
@@ -60,11 +64,13 @@ app = FastAPI(
 )
 
 
-def _to_hits(candidates: list[dict], scores,
-             reasons: list[list[str]] | None = None) -> list[ArtistHit]:
+def _to_hits(candidates: list[dict], scores, order: list[int],
+             reasons: list[list[str]] | None, personalized: bool) -> list[ArtistHit]:
+    """Hits in the order given. The order is decided upstream, not re-sorted here:
+    on a browse surface variety has already moved some acts off pure score order."""
     hits = []
-    for index, (artist, score) in enumerate(zip(candidates, scores)):
-        why = reasons[index] if reasons else []
+    for index in order:
+        artist, score = candidates[index], scores[index]
         hits.append(ArtistHit(
             artist_id=artist["artist_id"],
             slug=artist.get("slug"),
@@ -83,17 +89,57 @@ def _to_hits(candidates: list[dict], scores,
             # True for every hit in a personalised list, including the ones the
             # profile had nothing particular to say about — the ordering around
             # them still moved.
-            personalized=reasons is not None,
-            reasons=why,
+            personalized=personalized,
+            reasons=(reasons[index] if reasons else [])[:2],
         ))
-    hits.sort(key=lambda hit: -hit.score)
     return hits
 
 
-def _strategy(profile) -> str:
+def _strategy(personalized: bool) -> str:
     """What produced this ordering, said plainly enough to print in the UI."""
     base = ranker.model_info()["strategy"]
-    return f"{base} + your history" if profile is not None else base
+    return f"{base} + your history" if personalized else base
+
+
+def _viewer(user_id: int | None, visitor_id: str | None) -> str | None:
+    if user_id:
+        return f"u{user_id}"
+    return f"v{visitor_id}" if visitor_id else None
+
+
+def _usable(profile) -> bool:
+    return profile is not None and profile.usable
+
+
+def _finish(candidates: list[dict], raw_scores, surface: str, profile, alpha: float,
+            limit: int, viewer: str | None, diversify: bool):
+    """Everything after the model has scored: person, platform, variety, order."""
+    platform = signals.current()
+    personalized = _usable(profile)
+
+    reasons = None
+    if personalized:
+        co = platform.co_choice(profile.seeds())
+        scores, reasons = personalization.rerank(
+            profile, candidates, raw_scores, alpha, co, platform.co_scale)
+    else:
+        scores = blend.to_unit_scale(raw_scores)
+
+    scores, reasons = blend.platform_blend(
+        candidates, scores, surface, platform,
+        skips=personalization.skip_strength(profile, candidates),
+        reasons=reasons, viewer=viewer)
+
+    if diversify:
+        top = [int(candidates[i]["artist_id"]) for i in np.argsort(-scores)[: limit * 3]]
+        order = blend.diversify(candidates, scores, personalization._embeddings(top),
+                                limit, personalization._taste_band())
+        if personalized:
+            order = blend.limit_familiar(order, candidates, set(profile.seeds()), limit)
+    else:
+        order = list(np.argsort(-scores, kind="stable"))
+
+    return _to_hits(candidates, scores, order[:limit], reasons, personalized), personalized
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -122,6 +168,7 @@ def health() -> HealthResponse:
 def semantic_search(request: SearchRequest) -> SearchResponse:
     """Retrieve by meaning, then rank by fit."""
     settings = get_settings()
+    visitor_id = None if request.user_id else request.visitor_id
     candidates = search.vector_candidates(
         request.query,
         limit=settings.candidate_pool_size,
@@ -143,20 +190,19 @@ def semantic_search(request: SearchRequest) -> SearchResponse:
 
     # Retrieval stays untouched here. Someone who has typed a sentence has just
     # said what they want, and their history is context for ordering the results
-    # rather than grounds for returning different ones.
-    profile = personalization.profile_for(request.user_id)
-    reasons = None
-    if profile is not None:
-        scores, reasons = personalization.rerank(
-            profile, candidates, scores, get_settings().taste_alpha_search)
+    # rather than grounds for returning different ones. No variety pass either:
+    # a search for jazz trios should come back as jazz trios.
+    profile = personalization.profile_for(request.user_id, visitor_id)
+    hits, personalized = _finish(
+        candidates, scores, blend.SURFACE_SEARCH, profile, settings.taste_alpha_search,
+        request.limit, _viewer(request.user_id, visitor_id), diversify=False)
 
     # Folded in after this search was ranked, not before: the query already
     # decides these results, and what it shapes is where they go next.
-    personalization.note_search(request.user_id, request.query)
+    personalization.note_search(request.user_id, request.query, visitor_id)
 
-    hits = _to_hits(candidates, scores, reasons)[: request.limit]
     return SearchResponse(query=request.query, total=len(hits),
-                          strategy=_strategy(profile), personalized=profile is not None,
+                          strategy=_strategy(personalized), personalized=personalized,
                           results=hits)
 
 
@@ -165,37 +211,50 @@ def recommend(request: RecommendRequest) -> SearchResponse:
     """Rank the catalogue for a set of requirements the organizer did not type.
 
     Browse filters are still a statement of intent, so they are turned back into
-    a query and run through the same retrieve-then-rank path as `/search`. That
-    matters more than it sounds: `text_similarity` carries the largest share of
-    the model's gain, and this endpoint used to hand it the same value for every
-    candidate, which left the trees with almost nothing to separate them.
+    a query and run through the same retrieve-then-rank path as `/search`.
+
+    With nothing stated at all this is the front page, and it is where the
+    platform's own behaviour matters most: who is in demand this month, what this
+    visitor keeps passing over, and not showing eight versions of the same act.
     """
     settings = get_settings()
+    visitor_id = None if request.user_id else request.visitor_id
     pseudo_query = search.requirement_query(
         request.genre, request.event_type, request.city)
-    profile = personalization.profile_for(request.user_id)
+    profile = personalization.profile_for(request.user_id, visitor_id)
+    platform = signals.current()
 
-    if profile is not None and (profile.vector is not None or profile.intent_vector is not None):
+    if _usable(profile) and (profile.vector is not None or profile.intent_vector is not None):
         # A browse has no words, so re-ranking alone would only reorder whatever
         # generic pool retrieval happened to return. Here the profile is allowed
-        # into retrieval itself, from two sources: what this person is asking
-        # for now (stated filters and recent searches, both query text) and what
-        # they have engaged with (a centre of profile vectors). The reported
+        # into retrieval itself, from three sources: what this person is asking
+        # for now (stated filters and recent searches, both query text), what
+        # they have engaged with (a centre of profile vectors), and what people
+        # who chose the same acts went on to choose (co-choice). The reported
         # similarity is still measured against the filters alone, so the ranker's
         # `text_similarity` keeps meaning what it was calibrated to mean.
+        pool = settings.candidate_pool_size
         query_vector = embed_one(pseudo_query) if pseudo_query else None
-        candidates = search.merged_candidates(
+
+        co = platform.co_choice(profile.seeds())
+        co_slots = round(pool * settings.co_retrieval_share) if co else 0
+        co_ids = [artist for artist, _ in sorted(co.items(), key=lambda kv: -kv[1][0])]
+        from_co = search.candidates_by_id(co_ids[: co_slots * 2], city=request.city,
+                                          similarity_vector=query_vector)[:co_slots]
+
+        from_vectors = search.merged_candidates(
             personalization.query_space_vector(profile, query_vector),
             profile.vector,
             taste_share=settings.taste_retrieval_share,
-            limit=settings.candidate_pool_size, city=request.city,
+            limit=pool - len(from_co), city=request.city,
             similarity_vector=query_vector)
+        candidates = search.interleave(from_vectors, from_co)
     elif pseudo_query:
         candidates = search.vector_candidates(
             pseudo_query, limit=settings.candidate_pool_size, city=request.city)
     else:
-        # Nothing stated but a location, which is a filter rather than a taste.
-        # Similarity stays absent, and the model ranks on the other features.
+        # Nothing stated but perhaps a location, which is a filter rather than a
+        # taste. Similarity stays absent, and the model ranks on the rest.
         candidates = fetch_artists()
         for candidate in candidates:
             candidate["similarity"] = None
@@ -203,10 +262,17 @@ def recommend(request: RecommendRequest) -> SearchResponse:
             wanted = request.city.strip().lower()
             candidates = [a for a in candidates
                           if (a.get("city") or "").strip().lower() == wanted]
+        # Past a certain catalogue size, scoring every act for a front page is
+        # wasted work: keep the ones in demand and the best reviewed.
+        cap = settings.candidate_pool_size * 5
+        if len(candidates) > cap:
+            candidates.sort(key=lambda a: (-platform.demand.get(a["artist_id"], 0.0),
+                                           -float(a.get("rating_smoothed", a["rating"]))))
+            candidates = candidates[:cap]
 
     if not candidates:
-        return SearchResponse(total=0, strategy=_strategy(profile),
-                              personalized=profile is not None, results=[])
+        return SearchResponse(total=0, strategy=_strategy(_usable(profile)),
+                              personalized=_usable(profile), results=[])
 
     frame = ranker.build_candidate_frame(
         candidates, city=request.city, budget_per_hour=request.budget_per_hour,
@@ -214,19 +280,20 @@ def recommend(request: RecommendRequest) -> SearchResponse:
     )
     scores = ranker.score(frame)
 
-    reasons = None
-    if profile is not None:
-        # A browse that states nothing leaves the ranker with no feature about
-        # this request to order by, so the person's own history takes the larger
-        # share. Say what the event is and that reverses.
-        stated_something = bool(request.genre or request.event_type or request.budget_per_hour)
-        alpha = (settings.taste_alpha_browse if stated_something
-                 else settings.taste_alpha_browse_unfiltered)
-        scores, reasons = personalization.rerank(profile, candidates, scores, alpha)
+    # A browse that states nothing leaves the ranker with no feature about this
+    # request to order by, so the person's own history takes the larger share,
+    # and platform demand weighs most. Say what the event is and both recede.
+    stated_something = bool(request.genre or request.event_type or request.budget_per_hour)
+    alpha = (settings.taste_alpha_browse if stated_something
+             else settings.taste_alpha_browse_unfiltered)
+    surface = blend.SURFACE_BROWSE if stated_something else blend.SURFACE_HOME
 
-    hits = _to_hits(candidates, scores, reasons)[: request.limit]
-    return SearchResponse(total=len(hits), strategy=_strategy(profile),
-                          personalized=profile is not None, results=hits)
+    hits, personalized = _finish(
+        candidates, scores, surface, profile, alpha, request.limit,
+        _viewer(request.user_id, visitor_id), diversify=True)
+
+    return SearchResponse(total=len(hits), strategy=_strategy(personalized),
+                          personalized=personalized, results=hits)
 
 
 @app.post("/embeddings/rebuild", response_model=RebuildResponse)
@@ -341,7 +408,28 @@ def user_taste(user_id: int) -> dict:
     thin to personalise from — the point is to be able to check the input to a
     ranking rather than infer it from the ranking.
     """
-    return personalization.build_profile(user_id).describe()
+    return personalization.build_profile(user_id=user_id).describe()
+
+
+@app.get("/visitors/{visitor_id}/taste")
+def visitor_taste(visitor_id: str) -> dict:
+    """The same, for a browser that has not signed in."""
+    return personalization.build_profile(visitor_id=visitor_id[:64]).describe()
+
+
+@app.post("/users/{user_id}/forget")
+def forget_user(user_id: int) -> dict:
+    """Drops one account's cached profile, e.g. after a visitor's history moved onto it."""
+    personalization.forget(user_id=user_id)
+    return {"userId": user_id, "forgotten": True}
+
+
+@app.get("/signals")
+def platform_signals(refresh: bool = False) -> dict:
+    """What the platform-wide signals currently hold. `refresh` rebuilds them first."""
+    if refresh:
+        signals.reset()
+    return signals.current().describe()
 
 
 @app.get("/artists/{artist_id}/segment")
@@ -357,3 +445,38 @@ def artist_similar(artist_id: int, limit: int = 6) -> dict:
     """Nearest neighbours by embedding. Works whether or not segmentation has run."""
     limit = max(1, min(limit, 24))
     return {"artistId": artist_id, "similar": segments.similar_artists(artist_id, limit)}
+
+
+@app.get("/artists/{artist_id}/also-chosen")
+def artist_also_chosen(artist_id: int, limit: int = 6) -> dict:
+    """Artists the people who chose this one also chose - booked, or opened.
+
+    A different question from `/similar`. Similar is "whose profile reads the
+    same"; this is "who ends up on the same shortlist", which crosses genres
+    whenever real bookings do. `similarity` is the support-shrunk cosine, 0-1,
+    comparable across artists.
+    """
+    limit = max(1, min(limit, 24))
+    platform = signals.current()
+    neighbours = platform.similar(artist_id, limit)
+    if not neighbours:
+        return {"artistId": artist_id, "alsoChosen": []}
+
+    artists = {a["artist_id"]: a for a in fetch_artists([other for other, _ in neighbours])}
+    return {
+        "artistId": artist_id,
+        "alsoChosen": [
+            {
+                "artistId": other,
+                "slug": artists[other].get("slug"),
+                "stageName": artists[other]["stage_name"],
+                "fullName": artists[other].get("full_name"),
+                "profileImage": artists[other].get("profile_image"),
+                "rating": float(artists[other]["rating"]),
+                "hourlyRate": float(artists[other]["hourly_rate"]),
+                "city": artists[other].get("city"),
+                "similarity": round(similarity, 4),
+            }
+            for other, similarity in neighbours if other in artists
+        ],
+    }

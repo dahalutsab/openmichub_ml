@@ -35,7 +35,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 from app.db import connection
-from training import world
+from training import behaviour, world
 from training.artwork import cover_art
 
 log = logging.getLogger(__name__)
@@ -135,10 +135,18 @@ def wipe(conn) -> None:
             if removed:
                 log.info("Removed %d generated pictures from the previous seed", removed)
 
-        # ML tables live in their own schema and are keyed by artist id.
-        for table in ("ml.artist_embedding", "ml.artist_segment"):
+        # Committed before the optional tables below, each of which may not exist
+        # yet: a rollback after a failed TRUNCATE would otherwise undo this one too.
+        conn.commit()
+
+        # ML tables live in their own schema and are keyed by artist id. The
+        # discovery logs are listed too: a signed-out visitor's rows belong to no
+        # user, so truncating users does not cascade to them.
+        for table in ("ml.artist_embedding", "ml.artist_segment",
+                      "user_interaction", "discovery_impression"):
             try:
                 cur.execute(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE")
+                conn.commit()
             except Exception:
                 conn.rollback()
     conn.commit()
@@ -429,10 +437,16 @@ def booking_status(rng, event_day: date, today: date) -> str:
     return "CANCELLED"
 
 
-def seed_bookings(conn, rng, artists, bookers, today, per_artist=(0, 26)) -> list[dict]:
-    """Places gigs across the platform's history and a few months into the future."""
+def seed_bookings(conn, rng, artists, bookers, today, known, per_artist=(0, 26)) -> list[dict]:
+    """Places gigs across the platform's history and a few months into the future.
+
+    How many gigs an act gets follows its quality. *Who* books each one follows
+    the organizers' preferences - genre, city, budget, circle, loyalty - rather
+    than a uniform draw; see training/behaviour.py for why that changed.
+    """
     log.info("Booking gigs")
     bookings = []
+    history: dict[tuple, int] = {}
     low, high = per_artist
 
     with conn.cursor() as cur:
@@ -465,17 +479,25 @@ def seed_bookings(conn, rng, artists, bookers, today, per_artist=(0, 26)) -> lis
                 if billed_hours <= 0:
                     continue
 
-                event_type = rng.choices(world.EVENT_TYPES, weights=world.EVENT_WEIGHTS, k=1)[0]
-                # Booked in the city of the artist most of the time, occasionally away.
-                city = artist["city"] if rng.random() < 0.78 else weighted_choice(rng, CITY_WEIGHTS)
+                booker = behaviour.choose(rng, bookers, artist, known, history)
+                history[(booker["user_id"], artist["artist_id"])] = \
+                    history.get((booker["user_id"], artist["artist_id"]), 0) + 1
+                event_type = behaviour.occasion_for(rng, booker, artist)
+                # Played where the organizer is most of the time, otherwise at home.
+                city = booker["city"] if rng.random() < 0.7 else artist["city"]
                 venue = rng.choice(world.VENUES.get(city, world.VENUES["Kathmandu"]))
 
                 total = round(artist["rate"] * billed_hours, 2)
-                booker = rng.choice(bookers)
 
-                # Requested somewhere between three months and a week beforehand.
+                # Requested somewhere between three months and a week beforehand,
+                # and never later than today: a request cannot have been made in
+                # the future, and a row dated there would count as brand new in
+                # every recency-weighted signal for months.
                 lead = rng.randint(7, 95)
-                requested = stamp(rng, max(earliest, event_day - timedelta(days=lead)))
+                requested_on = min(today, max(earliest, event_day - timedelta(days=lead)))
+                requested = stamp(rng, requested_on)
+                if requested > datetime.now():
+                    requested = datetime.now() - timedelta(minutes=rng.randint(5, 600))
 
                 cur.execute(
                     """
@@ -492,7 +514,7 @@ def seed_bookings(conn, rng, artists, bookers, today, per_artist=(0, 26)) -> lis
                 bookings.append({
                     "id": cur.fetchone()[0], "artist": artist, "booker": booker,
                     "event_day": event_day, "status": status, "total": total,
-                    "requested": requested, "hours": billed_hours,
+                    "requested": requested, "hours": billed_hours, "event_type": event_type,
                 })
 
             if len(bookings) % 500 < count:
@@ -724,7 +746,9 @@ def seed_bookers(conn, rng, n_bookers, roles, today) -> list[dict]:
                 cur, email=f"{handle}.{index + 1}@{SEED_DOMAIN}", full_name=name, city=city,
                 phone=f"977{rng.randint(9800000000, 9899999999)}", joined=joined)
             grant_role(cur, user_id, roles["ORGANIZER"])
-            bookers.append({"user_id": user_id, "name": name, "city": city})
+            # What this organizer actually wants. See training/behaviour.py.
+            bookers.append({"user_id": user_id, "name": name, "city": city,
+                            "taste": behaviour.taste(rng, city)})
     conn.commit()
     return bookers
 
@@ -751,6 +775,8 @@ def main() -> None:
     parser.add_argument("--artists", type=int, default=300)
     parser.add_argument("--bookers", type=int, default=140)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--visitors", type=int, default=900,
+                        help="signed-out visitors who browse and search but never book")
     parser.add_argument("--no-art", action="store_true",
                         help="skip generating profile pictures")
     parser.add_argument("--wipe", action="store_true",
@@ -773,25 +799,38 @@ def main() -> None:
         # The demo organizer books too, so its dashboard is not empty.
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM users WHERE email = %s", (f"booker@{DEMO_DOMAIN}",))
+            # A legible taste, so signing in as the demo organizer shows what
+            # personalisation does: corporate dinners and weddings, Jazz and
+            # Folk, in Kathmandu, at a mid-range budget.
             bookers.append({"user_id": cur.fetchone()[0], "name": "Demo Organizer",
-                            "city": "Kathmandu"})
+                            "city": "Kathmandu",
+                            "taste": behaviour.taste(rng, "Kathmandu", archetype="corporate events",
+                                                     favourites=["Jazz", "Folk"], budget=4200.0)})
 
         artists = seed_artists(conn, rng, args.artists, categories, roles, today,
                                with_art=not args.no_art)
+        known, circle_city = behaviour.make_circles(rng, artists)
+        behaviour.attach_roster(rng, bookers, artists, circle_city)
         slots = seed_availability(conn, rng, artists)
-        bookings = seed_bookings(conn, rng, artists, bookers, today)
+        bookings = seed_bookings(conn, rng, artists, bookers, today, known)
         money = seed_money(conn, rng, bookings, today)
         reviews = seed_reviews(conn, rng, bookings)
         posts = seed_posts(conn, rng, artists, today)
+        activity = behaviour.seed_interactions(conn, rng, artists, bookers, bookings,
+                                               known, circle_city, today,
+                                               visitors=args.visitors)
 
     log.info("")
     log.info("Done: %d artists, %d organizers, %d bookings, %d payments, "
              "%d transactions, %d reviews, %d posts, %d availability slots",
              len(artists), len(bookers), len(bookings), money["payments"],
              money["transactions"] + money["withdrawals"], reviews, posts, slots)
+    log.info("      %d profile views and %d searches, %d from signed-out visitors",
+             activity["views"], activity["searches"], activity["visitors"])
     log.info("Every seeded account signs in with: %s", PASSWORD)
     log.info("Next: rebuild embeddings and retrain segmentation, or artists will be "
-             "unsearchable and unsegmented.")
+             "unsearchable and unsegmented. Then GET /signals?refresh=true on the ML "
+             "service, so co-choice and demand read the new history.")
 
 
 if __name__ == "__main__":

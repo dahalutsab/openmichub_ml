@@ -8,6 +8,7 @@ import com.brogrammers.open_mic_hub_service.social_feed.service.PostService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.artist.service.ArtistService;
 import com.brogrammers.open_mic_hub_service.user_management.artist.dto.response.ArtistResponse;
 import com.brogrammers.open_mic_hub_service.user_management.user.service.UserService;
+import com.brogrammers.open_mic_hub_service.discovery.dto.DiscoveryActor;
 import com.brogrammers.open_mic_hub_service.discovery.service.InteractionService;
 import com.brogrammers.open_mic_hub_service.util.logged_in_user.LoggedInUserUtil;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +20,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,15 +63,20 @@ public class PublicController extends BaseController {
      * and every internal caller that only knows an id, keep working.
      */
     @GetMapping("/artists/{handle}")
-    public ResponseEntity<GlobalApiResponse> getArtist(@PathVariable String handle) {
+    public ResponseEntity<GlobalApiResponse> getArtist(
+            @PathVariable String handle,
+            @RequestHeader(value = DiscoveryActor.VISITOR_HEADER, required = false) String visitorId) {
         ArtistResponse artist = handle.matches("\\d+")
                 ? artistService.getArtistById(Long.valueOf(handle))
                 : artistService.getArtistBySlug(handle);
 
         // Who read whose profile is the signal discovery was missing: it is most of what a person
-        // does before booking, and until now none of it was kept. Recorded only for a signed-in
-        // visitor, on another thread, and de-duplicated so a page that reloads twice counts once.
-        interactionService.recordProfileView(loggedInUserUtil.currentUserIdOrNull(), artist.getArtistId());
+        // does before booking. Recorded against the account, or against the browser's visitor id
+        // for someone not signed in, on another thread, and de-duplicated so a page that reloads
+        // twice counts once.
+        interactionService.recordProfileView(
+                DiscoveryActor.of(loggedInUserUtil.currentUserIdOrNull(), visitorId),
+                artist.getArtistId());
 
         return successResponse(artist, "Fetched artist successfully.");
     }

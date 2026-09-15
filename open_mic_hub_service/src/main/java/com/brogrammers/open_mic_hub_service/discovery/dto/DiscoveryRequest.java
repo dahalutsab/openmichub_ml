@@ -35,4 +35,11 @@ public class DiscoveryRequest {
      */
     @JsonProperty("user_id")
     private Long userId;
+
+    /**
+     * The browser's random id, for a visitor who is not signed in. Their own searches and views
+     * personalise the ranking the same way an account's do. Never sent alongside {@code userId}.
+     */
+    @JsonProperty("visitor_id")
+    private String visitorId;
 }

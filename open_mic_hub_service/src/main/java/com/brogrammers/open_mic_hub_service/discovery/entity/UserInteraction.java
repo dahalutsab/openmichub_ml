@@ -14,14 +14,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
- * One thing a signed-in person did while looking for an artist.
+ * One thing a person did while looking for an artist.
  *
  * <p>Holds ids rather than {@code @ManyToOne} associations on purpose. This is an append-only log
  * written on the way out of a request that has already done its work; resolving a user and an
  * artist entity to write one row would add two selects to every search and every profile view, and
  * nothing here ever navigates to either.
+ *
+ * <p>Belongs to an account or to a browser, never to neither. A visitor's rows move to their account
+ * when they sign in.
  */
 @Entity
 @Table(name = "user_interaction")
@@ -35,8 +39,13 @@ public class UserInteraction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
+    /** Null for a visitor who has not signed in. */
+    @Column(name = "user_id")
     private Long userId;
+
+    /** The browser's random id, for a visitor who has not signed in. Null once claimed. */
+    @Column(name = "visitor_id", length = 64)
+    private String visitorId;
 
     /** Null for a search or a browse, which are about a requirement rather than one artist. */
     @Column(name = "artist_id")
@@ -61,6 +70,14 @@ public class UserInteraction {
 
     @Column(name = "budget_per_hour")
     private Double budgetPerHour;
+
+    /** For a CLICK: the served list it came from. See {@code discovery_impression}. */
+    @Column(name = "request_id")
+    private UUID requestId;
+
+    /** For a CLICK: where in that list the artist was, from 0. */
+    @Column(name = "position")
+    private Integer position;
 
     @Column(name = "created_date", nullable = false)
     private LocalDateTime createdDate;

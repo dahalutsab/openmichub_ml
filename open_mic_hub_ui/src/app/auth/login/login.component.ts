@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Role } from '../../shared/role';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
 import { environment } from '../../environment/environment';
+import { DiscoveryService } from '../../discovery/discovery.service';
 
 @Component({
   selector: 'app-login',
@@ -24,6 +25,8 @@ export class LoginComponent implements OnInit {
   loginForm: any;
   isLoading: boolean = false;
   showPassword: boolean = false;
+
+  private readonly discovery = inject(DiscoveryService);
 
   constructor(
     private router: Router,
@@ -89,8 +92,10 @@ export class LoginComponent implements OnInit {
     
             localStorage.setItem('authToken', token);
             localStorage.setItem('urole', JSON.stringify(roles));
-            
-            this.redirectUser(roles);
+
+            // What they searched for and opened before signing in now belongs to the account, so
+            // the first page they land on already reflects it.
+            this.discovery.claimVisitorHistory().then(() => this.redirectUser(roles));
           }
         },
         (error) => {

@@ -26,7 +26,10 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With",
+                // Discovery's anonymous visitor id. Without it listed, the browser's preflight
+                // fails and every public page request from the client is refused.
+                "X-Visitor-Id"));
         config.setAllowedMethods(List.of("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);

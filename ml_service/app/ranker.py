@@ -149,7 +149,10 @@ def build_candidate_frame(candidates: list[dict], *, city: str | None,
             "text_similarity": similarity,
             "price_fit": (price_fit(budget, artist["hourly_rate"])
                           if budget_known else float("nan")),
-            "rating_norm": (float(artist["rating"]) - 1.0) / 4.0,
+            # The shrunk rating where the catalogue provides one: a single 5-star
+            # review is weak evidence of a 5-star act, and ranking on the raw mean
+            # put one-review newcomers above acts with forty reviews at 4.6.
+            "rating_norm": (float(artist.get("rating_smoothed", artist["rating"])) - 1.0) / 4.0,
             "location_match": _location_match(city, artist.get("city")),
             "experience": min(1.0, np.log1p(artist["completed_bookings"]) / np.log1p(120)),
             "event_fit": event_fit(event_type, parents),

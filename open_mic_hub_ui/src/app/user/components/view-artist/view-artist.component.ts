@@ -34,6 +34,7 @@ export class ViewArtistComponent implements OnInit {
   artist: any = null;
   availability: any[] = [];
   similar: any[] = [];
+  alsoChosen: any[] = [];
   posts: any[] = [];
 
   loading = true;
@@ -66,6 +67,7 @@ export class ViewArtistComponent implements OnInit {
           this.artist = null;
           this.availability = [];
           this.similar = [];
+          this.alsoChosen = [];
           this.posts = [];
           this.booking = false;
         }),
@@ -150,6 +152,18 @@ export class ViewArtistComponent implements OnInit {
       .subscribe({
         next: res => (this.similar = res?.data?.similar ?? []),
         error: () => (this.similar = []),
+      });
+
+    // A different question from "whose profile reads the same": who ends up on the same
+    // shortlists. It crosses genres whenever real bookings do, and it is empty until there is
+    // enough history to say - in which case the strip simply does not show.
+    this.http
+      .get<any>(`${environment.baseUrl}/discover/artists/${this.artistId}/also-chosen`, {
+        params: { limit: 6 },
+      })
+      .subscribe({
+        next: res => (this.alsoChosen = res?.data?.alsoChosen ?? []),
+        error: () => (this.alsoChosen = []),
       });
   }
 

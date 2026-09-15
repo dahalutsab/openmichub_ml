@@ -200,6 +200,48 @@ def merged_candidates(query_side, taste_side, *, taste_share: float,
     return list(merged.values())
 
 
+def candidates_by_id(artist_ids: list[int], city: str | None = None,
+                     similarity_vector=None) -> list[dict]:
+    """Candidates named by id rather than found by distance, in the order given.
+
+    For sources that are not a vector - co-choice neighbours, acts in demand -
+    so they enter the same pool, under the same city filter, carrying the same
+    `similarity` to the query that a retrieved candidate would.
+    """
+    if not artist_ids:
+        return []
+    order = {artist_id: position for position, artist_id in enumerate(artist_ids)}
+    artists = fetch_artists(list(order))
+    if city:
+        wanted = city.strip().lower()
+        artists = [a for a in artists if (a.get("city") or "").strip().lower() == wanted]
+
+    similarity: dict[int, float] = {}
+    if similarity_vector is not None and artists:
+        with connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                f"SELECT artist_id, 1 - (embedding <=> %(v)s) "
+                f"FROM {get_settings().db_schema}.artist_embedding WHERE artist_id = ANY(%(ids)s)",
+                {"v": similarity_vector, "ids": [a["artist_id"] for a in artists]})
+            similarity = {int(row[0]): float(row[1]) for row in cur.fetchall()}
+
+    for artist in artists:
+        artist["similarity"] = similarity.get(artist["artist_id"]) if similarity_vector is not None else None
+    artists.sort(key=lambda a: order.get(a["artist_id"], len(order)))
+    return artists
+
+
+def interleave(*pools: list[dict], limit: int | None = None) -> list[dict]:
+    """Merges candidate pools one from each in turn, first occurrence kept."""
+    merged: dict[int, dict] = {}
+    for group in zip_longest(*pools):
+        for candidate in group:
+            if candidate is not None:
+                merged.setdefault(candidate["artist_id"], candidate)
+    values = list(merged.values())
+    return values[:limit] if limit else values
+
+
 def requirement_query(genre: str | None, event_type: str | None,
                       city: str | None) -> str | None:
     """A query built from browse filters, phrased the way artists are embedded.

@@ -16,5 +16,15 @@ public enum InteractionKind {
     BROWSE,
 
     /** Opened an artist's profile. The commonest signal, and the weakest one on its own. */
-    PROFILE_VIEW
+    PROFILE_VIEW,
+
+    /**
+     * Chose an artist from a ranked list, carrying the list it came from and the position it held.
+     *
+     * <p>Usually followed by a PROFILE_VIEW for the same artist, and deliberately not weighted as a
+     * second one. What a click adds is the position: it is what lets an artist shown first and
+     * opened be told apart from one shown twentieth and opened, and one shown every visit and never
+     * opened be told apart from one never shown at all.
+     */
+    CLICK
 }

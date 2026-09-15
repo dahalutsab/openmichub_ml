@@ -35,12 +35,23 @@ WITH genres AS (
     GROUP BY ag.artist_id
 ),
 booking_stats AS (
+    -- A played gig is COMPLETED, not CONFIRMED. Counting only CONFIRMED made an
+    -- act with forty gigs behind it and two ahead look like it had played two,
+    -- and made it look as if it had ignored the other forty requests.
     SELECT artist_id,
-           COUNT(*) FILTER (WHERE status = 'CONFIRMED')                        AS completed,
-           COUNT(*) FILTER (WHERE status IN ('CONFIRMED', 'DECLINED'))          AS answered,
+           COUNT(*) FILTER (WHERE status IN ('COMPLETED', 'CONFIRMED'))        AS completed,
+           COUNT(*) FILTER (WHERE status <> 'PENDING')                          AS answered,
            COUNT(*)                                                            AS total
     FROM booking
     GROUP BY artist_id
+),
+review_stats AS (
+    SELECT artist_id, COUNT(*) AS reviews
+    FROM review
+    GROUP BY artist_id
+),
+prior AS (
+    SELECT COALESCE(AVG(rating), 4.0)::float AS mean FROM review
 )
 SELECT a.id                                   AS artist_id,
        a.slug,
@@ -48,6 +59,12 @@ SELECT a.id                                   AS artist_id,
        COALESCE(a.bio, '')                    AS bio,
        a.hourly_rate,
        COALESCE(a.rating, 3.0)                AS rating,
+       COALESCE(rs.reviews, 0)                AS review_count,
+       -- The rating shrunk towards the catalogue mean, as if every act had a
+       -- few extra reviews at that mean. What ranking reads; `rating` is what
+       -- is displayed. Unrated acts sit at the mean rather than at 3.0.
+       (%(prior_reviews)s * prior.mean + COALESCE(rs.reviews, 0) * COALESCE(a.rating, prior.mean))
+           / (%(prior_reviews)s + COALESCE(rs.reviews, 0)) AS rating_smoothed,
        COALESCE(u.location, '')               AS city,
        COALESCE(u.full_name, a.stage_name)    AS full_name,
        u.profile                              AS profile_image,
@@ -58,16 +75,21 @@ SELECT a.id                                   AS artist_id,
             ELSE bs.answered::float / bs.total
        END                                    AS response_rate
 FROM artists a
+CROSS JOIN prior
 LEFT JOIN users u          ON u.id = a.user_id
 LEFT JOIN genres gz        ON gz.artist_id = a.id
 LEFT JOIN booking_stats bs ON bs.artist_id = a.id
+LEFT JOIN review_stats rs  ON rs.artist_id = a.id
 """
 
 
 def fetch_artists(artist_ids: list[int] | None = None) -> list[dict]:
     """The whole catalogue, or just the given ids."""
     sql = _ARTIST_QUERY
-    params: dict = {"default_response": DEFAULT_RESPONSE_RATE}
+    from app.config import get_settings
+
+    params: dict = {"default_response": DEFAULT_RESPONSE_RATE,
+                    "prior_reviews": get_settings().rating_prior_reviews}
 
     if artist_ids is not None:
         if not artist_ids:

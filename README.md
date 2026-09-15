@@ -75,29 +75,50 @@ ordering.
 
 ### Suggestions that know who is asking
 
-Both endpoints are public, but not anonymous. A signed-in visitor's token is honoured when the
-browser sends one, and two things follow from that.
+Both endpoints are public, but not anonymous. A signed-in visitor is their account; a visitor who
+has not signed in is a random id their browser keeps and sends as `X-Visitor-Id` — not an IP
+address, not a fingerprint. A request with neither is served normally and recorded nowhere.
 
 **What they do is recorded.** Searches, browse filters and opened profiles go to
-`user_interaction`; bookings were already in `booking`. Profile views are de-duplicated within
-half an hour, an unfiltered browse is ignored, and writing the row happens on another thread and
-can never fail a search. Nothing at all is recorded for a visitor who is not signed in.
+`user_interaction`, against the account or the browser; bookings were already in `booking`.
+Profile views are de-duplicated within half an hour, an unfiltered browse is ignored, and writing
+the row happens on another thread and can never fail a search. Signing in moves a browser's history
+onto the account and starts a fresh visitor id. History no account claims is deleted after 90 days
+by a nightly job in the API.
 
-**The ranking uses it.** The ML service builds a taste profile per person and blends it into the
-ordering. Two things are tracked separately, because they answer different questions: what someone
-usually books, and what they are searching for this week. Averaging the two buries the second — an
-organizer with fifty bookings who searches for a DJ contributes one vector against fifty, so the
-search vanishes — so a browse retrieves from both, in a stated proportion, and scores them in the
-same proportion. Old events decay rather than falling out of a window, a typed query keeps most of
-the say over its own results, and someone with almost no history gets the ordinary ranking rather
-than a guess. One search is enough to shape what comes next; one profile view is not.
+**What they were shown is recorded too.** Every ranked list gets a `requestId` and its artists are
+logged in order to `discovery_impression`; a click posts back the list and the position it came
+from, and is kept only if that list was served to that same caller. This is what lets an act shown
+first and opened be told apart from one shown on every visit and never opened — and it is the
+training label the search ranker has been missing.
 
-Searching then browsing works immediately: the search is folded into the cached profile as it is
-served, rather than waiting for the next rebuild.
+**The ranking uses all of it.** The ML service builds a taste profile per person — account or
+browser — and blends it into the ordering. Two things are tracked separately, because they answer
+different questions: what someone usually books, and what they are searching for this week.
+Averaging the two buries the second, so a browse retrieves from both in a stated proportion. Old
+events decay rather than falling out of a window, a typed query keeps most of the say over its own
+results, and someone with almost no history gets the ordinary ranking rather than a guess. One
+search is enough to shape what comes next; one profile view is not.
+
+On top of one person's history sit three things only the whole platform's behaviour can say:
+
+- **Often picked alongside** — item-to-item collaborative filtering over bookings and profile
+  views. Acts are close when the same people chose both, which crosses genres whenever real
+  shortlists do. It feeds retrieval, scoring, a reason line naming the act it came from, and a
+  strip on every artist profile.
+- **In demand this month** — decayed booking requests and views, on a three-week half-life. It is
+  what a visitor with no history sees first, instead of the catalogue sorted by rating.
+- **Exposure** — an act shown near the top of lists constantly gets no help; one barely shown gets a
+  small, bounded chance. An act a person keeps being shown and never opens gives way to others.
+
+Ratings are shrunk towards the catalogue mean before ranking, so one 5-star review no longer
+outranks forty at 4.6, and browse pages trade a little score for variety so the first screen is not
+eight versions of the same act.
 
 Each ranked artist comes back with the reason it was raised — "you have booked them before",
-"you keep coming back to Jazz" — and the cards show it. `GET /users/{id}/taste` on the ML service
-shows what the service believes about someone, including when it is too thin to use.
+"often picked alongside The Velvet Club", "in demand this month" — most specific first, and the
+cards show it. `GET /users/{id}/taste` and `GET /visitors/{id}/taste` on the ML service show what the
+service believes about someone; `GET /signals` shows the platform-wide side.
 
 To get a demo catalogue and trained models on a fresh install:
 
@@ -106,6 +127,8 @@ docker compose exec ml python -m training.seed_world --artists 300 --wipe
 curl -X POST localhost:8000/embeddings/rebuild
 docker compose exec ml python -m training.segment
 curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
+curl "localhost:8000/signals?refresh=true"
+docker compose exec ml python -m training.evaluate_recs    # how well it recommends, measured
 ```
 
 See [ml_service/README.md](ml_service/README.md) for the model, its features and how it is
@@ -195,14 +218,14 @@ refused outright rather than reassigned.
 ## Tests
 
 ```bash
-# Backend — 91 tests
+# Backend — 98 tests
 docker compose up -d postgres                     # optional; see below
 cd open_mic_hub_service && ./mvnw test
 
-# Frontend — 78 tests
+# Frontend — 80 tests
 cd open_mic_hub_ui && CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless
 
-# ML — 32 tests, inside the running container
+# ML — 56 tests, inside the running container
 docker compose exec ml python -m pytest tests -q
 ```
 

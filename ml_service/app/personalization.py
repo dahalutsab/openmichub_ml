@@ -57,8 +57,16 @@ produces the ordering; this shifts it by at most `taste_alpha_*` of the final
 score, and less when the person has just typed what they want. Somebody who
 searches "dj for a club night" gets DJs, however much jazz they have booked.
 
-Anonymous visitors have no history here — the API records nothing for them —
-and are served exactly as they were before.
+**A person is an account or a browser.** A visitor who has not signed in is
+identified by the random id their browser keeps, and their searches and profile
+views build a profile exactly as an account's do - without bookings, which need
+an account. Signing in moves that history onto the account. A request carrying
+neither is served the ordinary ranking.
+
+**What people chose alongside the same acts counts too.** The platform-wide
+co-choice table in `app/signals.py` is passed in by the caller, and becomes one
+more component of affinity: an artist that people who booked what this person
+booked also booked. It is what a profile's text cannot say.
 """
 
 from __future__ import annotations
@@ -121,6 +129,33 @@ MAX_INTENT_PER_TEXT = 3.0
 W_FAMILIARITY = 0.15        # they have booked or read this artist before
 W_BUDGET = 0.10             # what they usually pay
 W_CITY = 0.07               # where they usually book
+W_CO_CHOICE = 0.18          # people who chose what they chose also chose this
+
+# Co-choice worth naming on the card: at least this share of the platform's
+# typical strong tie (see `Signals.co_scale`).
+CO_CHOICE_REASON_AT = 0.6
+
+# How close a search or a taste match has to be before the card claims it. Set
+# above the typical genre match on each calibrated scale (0.775 for a query), not
+# at the middle of it: at 0.6, after one search for a DJ, Jazz and Folk acts said
+# "matches what you have been searching for", and on a personalised page every
+# card carried the same two lines, which is the same as carrying none.
+INTENT_REASON_AT = 0.85
+TASTE_REASON_AT = 0.8
+
+# Which line wins when several apply, most specific first. Naming an act this
+# person booked or one they chose it alongside says something about *this* card;
+# "close to your taste" could be said of most of a personalised list.
+REASON_PRIORITY = {
+    "booked": 0,
+    "co_choice": 1,
+    "viewed": 2,
+    "intent": 3,
+    "genre": 4,
+    "taste": 5,
+    "budget": 6,
+    "city": 7,
+}
 
 # What is left over is the question "does this artist fit this person", and it
 # is split between the two vectors by the same `taste_intent_share` that splits
@@ -128,7 +163,7 @@ W_CITY = 0.07               # where they usually book
 # point: the first version had intent at 0.26 against a durable side of 0.42,
 # because taste was counted twice — once as a vector and again as genre
 # affinity — and a fresh search lost to a history it was supposed to outrank.
-W_PERSONAL = 1.0 - (W_FAMILIARITY + W_BUDGET + W_CITY)
+W_PERSONAL = 1.0 - (W_FAMILIARITY + W_BUDGET + W_CITY + W_CO_CHOICE)
 
 # Within the durable half, how much is the vector rather than the genre names.
 # Slightly under half: genre is the coarser signal and the more legible one, and
@@ -176,7 +211,11 @@ class TasteProfile:
     Built from a bounded window and cached briefly; see `profile_for`.
     """
 
-    user_id: int
+    user_id: int | None = None
+
+    #: The browser's id, for a visitor who has not signed in. Never set together
+    #: with `user_id`.
+    visitor_id: str | None = None
 
     #: Unit-length taste vector: the weighted centre of the artists this person
     #: booked or read. Durable. None when there were no embeddings to build it
@@ -206,9 +245,23 @@ class TasteProfile:
     booked: dict[int, float] = field(default_factory=dict)
     viewed: dict[int, float] = field(default_factory=dict)
 
+    #: Stage names of the artists above, so a reason can name the act it came from.
+    names: dict[int, str] = field(default_factory=dict)
+
+    #: Artists shown near the top of this person's lists repeatedly lately and
+    #: never opened or booked, to how many lists showed them.
+    skipped: dict[int, int] = field(default_factory=dict)
+
     #: Total decayed weight behind all of it, and how many rows it came from.
     signal: float = 0.0
     events: int = 0
+
+    def seeds(self) -> dict[int, float]:
+        """Every artist this person engaged with, to how strongly - for co-choice."""
+        engaged = dict(self.viewed)
+        for artist_id, weight in self.booked.items():
+            engaged[artist_id] = engaged.get(artist_id, 0.0) + weight
+        return engaged
 
     @property
     def usable(self) -> bool:
@@ -231,6 +284,7 @@ class TasteProfile:
             sorted(mapping.items(), key=lambda kv: -kv[1])[:5])
         return {
             "userId": self.user_id,
+            "visitorId": self.visitor_id,
             "usable": self.usable,
             "signal": round(self.signal, 3),
             "events": self.events,
@@ -242,6 +296,7 @@ class TasteProfile:
             "hasVector": self.vector is not None,
             "hasIntent": self.intent_vector is not None,
             "intentSignal": round(self.intent_signal, 3),
+            "skippedArtists": len(self.skipped),
         }
 
 
@@ -249,13 +304,30 @@ class TasteProfile:
 # Reading the history
 # --------------------------------------------------------------------------- #
 
+# `{owner}` is `user_id` or `visitor_id`, chosen in code and never taken from input.
+# CLICK rows are left out: each is followed by a profile view of the same artist,
+# which already counts, and what a click adds - its position - is read from the
+# impression log instead.
 _INTERACTIONS_SQL = """
 SELECT kind, artist_id, search_query, genre, city, occasion, budget_per_hour, created_date
 FROM user_interaction
-WHERE user_id = %(user_id)s
+WHERE {owner} = %(owner)s
+  AND kind <> 'CLICK'
   AND created_date > NOW() - (%(days)s * INTERVAL '1 day')
 ORDER BY created_date DESC
 LIMIT %(limit)s
+"""
+
+# Artists near the top of this person's recent lists, by how many lists showed
+# them. Whether they were then opened is decided in code against the history.
+_SHOWN_SQL = """
+SELECT shown.artist_id, COUNT(DISTINCT d.request_id)
+FROM discovery_impression d,
+     UNNEST(d.artist_ids[1:%(top)s]) AS shown(artist_id)
+WHERE d.{owner} = %(owner)s
+  AND d.created_date > NOW() - (%(days)s * INTERVAL '1 day')
+GROUP BY shown.artist_id
+HAVING COUNT(DISTINCT d.request_id) >= %(threshold)s
 """
 
 _BOOKINGS_SQL = """
@@ -339,34 +411,62 @@ def _normalise_shares(weights: dict[str, float]) -> dict[str, float]:
     return {name: value / strongest for name, value in weights.items()}
 
 
-def build_profile(user_id: int) -> TasteProfile:
+def build_profile(user_id: int | None = None, visitor_id: str | None = None) -> TasteProfile:
     """Reads one person's history and turns it into a taste profile.
 
     Bounded on both sides — a time window and a row cap — so this stays a small
-    indexed read however long someone has been on the platform.
+    indexed read however long someone has been on the platform. An account is
+    read by `user_id`, with its bookings; a browser by `visitor_id`, without.
     """
     settings = get_settings()
-    profile = TasteProfile(user_id=user_id)
-    params = {"user_id": user_id,
+    owner, value = ("user_id", user_id) if user_id else ("visitor_id", visitor_id)
+    profile = TasteProfile(user_id=user_id or None, visitor_id=None if user_id else visitor_id)
+    if not value:
+        return profile
+
+    params = {"owner": value, "user_id": user_id,
               "days": settings.taste_window_days,
               "limit": settings.taste_max_events}
 
     try:
-        interactions = _rows(_INTERACTIONS_SQL, params)
-        bookings = _rows(_BOOKINGS_SQL, params)
+        interactions = _rows(_INTERACTIONS_SQL.format(owner=owner), params)
+        bookings = _rows(_BOOKINGS_SQL, params) if user_id else []
     except Exception:
         # A missing table on an install that has not migrated yet, or a database
         # blip. Discovery still works; it is simply not personalised.
-        log.exception("Could not read the history for user %s", user_id)
+        log.exception("Could not read the history for %s %s", owner, value)
         return profile
 
-    if not interactions and not bookings:
-        return profile
+    if interactions or bookings:
+        profile = profile_from_history(profile, interactions, bookings, datetime.now())
 
-    now = datetime.now()
+    try:
+        shown = _rows(_SHOWN_SQL.format(owner=owner), {
+            "owner": value, "top": settings.exposure_top_positions,
+            "days": settings.skip_window_days, "threshold": settings.skip_threshold})
+    except Exception:
+        # No impression log yet. Nothing is skipped rather than everything.
+        log.debug("Could not read served lists for %s %s", owner, value, exc_info=True)
+        shown = []
+    engaged = set(profile.viewed) | set(profile.booked)
+    profile.skipped = {int(artist_id): int(count) for artist_id, count in shown
+                       if artist_id is not None and int(artist_id) not in engaged}
+    return profile
+
+
+def profile_from_history(profile: TasteProfile, interactions: list[tuple],
+                         bookings: list[tuple], now: datetime) -> TasteProfile:
+    """Fills a profile from history rows, as that history stood at `now`.
+
+    Split from the read so the offline evaluation can replay a person's history
+    cut at any date and score the profile it would have produced then.
+    """
+    settings = get_settings()
     artist_ids = {int(row[1]) for row in interactions if row[1] is not None}
     artist_ids |= {int(row[0]) for row in bookings if row[0] is not None}
     artists = {a["artist_id"]: a for a in fetch_artists(list(artist_ids))} if artist_ids else {}
+    profile.names = {artist_id: a["stage_name"] for artist_id, a in artists.items()
+                     if a.get("stage_name")}
 
     genre_weight: dict[str, float] = {}
     city_weight: dict[str, float] = {}
@@ -449,7 +549,8 @@ def build_profile(user_id: int) -> TasteProfile:
             profile.typical_rate = sum(rate * weight for rate, weight in rate_samples) / total
 
     profile.vector = _taste_vector(profile)
-    profile.intent_vector, profile.intent_signal = _intent_vector(profile.user_id, query_texts)
+    profile.intent_vector, profile.intent_signal = _intent_vector(
+        profile.user_id or profile.visitor_id, query_texts)
     return profile
 
 
@@ -513,49 +614,62 @@ def _intent_vector(user_id: int,
 # Cache
 # --------------------------------------------------------------------------- #
 
-_cache: dict[int, tuple[float, TasteProfile]] = {}
+_cache: dict[tuple[str, object], tuple[float, TasteProfile]] = {}
 _cache_lock = threading.Lock()
-_CACHE_MAX_USERS = 512
+# Visitors are far more numerous than accounts, so the cache is sized for them.
+_CACHE_MAX_USERS = 4096
 
 
-def profile_for(user_id: int | None) -> TasteProfile | None:
-    """The cached taste profile for a user, rebuilt when it has expired.
+def _key(user_id: int | None, visitor_id: str | None) -> tuple[str, object] | None:
+    if user_id:
+        return ("u", int(user_id))
+    if visitor_id:
+        return ("v", visitor_id)
+    return None
 
-    Returns None for an anonymous caller and for anyone whose history is too
-    thin to personalise from, so a caller can treat "no profile" as "rank the
-    ordinary way" without inspecting anything.
+
+def profile_for(user_id: int | None, visitor_id: str | None = None) -> TasteProfile | None:
+    """The cached profile for an account or a browser, rebuilt when it has expired.
+
+    Returns None for a caller who is neither, and for anyone with nothing to
+    act on, so a caller can treat "no profile" as "rank the ordinary way"
+    without inspecting anything. A profile that comes back may still be too
+    thin to personalise from - check `usable` - but carry artists this person
+    keeps being shown and passing over, which is worth acting on by itself.
     """
-    if not user_id:
+    key = _key(user_id, visitor_id)
+    if key is None:
         return None
 
     ttl = get_settings().taste_cache_ttl_seconds
     now = time.monotonic()
 
     with _cache_lock:
-        cached = _cache.get(user_id)
-        if cached and now - cached[0] < ttl:
-            return cached[1] if cached[1].usable else None
+        cached = _cache.get(key)
+    if cached and now - cached[0] < ttl:
+        profile = cached[1]
+    else:
+        profile = build_profile(user_id=user_id or None,
+                                visitor_id=None if user_id else visitor_id)
+        with _cache_lock:
+            if len(_cache) >= _CACHE_MAX_USERS:
+                # Cheapest useful eviction: drop the oldest half rather than track
+                # access order for what is a short-lived cache anyway.
+                for stale in sorted(_cache, key=lambda k: _cache[k][0])[: _CACHE_MAX_USERS // 2]:
+                    _cache.pop(stale, None)
+            _cache[key] = (now, profile)
 
-    profile = build_profile(user_id)
+    return profile if (profile.usable or profile.skipped) else None
 
+
+def forget(user_id: int | None = None, visitor_id: str | None = None) -> None:
+    """Drops cached profiles: one person's, or everyone's when given nobody."""
     with _cache_lock:
-        if len(_cache) >= _CACHE_MAX_USERS:
-            # Cheapest useful eviction: drop the oldest half rather than track
-            # access order for what is a short-lived cache anyway.
-            for stale in sorted(_cache, key=lambda uid: _cache[uid][0])[: _CACHE_MAX_USERS // 2]:
-                _cache.pop(stale, None)
-        _cache[user_id] = (now, profile)
-
-    return profile if profile.usable else None
-
-
-def forget(user_id: int | None = None) -> None:
-    """Drops cached profiles. Used by the tests and after a bulk import."""
-    with _cache_lock:
-        if user_id is None:
+        key = _key(user_id, visitor_id)
+        if key is None:
             _cache.clear()
         else:
-            _cache.pop(user_id, None)
+            _cache.pop(key, None)
 
 
 # --------------------------------------------------------------------------- #
@@ -604,32 +718,38 @@ def _intent_band() -> tuple[float, float]:
 
 
 def affinity(profile: TasteProfile, artist: dict,
-             vectors: dict[int, np.ndarray]) -> tuple[float, list[str]]:
+             vectors: dict[int, np.ndarray],
+             co_choice: dict[int, tuple[float, int]] | None = None,
+             co_scale: float = 0.0) -> tuple[float, list[str]]:
     """How well one artist fits this person, and why, on a 0-1 scale.
 
     The reasons are not a post-hoc story: each one is emitted by the component
     that actually contributed, and only when that component was strong enough to
     have moved the score.
+
+    `co_choice` is `Signals.co_choice(profile.seeds())`: artist -> (score, the
+    seed that contributed most). Absent, or with no scale to read it against,
+    the component is dropped like any other signal this person has not given.
     """
     artist_id = int(artist["artist_id"])
-    reasons: list[str] = []
+    reasons: list[tuple[int, str]] = []     # (priority, line) - see REASON_PRIORITY
     parts: list[tuple[float, float]] = []   # (weight, value)
 
-    # Intent first: what someone searched for this week outranks what they
-    # booked last spring as an explanation of why an artist is in front of them.
+    # Intent carries the largest share of the score; which reason is *shown* is
+    # decided separately, by REASON_PRIORITY, at the end.
     w_intent, w_taste, w_genre = _affinity_weights()
 
     intent = _similarity_to(profile.intent_vector, artist_id, vectors, _intent_band())
     if intent is not None:
         parts.append((w_intent, intent))
-        if intent >= 0.6:
-            reasons.append("Matches what you have been searching for")
+        if intent >= INTENT_REASON_AT:
+            reasons.append((REASON_PRIORITY["intent"], "Matches what you have been searching for"))
 
     similarity = _similarity_to(profile.vector, artist_id, vectors, _taste_band())
     if similarity is not None:
         parts.append((w_taste, similarity))
-        if similarity >= 0.6:
-            reasons.append("Close to the acts you have booked and viewed")
+        if similarity >= TASTE_REASON_AT:
+            reasons.append((REASON_PRIORITY["taste"], "Close to the acts you have booked and viewed"))
 
     genres = [g for g in (artist.get("sub_genres") or []) + (artist.get("parent_genres") or []) if g]
     best_genre, genre_score = None, 0.0
@@ -640,17 +760,27 @@ def affinity(profile: TasteProfile, artist: dict,
     if profile.genre_affinity:
         parts.append((w_genre, genre_score))
         if best_genre and genre_score >= 0.5:
-            reasons.append(f"You keep coming back to {best_genre}")
+            reasons.append((REASON_PRIORITY["genre"], f"You keep coming back to {best_genre}"))
+
+    if co_choice is not None and co_scale > 0 and profile.seeds():
+        score, via = co_choice.get(artist_id, (0.0, 0))
+        together = min(1.0, score / co_scale)
+        parts.append((W_CO_CHOICE, together))
+        # Naming an act the person has already booked or read is the whole
+        # point of this line, and it is never this artist itself: co-choice has
+        # no diagonal.
+        if together >= CO_CHOICE_REASON_AT and profile.names.get(via):
+            reasons.append((REASON_PRIORITY["co_choice"], f"Often picked alongside {profile.names[via]}"))
 
     booked = profile.booked.get(artist_id, 0.0)
     viewed = profile.viewed.get(artist_id, 0.0)
     if booked > 0:
         familiarity = 1.0
-        reasons.append("You have booked them before")
+        reasons.append((REASON_PRIORITY["booked"], "You have booked them before"))
     elif viewed > 0:
         # Two visits mean more than one, and ten mean little more than three.
         familiarity = min(1.0, 0.45 + viewed)
-        reasons.append("You looked at their profile")
+        reasons.append((REASON_PRIORITY["viewed"], "You looked at their profile"))
     else:
         familiarity = 0.0
     parts.append((W_FAMILIARITY, familiarity))
@@ -661,14 +791,14 @@ def affinity(profile: TasteProfile, artist: dict,
         fit = price_fit(profile.typical_rate, float(artist["hourly_rate"]))
         parts.append((W_BUDGET, fit))
         if fit >= 0.75:
-            reasons.append("Around what you usually pay")
+            reasons.append((REASON_PRIORITY["budget"], "Around what you usually pay"))
 
     city = (artist.get("city") or "").strip()
     if profile.city_affinity:
         city_score = profile.city_affinity.get(city, 0.0)
         parts.append((W_CITY, city_score))
         if city and city_score >= 0.6:
-            reasons.append(f"In {city}, where you usually book")
+            reasons.append((REASON_PRIORITY["city"], f"In {city}, where you usually book"))
 
     # Renormalised over the components that could be evaluated, so an artist is
     # not penalised for a signal this person has never given.
@@ -676,7 +806,10 @@ def affinity(profile: TasteProfile, artist: dict,
     if total_weight <= 0:
         return 0.0, []
     score = sum(weight * value for weight, value in parts) / total_weight
-    return float(score), reasons[:2]
+    # Most specific first. The card shows one line, and a line that could be said
+    # of half the list tells the reader nothing about this act.
+    reasons.sort(key=lambda item: item[0])
+    return float(score), [line for _, line in reasons[:2]]
 
 
 def _to_unit_scale(scores: np.ndarray) -> np.ndarray:
@@ -698,7 +831,8 @@ def _to_unit_scale(scores: np.ndarray) -> np.ndarray:
 
 
 def rerank(profile: TasteProfile, candidates: list[dict], scores: np.ndarray,
-           alpha: float) -> tuple[np.ndarray, list[list[str]]]:
+           alpha: float, co_choice: dict[int, tuple[float, int]] | None = None,
+           co_scale: float = 0.0) -> tuple[np.ndarray, list[list[str]]]:
     """Blends the model's ordering with this person's affinity.
 
     `alpha` is personalisation's share of the final score. The model still does
@@ -709,12 +843,34 @@ def rerank(profile: TasteProfile, candidates: list[dict], scores: np.ndarray,
 
     needs_vectors = profile.vector is not None or profile.intent_vector is not None
     vectors = _embeddings([int(c["artist_id"]) for c in candidates]) if needs_vectors else {}
-    scored = [affinity(profile, candidate, vectors) for candidate in candidates]
+    scored = [affinity(profile, candidate, vectors, co_choice, co_scale)
+              for candidate in candidates]
     affinities = np.array([value for value, _ in scored], dtype=np.float64)
     reasons = [why for _, why in scored]
 
     blended = (1.0 - alpha) * _to_unit_scale(np.asarray(scores)) + alpha * affinities
     return blended, reasons
+
+
+def skip_strength(profile: TasteProfile | None, candidates: list[dict]) -> np.ndarray:
+    """0-1 per candidate: how firmly this person has passed over them.
+
+    Zero until an artist has been near the top of `skip_threshold` of this
+    person's lists without being opened, then rising to one over the next few.
+    Someone who reloads the front page five times and never opens the act in
+    the first slot has answered a question about that act; showing it a sixth
+    time in the same place ignores the answer. It is shown lower, not hidden -
+    they may simply not have got round to it.
+    """
+    strength = np.zeros(len(candidates), dtype=np.float64)
+    if profile is None or not profile.skipped:
+        return strength
+    threshold = get_settings().skip_threshold
+    for index, candidate in enumerate(candidates):
+        shown = profile.skipped.get(int(candidate["artist_id"]), 0)
+        if shown >= threshold:
+            strength[index] = min(1.0, (shown - threshold + 1) / 4.0)
+    return strength
 
 
 def query_space_vector(profile: TasteProfile,
@@ -737,7 +893,8 @@ def query_space_vector(profile: TasteProfile,
     return _centre([(profile.intent_vector, share), (query_vector, 1.0 - share)])
 
 
-def note_search(user_id: int | None, query_text: str | None) -> None:
+def note_search(user_id: int | None, query_text: str | None,
+                visitor_id: str | None = None) -> None:
     """Folds a search into the cached profile the moment it is made.
 
     The API records the search on its own thread and this service rebuilds a
@@ -750,11 +907,12 @@ def note_search(user_id: int | None, query_text: str | None) -> None:
     The row still reaches the database, and the next rebuild reads it: this
     anticipates that read, it does not replace it.
     """
-    if not user_id or not query_text or not query_text.strip():
+    key = _key(user_id, visitor_id)
+    if key is None or not query_text or not query_text.strip():
         return
 
     with _cache_lock:
-        cached = _cache.get(user_id)
+        cached = _cache.get(key)
     if cached is None:
         # Nothing cached to update, and the next build will read the row anyway.
         return
@@ -763,7 +921,7 @@ def note_search(user_id: int | None, query_text: str | None) -> None:
     try:
         vector = np.asarray(embed_one(query_text.strip()), dtype=np.float32)
     except Exception:
-        log.exception("Could not embed a search for user %s", user_id)
+        log.exception("Could not embed a search for %s", key)
         return
 
     weight = min(MAX_INTENT_PER_TEXT, INTENT_WEIGHT)

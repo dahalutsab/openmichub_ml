@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { SocialComponent } from './social.component';
+import { DiscoveryService } from '../../discovery/discovery.service';
 
 /**
  * The landing point after a social sign-in.
@@ -16,6 +17,7 @@ describe('SocialComponent', () => {
   let component: SocialComponent;
   let router: jasmine.SpyObj<Router>;
   let toast: jasmine.SpyObj<ToastrService>;
+  let discovery: jasmine.SpyObj<DiscoveryService>;
 
   const setFragment = (fragment: string) =>
     history.replaceState(null, '', `${window.location.pathname}${fragment}`);
@@ -23,12 +25,14 @@ describe('SocialComponent', () => {
   beforeEach(async () => {
     router = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']);
     toast = jasmine.createSpyObj('ToastrService', ['error']);
+    discovery = jasmine.createSpyObj('DiscoveryService', { claimVisitorHistory: Promise.resolve() });
 
     await TestBed.configureTestingModule({
       declarations: [SocialComponent],
       providers: [
         { provide: Router, useValue: router },
         { provide: ToastrService, useValue: toast },
+        { provide: DiscoveryService, useValue: discovery },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: { get: () => null } } },
@@ -54,6 +58,22 @@ describe('SocialComponent', () => {
     expect(localStorage.getItem('authToken')).toBe('abc.def');
     expect(JSON.parse(localStorage.getItem('urole')!)).toEqual(['ORGANIZER']);
     expect(router.navigate).toHaveBeenCalledWith(['/user']);
+  });
+
+  it('carries what this browser did while signed out over to the account', () => {
+    setFragment('#token=abc&roles=ORGANIZER&onboarding=false');
+
+    component.ngOnInit();
+
+    expect(discovery.claimVisitorHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('claims nothing when sign-in failed', () => {
+    setFragment('#error=Nope');
+
+    component.ngOnInit();
+
+    expect(discovery.claimVisitorHistory).not.toHaveBeenCalled();
   });
 
   it('sends an artist to the artist area', () => {
