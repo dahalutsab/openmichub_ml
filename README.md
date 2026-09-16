@@ -1,55 +1,44 @@
 # OpenMicHub
 
-Artist booking marketplace — organizers find and book performers, artists manage availability
-and earnings. Spring Boot 3.3 API + Angular 19 client.
+An artist booking marketplace. Organizers search for performers and book them; artists publish
+their availability, take bookings and get paid. Spring Boot 3.3 API, Angular 19 client, and a
+Python service that does the searching and the ranking.
 
 ```
-open_mic_hub_service/   Spring Boot API (Java 21)
-open_mic_hub_ui/        Angular 19 client
-ml_service/             FastAPI: semantic search + LightGBM ranker
-scripts/                developer helpers
-docker-compose.yml      Postgres + API + ML, one command
+open_mic_hub_service/       Spring Boot API (Java 21)
+open_mic_hub_ui/            Angular 19 client
+ml_service/                 FastAPI: semantic search + LightGBM ranker
+scripts/                    key generation, demo export and import
+docker-compose.yml          Postgres + API + ML, one command
+install-instructions.html   setup guide, from an empty machine to a trained model
 ```
 
-## Running the backend
+## Where the details are
+
+Three documents, and they are meant not to overlap. This one explains **what the system does and
+why it is built the way it is**, and sends you elsewhere for anything procedural.
+
+| If you want to | Read |
+|---|---|
+| **Install and run it** — Docker, the clone, `.env`, seeding, training, tests, troubleshooting | **[install-instructions.html](install-instructions.html)** — open it in a browser |
+| **Understand the models** — features, measured accuracy, the baselines to read it against | **[ml_service/README.md](ml_service/README.md)** |
+| **Understand the platform** — discovery, sign-in, payouts, roles, schema | this file |
+
+## Getting it running
 
 Docker is the only requirement. No JDK, no Maven, no local Postgres.
 
 ```bash
-cp .env.example .env          # set ADMIN_PASSWORD at minimum
-docker compose up -d --build
-```
-
-That builds both service images, starts Postgres with pgvector, waits for it to accept
-connections, generates the token-signing keypair on first run, creates the schema and seeds
-roles. Everything is healthy in about twenty seconds.
-
-```bash
-docker compose logs -f api    # follow
-docker compose ps             # health
-docker compose down           # stop, keep data
-docker compose down -v        # stop and wipe data, keys and uploads
-```
-
-With an empty `.env` the stack still boots; payment, mail and the chat assistant stay inert until
-their keys are set. Only `ADMIN_PASSWORD` matters for a first run — without it, no admin account
-is created.
-
-### Client
-
-```bash
+cp .env.example .env            # set ADMIN_PASSWORD at minimum
+docker compose up -d --build    # Postgres + API + ML
 cd open_mic_hub_ui && npm install && npm start
 ```
 
-### Running the API outside Docker
-
-Needs JDK 21 on the path — Lombok does not support JDK 24+.
-
-```bash
-docker compose up -d postgres        # database only
-./scripts/generate-keys.sh           # RSA keypair
-cd open_mic_hub_service && ./mvnw spring-boot:run
-```
+That builds both service images, starts Postgres with pgvector, generates the token-signing
+keypair on first run, migrates the schema and seeds the roles — healthy in about twenty seconds.
+With an empty `.env` it still boots: payment, mail, the chat assistant and social sign-in all stay
+inert rather than failing. Only `ADMIN_PASSWORD` matters on a first run, and without it no admin
+account is created at all. There is no default password.
 
 | | |
 |---|---|
@@ -58,6 +47,12 @@ cd open_mic_hub_service && ./mvnw spring-boot:run
 | Health | http://localhost:8181/actuator/health |
 | ML service | http://localhost:8000/docs |
 | Client | http://localhost:4200 |
+
+A fresh database has no artists and no trained model, so the app comes up empty. Filling it is
+four more commands in an order that matters, and they live — with the reasons for the order — in
+**[install-instructions.html](install-instructions.html)**. So does everything else procedural:
+installing Docker on each platform, running the API outside a container, the three test suites,
+and what to do when something will not come up.
 
 ## Artist discovery
 
@@ -120,18 +115,10 @@ Each ranked artist comes back with the reason it was raised — "you have booked
 cards show it. `GET /users/{id}/taste` and `GET /visitors/{id}/taste` on the ML service show what the
 service believes about someone; `GET /signals` shows the platform-wide side.
 
-To get a demo catalogue and trained models on a fresh install:
-
-```bash
-docker compose exec ml python -m training.seed_world --artists 300 --wipe
-curl -X POST localhost:8000/embeddings/rebuild
-docker compose exec ml python -m training.segment
-curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
-curl "localhost:8000/signals?refresh=true"
-docker compose exec ml python -m training.evaluate_recs    # how well it recommends, measured
-```
-
-See [ml_service/README.md](ml_service/README.md) for the model, its features and how it is
+Getting a demo catalogue and trained models onto a fresh install is four commands in a fixed
+order — seed, embed, segment, then the ranker — set out in
+**[install-instructions.html](install-instructions.html)**. See
+**[ml_service/README.md](ml_service/README.md)** for the model itself, its features and how it is
 evaluated.
 
 ### What is trained, and on what
@@ -172,31 +159,14 @@ untouched.
 
 ### Turning it on
 
-Register an OAuth client with each provider you want, using these redirect URIs:
+Register an OAuth client with each provider you want, put its id and secret in `.env`, and
+restart. That is the only step — the sign-in page asks the backend which providers it can use
+(`GET /api/v1/auth/providers`) and draws a button for each, so a provider you have not configured
+is never offered. The redirect URIs to register, and where to register them, are in
+**[install-instructions.html](install-instructions.html)**.
 
-```
-http://localhost:8181/login/oauth2/code/google
-http://localhost:8181/login/oauth2/code/facebook
-```
-
-| Provider | Where |
-|---|---|
-| Google | console.cloud.google.com -> APIs & Services -> Credentials -> OAuth client ID -> Web application |
-| Facebook | developers.facebook.com -> My Apps -> Create App -> Facebook Login -> Settings |
-
-Put the pairs in `.env` and restart. That is the only step — the sign-in page asks the backend
-which providers it can use (`GET /api/v1/auth/providers`) and draws a button for each, so a
-provider you have not configured is never offered:
-
-```bash
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-FACEBOOK_CLIENT_ID=...
-FACEBOOK_CLIENT_SECRET=...
-```
-
-Set both halves of a pair or neither — a client id without its secret fails fast at startup rather
-than offering a button that cannot work. Configure only Google and only a Google button appears. Facebook requires HTTPS for anyone outside your app's own
+Set both halves of a pair or neither: a client id without its secret fails fast at startup rather
+than offering a button that cannot work. Facebook requires HTTPS for anyone outside your app's own
 test users, so localhost works for you and not for them.
 
 ### What happens to the account
@@ -217,32 +187,16 @@ refused outright rather than reassigned.
 
 ## Tests
 
-```bash
-# Backend — 98 tests
-docker compose up -d postgres                     # optional; see below
-cd open_mic_hub_service && ./mvnw test
-
-# Frontend — 80 tests
-cd open_mic_hub_ui && CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless
-
-# ML — 56 tests, inside the running container
-docker compose exec ml python -m pytest tests -q
-```
-
-The JDK on a current Arch box is newer than Lombok supports, so the backend suite usually runs in
-a container instead:
-
-```bash
-docker run --rm -v "$PWD/open_mic_hub_service":/app -v "$HOME/.m2":/root/.m2 --network host \
-  -w /app maven:3.9-eclipse-temurin-21 mvn test
-```
+234 of them: 98 backend, 80 frontend, 56 ML. The commands are in
+**[install-instructions.html](install-instructions.html)**, including the containerised Maven run
+that the backend suite needs when the host JDK is newer than Lombok supports — which, on a current
+Linux box, it usually is.
 
 Everything except the context test is a unit test with no external dependency.
 `OpenMicHubServiceApplicationTests` boots the whole application — which runs every migration and
-then has Hibernate validate its mappings against the result — so it needs a real Postgres, and
-`--network host` is what lets the container reach the one `docker compose` started. Without a
-database it **skips** rather than fails, so the suite stays green either way. An in-memory database
-would not do: the migrations use partial indexes and pgvector.
+then has Hibernate validate its mappings against the result — so it needs a real Postgres. Without
+a database it **skips** rather than fails, so the suite stays green either way. An in-memory
+database would not do: the migrations use partial indexes and pgvector.
 
 What is covered, and why those parts:
 
@@ -325,25 +279,19 @@ becomes `SUPER_ADMIN` and `USER` becomes `ORGANIZER`, with all assignments prese
 
 ## Demo accounts
 
-Created by the seed data and `scripts/demo-accounts.sql`. **Local development only** — these are
-throwaway logins for a throwaway database, and none of them should ever exist in an environment
-that faces the internet.
-
-Every account below uses the same password:
-
-```
-Admin@123
-```
+Created by the seeder and `scripts/demo-accounts.sql`. **Local development only** — throwaway
+logins for a throwaway database, and none of them should ever exist in an environment that faces
+the internet. Every account below uses the password `Admin@123`.
 
 | Role | Email | Sees |
 |---|---|---|
 | `ADMIN` | `admin@demo.openmichub.local` | Admin dashboard, users, transactions, payments |
 | `ORGANIZER` | `booker@demo.openmichub.local` | Booker dashboard, bookings, payment history |
-| `ARTIST` | see below | Artist dashboard, calendar, wallet, posts |
+| `ARTIST` | `<slug>@seed.openmichub.local` | Artist dashboard, calendar, wallet, posts |
 
-There are **300 seeded artists**. Their email is their slug — the same string that appears in
-their public URL — so `/artists/amber-machine` signs in as `amber-machine@seed.openmichub.local`.
-List them with:
+There are **300 seeded artists**, and an artist's email is their slug — the same string that
+appears in their public URL — so `/artists/amber-machine` signs in as
+`amber-machine@seed.openmichub.local`. List them with:
 
 ```bash
 docker compose exec postgres psql -U postgres -d open_mic_hub \
@@ -351,62 +299,33 @@ docker compose exec postgres psql -U postgres -d open_mic_hub \
       join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"
 ```
 
-A few to start with:
-
-| Email | Stage name | City | Rating |
-|---|---|---|---|
-| `the-machhapuchhre-assembly@seed.openmichub.local` | The Machhapuchhre Assembly | Bhaktapur | 5.00 |
-| `amber-machine@seed.openmichub.local` | Amber Machine | Kathmandu | 5.00 |
-| `suraj-karki@seed.openmichub.local` | Suraj Karki | Kathmandu | 5.00 |
-| `bhairav-company@seed.openmichub.local` | Bhairav Company | Bhaktapur | 5.00 |
-
-Roughly 47 artists have no reviews and so no rating at all. That is deliberate — a new act should
-read as new rather than as mediocre — and it is worth having one open while working on the
-profile page.
+Roughly 47 of them have no reviews and so no rating at all. That is deliberate — a new act should
+read as new rather than as mediocre — and it is worth having one open while working on the profile
+page.
 
 `SUPER_ADMIN` is **not** in this list. It is created from `ADMIN_EMAIL`/`ADMIN_PASSWORD` in your
 `.env` (default email `admin@openmichub.com`), so its password is whatever you set — deliberately,
 since it is the only role that can move money.
 
-To rebuild the whole demo world after a `docker compose down -v`:
+Repeated failed logins are rate-limited, so a script that guesses passwords starts getting `429`
+after a few tries. Wait a minute rather than hammering it.
 
-```bash
-docker compose exec ml python -m training.seed_world --artists 300 --wipe
-curl -X POST localhost:8000/embeddings/rebuild
-docker compose exec ml python -m training.segment
-```
-
-That replaces every row the platform owns, so it asks for `--wipe` explicitly. The seed is fixed,
-so the same command produces the same catalogue — the same names, the same bookings, the same
-artwork — on any machine.
+`docker compose down -v` takes all of this with it. Rebuilding is the seeding and training
+sequence again — the seed is fixed, so it comes back identical.
 
 ## Sharing the demo
 
 Two ways, depending on whether the other person can wait two minutes.
 
-**Reproduce it from source.** The seeder is deterministic, so they need nothing but the repository:
-
-```bash
-docker compose up -d --build
-docker compose exec ml python -m training.seed_world --artists 300 --wipe
-curl -X POST localhost:8000/embeddings/rebuild
-docker compose exec ml python -m training.segment
-```
-
-They end up with a byte-for-byte identical catalogue. Nothing large travels, and the data stays
-readable in version control as the code that produces it.
+**Reproduce it from source.** The seeder is deterministic, so they need nothing but the
+repository: the same commands produce a byte-for-byte identical catalogue — the same names, the
+same bookings, the same artwork — on any machine. Nothing large travels, and the data stays
+readable in version control as the code that produces it. This is usually the right answer.
 
 **Ship a snapshot.** For a demo machine, or when the ranker's weights matter and you do not want
-them retrained:
-
-```bash
-./scripts/export-demo.sh demo-export     # about 10 MB
-# ... send demo-export/ ...
-./scripts/import-demo.sh demo-export     # on the other machine, containers up first
-```
-
-The export carries the database (including the embeddings and segment assignments), the generated
-artwork, and the trained model files, plus a `MANIFEST.txt` saying what is in it.
+them retrained, `scripts/export-demo.sh` packages the database (embeddings and segment assignments
+included), the generated artwork and the trained models into about 10 MB, and
+`scripts/import-demo.sh` restores it on the other side.
 
 Two things are deliberately left out. **`certs/`**, the JWT signing keypair — sharing a private
 signing key lets anyone holding it mint tokens for any account on any deployment that trusts it,
@@ -414,8 +333,8 @@ so the receiving stack generates its own. And **`.env`**, which holds your Khalt
 password. Import refuses to overwrite a database that already has artists unless you pass
 `--force`.
 
-Repeated failed logins are rate-limited, so a script that guesses passwords will start getting
-`429` after a few tries. Wait a minute rather than hammering it.
+Both paths, with their commands, are in
+**[install-instructions.html](install-instructions.html)**.
 
 ## Notes
 
@@ -426,6 +345,7 @@ Repeated failed logins are rate-limited, so a script that guesses passwords will
 - Token-signing keys live on the `certs` volume and are generated on first run, so each
   deployment has its own pair and restarts do not invalidate issued tokens.
 - The container runs as uid 1001, never root.
+
 ## Database schema
 
 Owned by Flyway, in `open_mic_hub_service/src/main/resources/db/migration`. Hibernate is set to
