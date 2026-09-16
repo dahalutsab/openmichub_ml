@@ -446,3 +446,11 @@ without re-running the baseline over live tables, then applies everything after.
 The `ml` schema is separate and belongs to `ml_service`, which creates it idempotently. `public`
 is the API's and is Flyway's alone — a second writer there makes a fresh database look non-empty,
 at which point Flyway baselines it instead of building it.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+The demo accounts and seeded data are throwaway fixtures for local development, not part of
+what the licence is granting rights over. Nothing in this repository ships a credential: the
+signing keypair is generated per deployment and `.env` is gitignored.
