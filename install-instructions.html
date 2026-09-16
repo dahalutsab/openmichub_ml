@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install OpenMicHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #F4F3F7;
+    --surface:     #FFFFFF;
+    --surface-2:   #EDEBF2;
+    --ink:         #191622;
+    --ink-soft:    #47415A;
+    --muted:       #6E6880;
+    --rule:        #DCD8E4;
+    --accent:      #56479B;
+    --accent-soft: #EDE9FA;
+
+    --warn:        #9A6208;
+    --warn-bg:     #FBF0DC;
+    --stop:        #B32D25;
+    --stop-bg:     #FBEAE8;
+    --note:        #35648C;
+    --note-bg:     #E6EFF7;
+    --good:        #1F6B4C;
+    --good-bg:     #E2F1E9;
+
+    --term:        #14121C;
+    --term-ink:    #E7E3F2;
+
+    --display: "Bricolage Grotesque", "Helvetica Neue", sans-serif;
+    --body:    "Source Serif 4", Georgia, serif;
+    --mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #131019;
+      --surface:     #1B1725;
+      --surface-2:   #241F31;
+      --ink:         #EFECF5;
+      --ink-soft:    #C3BCD4;
+      --muted:       #948CA8;
+      --rule:        #322B42;
+      --accent:      #B3A4F0;
+      --accent-soft: #2A2340;
+
+      --warn:        #E3AC55;
+      --warn-bg:     #362713;
+      --stop:        #F2897E;
+      --stop-bg:     #3A1C1A;
+      --note:        #7FB3DC;
+      --note-bg:     #182837;
+      --good:        #6DC49C;
+      --good-bg:     #12301F;
+
+      --term:        #0E0C14;
+      --term-ink:    #E7E3F2;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #131019;
+    --surface:     #1B1725;
+    --surface-2:   #241F31;
+    --ink:         #EFECF5;
+    --ink-soft:    #C3BCD4;
+    --muted:       #948CA8;
+    --rule:        #322B42;
+    --accent:      #B3A4F0;
+    --accent-soft: #2A2340;
+
+    --warn:        #E3AC55;
+    --warn-bg:     #362713;
+    --stop:        #F2897E;
+    --stop-bg:     #3A1C1A;
+    --note:        #7FB3DC;
+    --note-bg:     #182837;
+    --good:        #6DC49C;
+    --good-bg:     #12301F;
+
+    --term:        #0E0C14;
+    --term-ink:    #E7E3F2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 120px; }
+  @media (min-width: 700px) { .wrap { padding: 0 28px 120px; } }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { padding: 64px 0 36px; border-bottom: 2px solid var(--ink); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 20px;
+  }
+
+  h1 {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(2.4rem, 7vw, 4.1rem);
+    line-height: 0.98; letter-spacing: -0.03em;
+    margin: 0 0 24px; text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: 1.15rem; line-height: 1.55;
+    color: var(--ink-soft); max-width: 62ch; margin: 0;
+  }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  .runmeta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 30px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+  }
+  .runmeta b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- port board ---------- */
+
+  .board {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2px; background: var(--rule); border: 1px solid var(--rule); margin: 44px 0 0;
+  }
+  .tile { background: var(--surface); padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .tile .n {
+    font-family: var(--display); font-weight: 800; font-size: 2.1rem;
+    line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  .tile .l {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
+  }
+  .tile .s { font-size: 0.86rem; color: var(--ink-soft); line-height: 1.4; }
+
+  /* ---------- contents ---------- */
+
+  .toc {
+    margin: 48px 0 0; padding: 24px 26px;
+    background: var(--surface); border: 1px solid var(--rule);
+  }
+  .toc h2 { font-size: 0.95rem; margin: 0 0 14px; font-family: var(--mono);
+            font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .toc ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; }
+  @media (max-width: 640px) { .toc ol { columns: 1; } }
+  .toc li { margin-bottom: 6px; break-inside: avoid; font-size: 0.95rem; }
+  .toc a { color: var(--ink-soft); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  /* ---------- sections ---------- */
+
+  section { margin-top: 72px; scroll-margin-top: 20px; }
+
+  h2 {
+    font-family: var(--display); font-weight: 800; font-size: 1.85rem;
+    letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 10px; text-wrap: balance;
+  }
+  h2 .num {
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.1em; display: block; margin-bottom: 8px;
+  }
+
+  .sec-note { color: var(--muted); font-size: 1rem; margin: 0 0 28px; max-width: var(--measure); }
+
+  h3 {
+    font-family: var(--display); font-weight: 600; font-size: 1.12rem;
+    letter-spacing: -0.01em; margin: 38px 0 12px;
+  }
+  h4 {
+    font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    margin: 28px 0 10px;
+  }
+
+  p { max-width: var(--measure); }
+  a { color: var(--accent); }
+  ul, ol { max-width: var(--measure); }
+  li { margin-bottom: 6px; }
+
+  code {
+    font-family: var(--mono); font-size: 0.845em;
+    background: var(--surface-2); padding: 0.12em 0.38em;
+    border-radius: 3px; word-break: break-word;
+  }
+
+  /* ---------- terminal blocks ---------- */
+
+  .term { position: relative; margin: 18px 0 22px; }
+  .term pre {
+    margin: 0; background: var(--term); color: var(--term-ink);
+    font-family: var(--mono); font-size: 13px; line-height: 1.7;
+    padding: 18px 56px 18px 20px; overflow-x: auto; border-radius: 4px;
+    tab-size: 2;
+  }
+  .term pre .c { color: #8F87A8; }
+  .term pre .p { color: #7FD0A8; user-select: none; }
+  .term .copy {
+    position: absolute; top: 10px; right: 10px;
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(255,255,255,0.08); color: #C9C1E0;
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 3px;
+    padding: 5px 9px; cursor: pointer;
+  }
+  .term .copy:hover { background: rgba(255,255,255,0.16); color: #fff; }
+  .term .copy.done { color: #7FD0A8; border-color: #7FD0A8; }
+
+  .term-label {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 7px;
+  }
+
+  /* ---------- OS tabs ---------- */
+
+  .tabs { margin: 22px 0 8px; }
+  .tabbar { display: flex; flex-wrap: wrap; gap: 2px; background: var(--rule);
+            border: 1px solid var(--rule); border-bottom: none; }
+  .tabbar button {
+    flex: 1 1 auto; background: var(--surface-2); color: var(--muted);
+    border: none; padding: 11px 14px; cursor: pointer;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .tabbar button[aria-selected="true"] { background: var(--surface); color: var(--accent); }
+  .panels { border: 1px solid var(--rule); padding: 20px 22px 6px; background: var(--surface); }
+  .panel > h4:first-child { margin-top: 4px; }
+  .js .panel[hidden] { display: none; }
+
+  /* ---------- callouts ---------- */
+
+  .call {
+    border: 1px solid var(--rule); border-left: 4px solid var(--note);
+    background: var(--surface); padding: 18px 22px; margin: 22px 0;
+    max-width: var(--measure);
+  }
+  .call.warn { border-left-color: var(--warn); }
+  .call.stop { border-left-color: var(--stop); }
+  .call.good { border-left-color: var(--good); }
+  .call .tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase;
+    display: inline-block; padding: 2px 7px; border-radius: 3px; margin-bottom: 9px;
+    background: var(--note-bg); color: var(--note);
+  }
+  .call.warn .tag { background: var(--warn-bg); color: var(--warn); }
+  .call.stop .tag { background: var(--stop-bg); color: var(--stop); }
+  .call.good .tag { background: var(--good-bg); color: var(--good); }
+  .call p { margin: 0; max-width: none; font-size: 0.97rem; }
+  .call p + p { margin-top: 10px; }
+
+  /* ---------- tables ---------- */
+
+  .tablewrap { overflow-x: auto; margin: 22px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; background: var(--surface); }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--ink);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    margin-top: 90px; padding-top: 28px; border-top: 2px solid var(--ink);
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">OpenMicHub · setup guide</p>
+    <h1>Install and run it from scratch</h1>
+    <p class="standfirst">
+      Every command, from <strong>a machine with nothing installed</strong> to a running
+      marketplace with a 300-artist demo catalogue and trained models. Docker does the heavy
+      lifting: no JDK, no Maven, no Python and no local Postgres are needed for the backend.
+    </p>
+    <div class="runmeta">
+      <span><b>Stack</b> Spring Boot 3.3 · Angular 19 · FastAPI · Postgres 16 + pgvector</span>
+      <span><b>Time</b> ~15 min, most of it the first Docker build</span>
+      <span><b>Disk</b> ~4 GB of images</span>
+    </div>
+
+    <div class="board">
+      <div class="tile"><span class="n">4200</span><span class="l">Client</span><span class="s">Angular dev server</span></div>
+      <div class="tile"><span class="n">8181</span><span class="l">API</span><span class="s">Spring Boot + Swagger</span></div>
+      <div class="tile"><span class="n">8000</span><span class="l">ML</span><span class="s">Search, ranker, segments</span></div>
+      <div class="tile"><span class="n">5432</span><span class="l">Postgres</span><span class="s">pgvector, exposed for psql</span></div>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#prereq">What you need installed</a></li>
+      <li><a href="#docker">Install Docker</a></li>
+      <li><a href="#tools">Install Git and Node</a></li>
+      <li><a href="#clone">Clone the repository</a></li>
+      <li><a href="#env">Configure <code>.env</code></a></li>
+      <li><a href="#up">Start the backend</a></li>
+      <li><a href="#verify">Check it came up</a></li>
+      <li><a href="#client">Run the client</a></li>
+      <li><a href="#seed">Seed the demo data</a></li>
+      <li><a href="#train">Train the AI/ML</a></li>
+      <li><a href="#login">Sign in</a></li>
+      <li><a href="#optional">Optional integrations</a></li>
+      <li><a href="#tests">Run the tests</a></li>
+      <li><a href="#nodocker">Run the API outside Docker</a></li>
+      <li><a href="#share">Share a snapshot</a></li>
+      <li><a href="#daily">Everyday commands</a></li>
+      <li><a href="#trouble">Troubleshooting</a></li>
+    </ol>
+  </nav>
+
+  <!-- ================================================================= -->
+  <section id="prereq">
+    <h2><span class="num">STEP 01</span>What you need installed</h2>
+    <p class="sec-note">Two things are required. The rest are only for working outside containers.</p>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Tool</th><th>Version</th><th>Needed for</th></tr></thead>
+      <tbody>
+        <tr><td><b>Docker Engine</b> + Compose v2</td><td>20.10+ / <code>docker compose</code></td><td><b>Required.</b> Database, API and ML service</td></tr>
+        <tr><td><b>Git</b></td><td>any</td><td><b>Required.</b> Cloning the repository</td></tr>
+        <tr><td><b>Node.js</b> + npm</td><td>20 LTS (18.19+ works)</td><td>The Angular client. It is not containerised</td></tr>
+        <tr><td><b>JDK 21</b> + Maven</td><td>exactly 21</td><td>Optional — only to run the API without Docker</td></tr>
+        <tr><td><b>Python 3.12</b></td><td>3.12</td><td>Optional — only to run the ML service without Docker</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call warn">
+      <span class="tag">Version trap</span>
+      <p>The backend needs <b>JDK 21, not a newer one</b>. Lombok does not support JDK 24+, so a
+      current distro JDK will fail the build. Inside Docker this is already pinned and you can
+      ignore it entirely — which is the main reason to use Docker here.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="docker">
+    <h2><span class="num">STEP 02</span>Install Docker</h2>
+    <p class="sec-note">Pick your operating system. Each block ends with a verification command —
+    do not move on until it prints a version.</p>
+
+    <div class="tabs" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="os-deb">Ubuntu / Debian</button>
+        <button role="tab" aria-selected="false" aria-controls="os-fed">Fedora / RHEL</button>
+        <button role="tab" aria-selected="false" aria-controls="os-arch">Arch</button>
+        <button role="tab" aria-selected="false" aria-controls="os-mac">macOS</button>
+        <button role="tab" aria-selected="false" aria-controls="os-win">Windows</button>
+      </div>
+
+      <div class="panels">
+
+        <div class="panel" id="os-deb" role="tabpanel">
+          <h4>Remove any distro-packaged Docker first</h4>
+          <div class="term"><pre><span class="p">$</span> for p in docker.io docker-doc docker-compose podman-docker containerd runc; do
+    sudo apt-get remove -y $p
+  done</pre></div>
+
+          <h4>Add Docker's own repository</h4>
+          <div class="term"><pre><span class="p">$</span> sudo apt-get update
+<span class="p">$</span> sudo apt-get install -y ca-certificates curl
+<span class="p">$</span> sudo install -m 0755 -d /etc/apt/keyrings
+<span class="p">$</span> sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+<span class="p">$</span> sudo chmod a+r /etc/apt/keyrings/docker.asc
+<span class="p">$</span> echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null</pre></div>
+          <p style="font-size:.93rem;color:var(--muted)">On Debian, replace both occurrences of
+          <code>ubuntu</code> with <code>debian</code>.</p>
+
+          <h4>Install</h4>
+          <div class="term"><pre><span class="p">$</span> sudo apt-get update
+<span class="p">$</span> sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin</pre></div>
+        </div>
+
+        <div class="panel" id="os-fed" role="tabpanel" hidden>
+          <div class="term"><pre><span class="p">$</span> sudo dnf -y install dnf-plugins-core
+<span class="p">$</span> sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+<span class="p">$</span> sudo dnf -y install docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin</pre></div>
+          <p style="font-size:.93rem;color:var(--muted)">On RHEL/CentOS/Rocky, swap
+          <code>fedora</code> for <code>rhel</code> or <code>centos</code> in the repo URL.</p>
+        </div>
+
+        <div class="panel" id="os-arch" role="tabpanel" hidden>
+          <div class="term"><pre><span class="p">$</span> sudo pacman -S --needed docker docker-compose docker-buildx</pre></div>
+          <p style="font-size:.93rem;color:var(--muted)">Arch ships Compose v2 as
+          <code>docker-compose</code>, which provides the <code>docker compose</code> subcommand.</p>
+        </div>
+
+        <div class="panel" id="os-mac" role="tabpanel" hidden>
+          <h4>Docker Desktop, via Homebrew</h4>
+          <div class="term"><pre><span class="p">$</span> brew install --cask docker
+<span class="p">$</span> open -a Docker</pre></div>
+          <p style="font-size:.93rem;color:var(--muted)">Or download the <code>.dmg</code> from
+          <a href="https://www.docker.com/products/docker-desktop/">docker.com</a>. Launch the app
+          once and let it finish starting — the CLI does not work until the whale icon settles.
+          Compose and the daemon group are handled for you, so skip the Linux post-install step below.</p>
+          <p style="font-size:.93rem;color:var(--muted)">Give Docker Desktop at least <b>6 GB of
+          memory</b> in Settings → Resources; the Maven build stage is the hungry part.</p>
+        </div>
+
+        <div class="panel" id="os-win" role="tabpanel" hidden>
+          <h4>1 — Enable WSL 2 (PowerShell as Administrator)</h4>
+          <div class="term"><pre><span class="p">></span> wsl --install
+<span class="p">></span> wsl --set-default-version 2</pre></div>
+
+          <h4>2 — Install Docker Desktop</h4>
+          <div class="term"><pre><span class="p">></span> winget install --id Docker.DockerDesktop -e</pre></div>
+          <p style="font-size:.93rem;color:var(--muted)">Then open Docker Desktop → Settings →
+          Resources → WSL Integration and enable your distro.</p>
+
+          <div class="call warn">
+            <span class="tag">Do this in WSL</span>
+            <p>Clone and run the project from <b>inside the Linux filesystem</b>
+            (<code>~/projects/...</code> in your WSL home), not from <code>/mnt/c/...</code>.
+            Bind-mounted Windows paths are dramatically slower and break file-watching in the
+            Angular dev server. Every command in this guide then runs in the WSL shell exactly as
+            written.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <h3>Linux post-install — start the daemon, drop the sudo</h3>
+    <div class="term"><pre><span class="p">$</span> sudo systemctl enable --now docker
+<span class="p">$</span> sudo usermod -aG docker $USER
+<span class="p">$</span> newgrp docker   <span class="c"># or log out and back in</span></pre></div>
+
+    <h3>Verify before going further</h3>
+    <div class="term"><pre><span class="p">$</span> docker --version
+<span class="p">$</span> docker compose version
+<span class="p">$</span> docker run --rm hello-world</pre></div>
+
+    <div class="call good">
+      <span class="tag">Expected</span>
+      <p>A version for each of the first two — Compose must be <b>v2</b>, invoked as
+      <code>docker compose</code> with a space, not the old <code>docker-compose</code> script —
+      and "Hello from Docker!" from the third.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="tools">
+    <h2><span class="num">STEP 03</span>Install Git and Node</h2>
+    <p class="sec-note">Git clones the repository. Node runs the Angular client, which is the one
+    piece that is not containerised.</p>
+
+    <h3>Git</h3>
+    <div class="term"><pre><span class="c"># Ubuntu / Debian</span>
+<span class="p">$</span> sudo apt-get install -y git
+
+<span class="c"># Fedora</span>
+<span class="p">$</span> sudo dnf install -y git
+
+<span class="c"># Arch</span>
+<span class="p">$</span> sudo pacman -S git
+
+<span class="c"># macOS</span>
+<span class="p">$</span> brew install git
+
+<span class="c"># Windows</span>
+<span class="p">></span> winget install --id Git.Git -e</pre></div>
+
+    <h3>Node 20, via nvm</h3>
+    <p>Angular 19 wants Node 20 LTS. <code>nvm</code> keeps it out of the way of whatever your
+    system Node is.</p>
+    <div class="term"><pre><span class="p">$</span> curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+<span class="p">$</span> exec $SHELL -l
+<span class="p">$</span> nvm install 20
+<span class="p">$</span> nvm use 20
+<span class="p">$</span> node -v && npm -v   <span class="c"># v20.x</span></pre></div>
+    <p style="font-size:.93rem;color:var(--muted)">On Windows without WSL:
+    <code>winget install OpenJS.NodeJS.LTS</code>.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="clone">
+    <h2><span class="num">STEP 04</span>Clone the repository</h2>
+
+    <div class="term"><pre><span class="p">$</span> git clone https://github.com/dahalutsab/openmichub_ml.git openmichub
+<span class="p">$</span> cd openmichub</pre></div>
+
+    <p>With an SSH key on your GitHub account:</p>
+    <div class="term"><pre><span class="p">$</span> git clone git@github.com:dahalutsab/openmichub_ml.git openmichub
+<span class="p">$</span> cd openmichub</pre></div>
+
+    <p>Every remaining command in this guide runs from that directory.</p>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Path</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>open_mic_hub_service/</code></td><td>Spring Boot API, Java 21</td></tr>
+        <tr><td><code>open_mic_hub_ui/</code></td><td>Angular 19 client</td></tr>
+        <tr><td><code>ml_service/</code></td><td>FastAPI: embeddings, LightGBM ranker, segmentation</td></tr>
+        <tr><td><code>scripts/</code></td><td>Key generation, demo export and import</td></tr>
+        <tr><td><code>docker-compose.yml</code></td><td>Postgres + API + ML in one command</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call">
+      <span class="tag">Note the name</span>
+      <p>Cloning into a directory called <code>openmichub</code> is not cosmetic. Compose names its
+      volumes after the directory, and <code>scripts/export-demo.sh</code> and
+      <code>import-demo.sh</code> look for volumes prefixed <code>openmichub_</code>. Clone
+      somewhere else and set <code>COMPOSE_PROJECT_NAME=openmichub</code> in <code>.env</code>
+      instead — the next step does that anyway.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="env">
+    <h2><span class="num">STEP 05</span>Configure <code>.env</code></h2>
+    <p class="sec-note">The stack boots with an empty configuration. Exactly one value matters on a
+    first run.</p>
+
+    <div class="term"><pre><span class="p">$</span> cp .env.example .env</pre></div>
+
+    <p>Open it and set these two lines:</p>
+
+    <div class="term">
+      <div class="term-label">.env</div>
+      <pre>ADMIN_PASSWORD=ChangeMe@123
+COMPOSE_PROJECT_NAME=openmichub</pre>
+    </div>
+
+    <div class="call stop">
+      <span class="tag">No default password</span>
+      <p><b>Without <code>ADMIN_PASSWORD</code> no admin account is created at all.</b> There is no
+      fallback password — that is deliberate, since <code>SUPER_ADMIN</code> is the only role that
+      can move money. The address defaults to <code>admin@openmichub.com</code>, changeable with
+      <code>ADMIN_EMAIL</code>.</p>
+    </div>
+
+    <p>Everything else is optional and inert until set — payments, mail, the chat assistant and
+    social sign-in all stay switched off rather than failing at boot.</p>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>ADMIN_EMAIL</code></td><td><code>admin@openmichub.com</code></td><td>Super-admin login</td></tr>
+        <tr><td><code>ADMIN_PASSWORD</code></td><td><i>empty</i></td><td>Empty means no admin is seeded</td></tr>
+        <tr><td><code>POSTGRES_DB</code></td><td><code>open_mic_hub</code></td><td>Database name</td></tr>
+        <tr><td><code>DB_USERNAME</code> / <code>DB_PASSWORD</code></td><td><code>postgres</code> / <code>root</code></td><td>Database credentials</td></tr>
+        <tr><td><code>API_PORT</code></td><td><code>8181</code></td><td>Host port for the API</td></tr>
+        <tr><td><code>ML_PORT</code></td><td><code>8000</code></td><td>Host port for the ML service</td></tr>
+        <tr><td><code>DB_PORT</code></td><td><code>5432</code></td><td>Host port for Postgres</td></tr>
+        <tr><td><code>CORS_ALLOWED_ORIGINS</code></td><td><code>http://localhost:4200</code></td><td>Browser origins allowed to call the API</td></tr>
+        <tr><td><code>KHALTI_SECRET_KEY</code></td><td><i>empty</i></td><td>Checkout returns 502 until set</td></tr>
+        <tr><td><code>MAIL_USERNAME</code> / <code>MAIL_PASSWORD</code></td><td><i>empty</i></td><td>Gmail SMTP, app password not account password</td></tr>
+        <tr><td><code>CHATBOT_API_KEY</code></td><td><i>empty</i></td><td>GitHub Models token for the assistant</td></tr>
+        <tr><td><code>GOOGLE_*</code> / <code>FACEBOOK_*</code></td><td><i>empty</i></td><td>Social sign-in buttons stay hidden</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call warn">
+      <span class="tag">Never commit it</span>
+      <p><code>.env</code> is gitignored and holds real secrets once you fill it in. If you change
+      the ports here, change them in every <code>localhost:8181</code> and
+      <code>localhost:8000</code> command below too.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="up">
+    <h2><span class="num">STEP 06</span>Start the backend</h2>
+    <p class="sec-note">One command builds both images and starts three containers.</p>
+
+    <div class="term"><pre><span class="p">$</span> docker compose up -d --build</pre></div>
+
+    <p>That does all of the following, in order, without further input:</p>
+    <ul>
+      <li>Starts <b>Postgres 16 with pgvector</b> and waits until it accepts connections.</li>
+      <li>Builds the <b>API</b> image — Maven resolves dependencies inside the container, so your
+        host needs no JDK.</li>
+      <li>Builds the <b>ML</b> image and bakes the <code>BAAI/bge-small-en-v1.5</code> sentence
+        encoder into it, so the service works with no outbound network later.</li>
+      <li>Generates the <b>RSA token-signing keypair</b> on first run and keeps it on a volume, so
+        restarts do not invalidate issued tokens.</li>
+      <li>Runs the <b>Flyway migrations</b> and seeds the roles and the admin account.</li>
+    </ul>
+
+    <div class="call warn">
+      <span class="tag">First build is slow</span>
+      <p>Expect <b>5–15 minutes</b> and roughly 4 GB of images: the Maven stage downloads the
+      dependency tree and the ML stage downloads the encoder. Every build after that reuses the
+      layers and takes seconds. Watch it with <code>docker compose logs -f</code>.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="verify">
+    <h2><span class="num">STEP 07</span>Check it came up</h2>
+
+    <div class="term"><pre><span class="p">$</span> docker compose ps
+<span class="p">$</span> curl localhost:8181/actuator/health
+<span class="p">$</span> curl localhost:8000/health</pre></div>
+
+    <div class="call good">
+      <span class="tag">Expected</span>
+      <p>Three containers <code>running (healthy)</code>, <code>{"status":"UP"}</code> from the API,
+      and a JSON body from the ML service reporting its embedding count and ranker status. Both
+      counts are <b>zero on a fresh install</b> — that is what the next two steps fix.</p>
+    </div>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>What</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>API</td><td><a href="http://localhost:8181">http://localhost:8181</a></td></tr>
+        <tr><td>Swagger</td><td><a href="http://localhost:8181/v1/swagger">http://localhost:8181/v1/swagger</a></td></tr>
+        <tr><td>Health</td><td><a href="http://localhost:8181/actuator/health">http://localhost:8181/actuator/health</a></td></tr>
+        <tr><td>ML docs</td><td><a href="http://localhost:8000/docs">http://localhost:8000/docs</a></td></tr>
+        <tr><td>Client</td><td><a href="http://localhost:4200">http://localhost:4200</a> (step 8)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="client">
+    <h2><span class="num">STEP 08</span>Run the client</h2>
+    <p class="sec-note">The Angular app runs on the host, not in Docker.</p>
+
+    <div class="term"><pre><span class="p">$</span> cd open_mic_hub_ui
+<span class="p">$</span> npm install
+<span class="p">$</span> npm start</pre></div>
+
+    <p>Then open <a href="http://localhost:4200">http://localhost:4200</a>. The dev server reloads
+    on save.</p>
+
+    <p>The backend location is defined once, in
+    <code>open_mic_hub_ui/src/app/environment/environment.ts</code>:</p>
+
+    <div class="term">
+      <div class="term-label">environment.ts</div>
+      <pre>const host = 'http://localhost:8181';</pre>
+    </div>
+
+    <p>Change that single line to point the client at a different backend — and add the new client
+    origin to <code>CORS_ALLOWED_ORIGINS</code> in <code>.env</code>, or the browser will block the
+    calls.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="seed">
+    <h2><span class="num">STEP 09</span>Seed the demo data</h2>
+    <p class="sec-note">A fresh database has roles and an admin and nothing else. The seeder builds
+    a whole platform with a history — artists, bookings, reviews, posts and generated cover art.</p>
+
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe</pre></div>
+
+    <div class="call">
+      <span class="tag">Deterministic</span>
+      <p>The seed is fixed, so this produces <b>the same catalogue on every machine</b> — the same
+      names, the same bookings, the same artwork. That is why sharing the demo usually means sharing
+      this command rather than a database dump.</p>
+    </div>
+
+    <div class="call stop">
+      <span class="tag">--wipe replaces everything</span>
+      <p><code>--wipe</code> deletes every row the platform owns before seeding. It has to be passed
+      explicitly for exactly that reason. Leave it off on a database whose contents you care about.</p>
+    </div>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>--artists</code></td><td><code>300</code></td><td>How many artist accounts to create</td></tr>
+        <tr><td><code>--bookers</code></td><td><code>140</code></td><td>Organizer accounts that do the booking</td></tr>
+        <tr><td><code>--visitors</code></td><td><code>900</code></td><td>Signed-out browsers with a browsing history</td></tr>
+        <tr><td><code>--seed</code></td><td><code>7</code></td><td>Change it for a different but equally reproducible world</td></tr>
+        <tr><td><code>--no-art</code></td><td><i>off</i></td><td>Skip generated cover art — much faster, uglier</td></tr>
+        <tr><td><code>--wipe</code></td><td><i>off</i></td><td>Clear existing platform rows first</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>A smaller world, if you just want the app populated quickly:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 60 --no-art --wipe</pre></div>
+
+    <p>Check what landed:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub \
+    -c "select count(*) from artists;"</pre></div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="train">
+    <h2><span class="num">STEP 10</span>Train the AI/ML</h2>
+    <p class="sec-note">Four separate things, run in this order. Order matters: segmentation reads
+    the embeddings, so the catalogue has to be embedded first.</p>
+
+    <div class="term">
+      <div class="term-label">The whole sequence</div>
+      <pre><span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
+<span class="p">$</span> docker compose exec ml python -m training.segment
+<span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
+<span class="p">$</span> curl "localhost:8000/signals?refresh=true"
+<span class="p">$</span> docker compose exec ml python -m training.evaluate_recs</pre>
+    </div>
+
+    <h3>What each step does</h3>
+
+    <h4>1 — Embed the catalogue</h4>
+    <p>Runs the pretrained sentence encoder over every artist's own profile text and stores the
+    vectors in Postgres via pgvector. Nothing is trained here; the vectors are the artists'. This
+    powers semantic search and the "similar artists" strip.</p>
+    <div class="term"><pre><span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild</pre></div>
+
+    <h4>2 — Fit the segmentation</h4>
+    <p>This one is <b>genuinely fitted on the real catalogue</b>: k-means over the profile
+    embeddings, with <code>k</code> chosen by sweeping silhouette and Davies-Bouldin. Re-run it
+    whenever the catalogue changes.</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.segment
+<span class="p">$</span> docker compose exec ml python -m training.segment --k 9   <span class="c"># force a k, skip the sweep</span></pre></div>
+    <p>Or through the API: <code>POST /segments/train</code>. Read the result with
+    <code>GET /segments/report</code>.</p>
+
+    <h4>3 — Train the search ranker</h4>
+    <p>A LightGBM LambdaRank model over 13 features. Raising <code>queries</code> gives it more
+    synthetic training pairs; 5000 is the sensible default and takes a minute or two.</p>
+    <div class="term"><pre><span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'</pre></div>
+    <p>The same thing from the CLI, with the full set of knobs:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.train --queries 5000 --rounds 600</pre></div>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>--queries</code></td><td><code>5000</code></td><td>Synthetic queries generated for training</td></tr>
+        <tr><td><code>--candidates</code></td><td><i>from config</i></td><td>Artists scored per query</td></tr>
+        <tr><td><code>--rounds</code></td><td><code>600</code></td><td>Boosting rounds</td></tr>
+        <tr><td><code>--noise</code></td><td><i>from config</i></td><td>Noise in the simulated preferences</td></tr>
+        <tr><td><code>--seed</code></td><td><i>from config</i></td><td>Reproducibility</td></tr>
+        <tr><td><code>--out</code></td><td><code>/app/models</code></td><td>Where <code>ranker.txt</code> is written</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Optionally, re-measure how well the encoder actually separates a genre match from a
+    non-match on <i>this</i> catalogue and feed that back into the generator, so the ranker is
+    fitted against an encoder as noisy as the one it will be served with:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.calibrate</pre></div>
+
+    <h4>4 — Build the platform signals</h4>
+    <p>Co-choice ("often picked alongside"), demand ("in demand this month") and exposure, computed
+    from everyone's history. They rebuild themselves within five minutes anyway; the refresh only
+    saves the wait.</p>
+    <div class="term"><pre><span class="p">$</span> curl "localhost:8000/signals?refresh=true"</pre></div>
+
+    <h4>5 — Measure it</h4>
+    <p>A time-split replay: does it actually recommend what people went on to choose?</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.evaluate_recs
+<span class="p">$</span> curl localhost:8000/model            <span class="c"># ranker metadata and metrics</span>
+<span class="p">$</span> curl localhost:8000/segments/report  <span class="c"># segment quality</span></pre></div>
+
+    <h3>What is actually trained, and on what</h3>
+    <p>Worth being exact about, because "trained" covers three different things here.</p>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Component</th><th>Fitted on</th><th>What that means</th></tr></thead>
+      <tbody>
+        <tr><td>Profile embeddings</td><td>Real catalogue</td><td><b>Not trained.</b> A pretrained encoder runs over each artist's own text</td></tr>
+        <tr><td>Similar artists</td><td>Real catalogue</td><td><b>Not trained.</b> Nearest neighbours by cosine distance</td></tr>
+        <tr><td>Segmentation</td><td><b>Real catalogue</b></td><td>Genuinely fitted: k-means over the real embeddings</td></tr>
+        <tr><td>Search ranker</td><td><b>Synthetic</b></td><td>LambdaRank fitted on an explicit generative process in <code>training/generate.py</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="call">
+      <span class="tag">Be precise about the claim</span>
+      <p>The ranker is a real model — it learns weights, it is evaluated on a held-out split, and
+      its features come from real artists at query time — but the <i>preferences</i> it learned came
+      from a simulation, because the platform has no record yet of what anyone clicked or booked
+      after searching. Describe it as <b>bootstrapped on synthetic preferences</b>, not as trained
+      on platform data. <code>ml_service/README.md</code> has the measured numbers, the baselines
+      they should be read against, and what closing that gap would take.</p>
+    </div>
+
+    <h3>Rebuilding after a wipe</h3>
+    <p>After <code>docker compose down -v</code>, this restores the whole demo world from scratch:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose up -d --build
+<span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe
+<span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
+<span class="p">$</span> docker compose exec ml python -m training.segment
+<span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'</pre></div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="login">
+    <h2><span class="num">STEP 11</span>Sign in</h2>
+    <p class="sec-note">The seeded accounts are throwaway logins for a throwaway database.</p>
+
+    <div class="call stop">
+      <span class="tag">Local only</span>
+      <p>None of the accounts below should ever exist in an environment that faces the internet.</p>
+    </div>
+
+    <p>Every seeded account uses the same password:</p>
+    <div class="term"><pre>Admin@123</pre></div>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Role</th><th>Email</th><th>Sees</th></tr></thead>
+      <tbody>
+        <tr><td><code>SUPER_ADMIN</code></td><td>your <code>ADMIN_EMAIL</code></td><td>Everything, including payouts. Password is your <code>ADMIN_PASSWORD</code></td></tr>
+        <tr><td><code>ADMIN</code></td><td><code>admin@demo.openmichub.local</code></td><td>Admin dashboard, users, transactions</td></tr>
+        <tr><td><code>ORGANIZER</code></td><td><code>booker@demo.openmichub.local</code></td><td>Booker dashboard, bookings, payment history</td></tr>
+        <tr><td><code>ARTIST</code></td><td><code>amber-machine@seed.openmichub.local</code></td><td>Artist dashboard, calendar, wallet, posts</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>An artist's email is their slug — the same string in their public URL — so
+    <code>/artists/amber-machine</code> signs in as
+    <code>amber-machine@seed.openmichub.local</code>. List the rest:</p>
+
+    <div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub \
+    -c "select u.email, a.stage_name, a.rating from users u
+        join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"</pre></div>
+
+    <div class="call warn">
+      <span class="tag">Rate limited</span>
+      <p>Repeated failed logins start returning <code>429</code> after a few tries. Wait a minute
+      rather than retrying in a loop.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="optional">
+    <h2><span class="num">STEP 12</span>Optional integrations</h2>
+    <p class="sec-note">All off by default. Each one is a pair of values in <code>.env</code> and a
+    restart.</p>
+
+    <h3>Social sign-in</h3>
+    <p>Register an OAuth client with each provider you want, using these redirect URIs:</p>
+    <div class="term"><pre>http://localhost:8181/login/oauth2/code/google
+http://localhost:8181/login/oauth2/code/facebook</pre></div>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Provider</th><th>Where to register</th></tr></thead>
+      <tbody>
+        <tr><td>Google</td><td>console.cloud.google.com → APIs &amp; Services → Credentials → OAuth client ID → Web application</td></tr>
+        <tr><td>Facebook</td><td>developers.facebook.com → My Apps → Create App → Facebook Login → Settings</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="term">
+      <div class="term-label">.env</div>
+      <pre>GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+FACEBOOK_CLIENT_ID=...
+FACEBOOK_CLIENT_SECRET=...</pre>
+    </div>
+    <div class="term"><pre><span class="p">$</span> docker compose up -d</pre></div>
+
+    <p>That is the whole change. The sign-in page asks the backend which providers are usable
+    (<code>GET /api/v1/auth/providers</code>) and draws a button for each, so a provider you have
+    not configured is never offered.</p>
+
+    <div class="call warn">
+      <span class="tag">Both halves or neither</span>
+      <p>A client id without its secret <b>fails fast at startup</b> rather than offering a button
+      that cannot work. Also: Facebook requires HTTPS for anyone outside your app's own test users,
+      so localhost works for you and not for them.</p>
+    </div>
+
+    <h3>Payments — Khalti</h3>
+    <p>Leaving the key blank does not disable checkout quietly: every payment attempt fails with
+    <code>502</code> and "the Khalti secret key is not configured". Get a sandbox key from
+    <a href="https://dev.khalti.com/">dev.khalti.com</a> (Merchant → Settings → Keys).</p>
+    <div class="term">
+      <div class="term-label">.env</div>
+      <pre>KHALTI_BASE_URL=https://dev.khalti.com/api/v2
+KHALTI_SECRET_KEY=...</pre>
+    </div>
+
+    <h3>Mail and the chat assistant</h3>
+    <div class="term">
+      <div class="term-label">.env</div>
+      <pre>MAIL_USERNAME=you@gmail.com
+MAIL_PASSWORD=your-app-password   # an app password, not the account password
+CHATBOT_API_KEY=your-github-models-token</pre>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="tests">
+    <h2><span class="num">STEP 13</span>Run the tests</h2>
+
+    <h4>Backend — 98 tests</h4>
+    <p>The JDK on a current Linux box is usually newer than Lombok supports, so run the suite in a
+    container:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose up -d postgres
+<span class="p">$</span> docker run --rm -v "$PWD/open_mic_hub_service":/app -v "$HOME/.m2":/root/.m2 --network host \
+    -w /app maven:3.9-eclipse-temurin-21 mvn test</pre></div>
+    <p>With JDK 21 actually on your path, <code>cd open_mic_hub_service &amp;&amp; ./mvnw test</code>
+    works too. Everything except the context test is a unit test with no external dependency;
+    <code>OpenMicHubServiceApplicationTests</code> boots the whole application and needs a real
+    Postgres — <code>--network host</code> is what lets it reach the one Compose started. Without a
+    database it <b>skips</b> rather than fails.</p>
+
+    <h4>Frontend — 80 tests</h4>
+    <div class="term"><pre><span class="p">$</span> cd open_mic_hub_ui
+<span class="p">$</span> CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless</pre></div>
+    <p style="font-size:.93rem;color:var(--muted)">Substitute <code>google-chrome</code> for
+    <code>chromium</code> if that is what you have installed.</p>
+
+    <h4>ML — 56 tests</h4>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m pytest tests -q</pre></div>
+    <p style="font-size:.93rem;color:var(--muted)">pytest is installed in the image on purpose, so
+    the suite runs in the same interpreter and against the same versions the service runs on.</p>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="nodocker">
+    <h2><span class="num">STEP 14</span>Run the API outside Docker</h2>
+    <p class="sec-note">Only worth it if you are editing Java and want a faster loop. Needs JDK 21
+    on the path.</p>
+
+    <div class="term"><pre><span class="p">$</span> docker compose up -d postgres        <span class="c"># database only</span>
+<span class="p">$</span> ./scripts/generate-keys.sh           <span class="c"># RSA signing keypair</span>
+<span class="p">$</span> cd open_mic_hub_service && ./mvnw spring-boot:run</pre></div>
+
+    <p>The keys are gitignored and every environment gets its own pair. Regenerate with
+    <code>./scripts/generate-keys.sh --force</code>.</p>
+
+    <div class="call warn">
+      <span class="tag">Point it at localhost</span>
+      <p>Outside the Compose network the API cannot reach Postgres or the ML service by service
+      name. <code>DB_URL</code> in <code>.env</code> already uses
+      <code>localhost:5432</code>; set <code>ML_SERVICE_URL=http://localhost:8000</code> too, or
+      discovery quietly degrades to the plain artist listing.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="share">
+    <h2><span class="num">STEP 15</span>Share a snapshot</h2>
+    <p class="sec-note">Two ways to hand the demo to someone else, depending on whether they can
+    wait two minutes.</p>
+
+    <h3>Reproduce it from source</h3>
+    <p>The seeder is deterministic, so they need nothing but the repository — and they end up with a
+    byte-for-byte identical catalogue. This is steps 6, 9 and 10 above, and is usually the right
+    answer.</p>
+
+    <h3>Ship a snapshot</h3>
+    <p>For a demo machine, or when the ranker's weights matter and you do not want them retrained:</p>
+    <div class="term"><pre><span class="p">$</span> ./scripts/export-demo.sh demo-export     <span class="c"># about 10 MB</span>
+<span class="c"># ... send demo-export/ ...</span>
+<span class="p">$</span> ./scripts/import-demo.sh demo-export     <span class="c"># on the other machine, containers up first</span></pre></div>
+
+    <p>The export carries the database (embeddings and segment assignments included), the generated
+    artwork and the trained model files, plus a <code>MANIFEST.txt</code> saying what is in it.</p>
+
+    <div class="call stop">
+      <span class="tag">Deliberately excluded</span>
+      <p><b><code>certs/</code></b> — the JWT signing keypair. Sharing a private signing key lets
+      anyone holding it mint tokens for any account on any deployment that trusts it, so the
+      receiving stack generates its own.</p>
+      <p><b><code>.env</code></b> — your Khalti key and mail password.</p>
+      <p>Import refuses to overwrite a database that already holds artists unless you pass
+      <code>--force</code>.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="daily">
+    <h2><span class="num">STEP 16</span>Everyday commands</h2>
+
+    <div class="term"><pre><span class="p">$</span> docker compose ps                  <span class="c"># health of all three</span>
+<span class="p">$</span> docker compose logs -f api         <span class="c"># follow the API</span>
+<span class="p">$</span> docker compose logs -f ml          <span class="c"># follow the ML service</span>
+<span class="p">$</span> docker compose restart api         <span class="c"># pick up an .env change</span>
+<span class="p">$</span> docker compose up -d --build api   <span class="c"># rebuild after a Java change</span>
+<span class="p">$</span> docker compose down                <span class="c"># stop, keep the data</span>
+<span class="p">$</span> docker compose down -v             <span class="c"># stop and wipe data, keys and uploads</span></pre></div>
+
+    <p>A shell inside a container, and a psql session:</p>
+    <div class="term"><pre><span class="p">$</span> docker compose exec ml bash
+<span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub</pre></div>
+
+    <div class="call warn">
+      <span class="tag">down -v is not recoverable</span>
+      <p>It removes the volumes: the database, the uploaded media, the generated artwork, the signing
+      keypair and the trained models. Rebuilding means re-running steps 9 and 10.</p>
+    </div>
+  </section>
+
+  <!-- ================================================================= -->
+  <section id="trouble">
+    <h2><span class="num">STEP 17</span>Troubleshooting</h2>
+
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Symptom</th><th>Cause and fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>permission denied … /var/run/docker.sock</code></td>
+          <td>Your user is not in the <code>docker</code> group yet. Run
+              <code>sudo usermod -aG docker $USER</code> then <code>newgrp docker</code>, or log out
+              and back in.</td>
+        </tr>
+        <tr>
+          <td><code>port is already allocated</code></td>
+          <td>Something else holds 5432, 8181 or 8000. Find it with
+              <code>ss -ltnp | grep 8181</code> and either stop it or set
+              <code>API_PORT</code> / <code>ML_PORT</code> / <code>DB_PORT</code> in
+              <code>.env</code>.</td>
+        </tr>
+        <tr>
+          <td>No admin account exists</td>
+          <td><code>ADMIN_PASSWORD</code> was empty at first boot. Set it and
+              <code>docker compose restart api</code>.</td>
+        </tr>
+        <tr>
+          <td>Search returns the plain listing, no ranking</td>
+          <td>The ML service is unreachable or has no embeddings. Discovery degrades on purpose
+              rather than failing. Check <code>curl localhost:8000/health</code> and re-run
+              <code>POST /embeddings/rebuild</code>.</td>
+        </tr>
+        <tr>
+          <td><code>ranker: null</code> from <code>/health</code></td>
+          <td>No model has been trained yet — step 10.3. Model files live on the
+              <code>mlmodels</code> volume and survive restarts.</td>
+        </tr>
+        <tr>
+          <td>Browser shows CORS errors</td>
+          <td>The client origin is not in <code>CORS_ALLOWED_ORIGINS</code>. Add it and restart the
+              API.</td>
+        </tr>
+        <tr>
+          <td>Backend build fails on Lombok</td>
+          <td>You are building with a JDK newer than 21 outside Docker. Use the containerised build,
+              or install JDK 21.</td>
+        </tr>
+        <tr>
+          <td>Flyway refuses to start / checksum mismatch</td>
+          <td>An applied migration was edited. Never edit one — add a new
+              <code>V{n}__description.sql</code>. To start over locally:
+              <code>docker compose down -v</code>.</td>
+        </tr>
+        <tr>
+          <td><code>export-demo.sh</code>: container not found</td>
+          <td>Your Compose project name does not match. Set
+              <code>COMPOSE_PROJECT_NAME=openmichub</code> in <code>.env</code>.</td>
+        </tr>
+        <tr>
+          <td>Postgres healthy, API restarting</td>
+          <td>Read the actual error: <code>docker compose logs api | tail -50</code>. Most often a
+              half-configured OAuth pair — a client id with no secret.</td>
+        </tr>
+        <tr>
+          <td>Angular dev server never picks up changes (Windows)</td>
+          <td>The repo is on <code>/mnt/c/...</code>. Move it into the WSL filesystem.</td>
+        </tr>
+        <tr>
+          <td>Checkout fails with <code>502</code></td>
+          <td><code>KHALTI_SECRET_KEY</code> is blank. Step 12.</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>When nothing else works — full reset</h3>
+    <div class="term"><pre><span class="p">$</span> docker compose down -v
+<span class="p">$</span> docker compose up -d --build
+<span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe
+<span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
+<span class="p">$</span> docker compose exec ml python -m training.segment
+<span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'</pre></div>
+  </section>
+
+  <footer>
+    OpenMicHub · install instructions · see <code>README.md</code> for the platform and
+    <code>ml_service/README.md</code> for the models, their features and how they are evaluated.
+  </footer>
+
+</div>
+
+<script>
+  document.documentElement.classList.add('js');
+
+  // Copy buttons on every terminal block. The prompt glyphs are marked up
+  // separately so they can be stripped from what lands on the clipboard.
+  document.querySelectorAll('.term').forEach(function (term) {
+    var pre = term.querySelector('pre');
+    if (!pre) return;
+    var btn = document.createElement('button');
+    btn.className = 'copy';
+    btn.type = 'button';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      var clone = pre.cloneNode(true);
+      clone.querySelectorAll('.p').forEach(function (p) { p.remove(); });
+      var text = clone.textContent.split('\n').map(function (l) { return l.trim(); })
+                      .join('\n').trim();
+      var done = function () {
+        btn.textContent = 'Copied';
+        btn.classList.add('done');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+    term.appendChild(btn);
+  });
+
+  // OS tabs. Panels render unhidden without JS, so the page degrades to
+  // "every platform, one after another" rather than to nothing.
+  document.querySelectorAll('[data-tabs]').forEach(function (group) {
+    var tabs = Array.prototype.slice.call(group.querySelectorAll('[role="tab"]'));
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) {
+          var panel = document.getElementById(t.getAttribute('aria-controls'));
+          var on = t === tab;
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+          if (panel) panel.hidden = !on;
+        });
+      });
+    });
+  });
+</script>
+</html>
