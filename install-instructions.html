@@ -243,6 +243,12 @@
   .tabbar button[aria-selected="true"] { background: var(--surface); color: var(--accent); }
   .panels { border: 1px solid var(--rule); padding: 20px 22px 6px; background: var(--surface); }
   .panel > h4:first-child { margin-top: 4px; }
+  /* bash / PowerShell pairs: lighter than the OS tabs, and the terminal is the panel */
+  .tabs.shell { margin: 18px 0 22px; }
+  .tabs.shell .tabbar button { flex: 0 1 auto; padding: 8px 14px; }
+  .tabs.shell .panels { padding: 0; border: none; background: none; }
+  .tabs.shell .term { margin: 0; }
+  .tabs.shell .term pre { border-radius: 0 0 4px 4px; }
   .js .panel[hidden] { display: none; }
 
   /* ---------- callouts ---------- */
@@ -349,6 +355,7 @@
         <tr><td><b>Node.js</b> + npm</td><td>20 LTS (18.19+ works)</td><td>The Angular client. It is not containerised</td></tr>
         <tr><td><b>JDK 21</b> + Maven</td><td>exactly 21</td><td>Optional — only to run the API without Docker</td></tr>
         <tr><td><b>Python 3.12</b></td><td>3.12</td><td>Optional — only to run the ML service without Docker</td></tr>
+        <tr><td><b>PowerShell</b></td><td>5.1 (built in) or 7</td><td>Windows only — runs the <code>.ps1</code> scripts. Nothing to install</td></tr>
       </tbody>
     </table>
     </div>
@@ -431,21 +438,33 @@
 
         <div class="panel" id="os-win" role="tabpanel" hidden>
           <h4>1 — Enable WSL 2 (PowerShell as Administrator)</h4>
+          <p style="font-size:.93rem;color:var(--muted)">Docker Desktop runs its Linux engine on
+          WSL 2. You do not have to work inside WSL yourself — see below.</p>
           <div class="term"><pre><span class="p">></span> wsl --install
 <span class="p">></span> wsl --set-default-version 2</pre></div>
 
           <h4>2 — Install Docker Desktop</h4>
           <div class="term"><pre><span class="p">></span> winget install --id Docker.DockerDesktop -e</pre></div>
-          <p style="font-size:.93rem;color:var(--muted)">Then open Docker Desktop → Settings →
-          Resources → WSL Integration and enable your distro.</p>
+          <p style="font-size:.93rem;color:var(--muted)">Start it once and let the engine finish
+          starting before running <code>docker</code> commands.</p>
+
+          <h4>3 — Pick a shell, and stick to it</h4>
+          <p><b>PowerShell, natively.</b> Clone anywhere on your Windows drive, for example
+          <code>C:\src\openmichub</code>. Wherever a command differs on Windows, this guide
+          has a <b>Windows PowerShell</b> tab next to it. Every script in
+          <code>scripts\</code> has a <code>.ps1</code> twin that does the same thing as the
+          <code>.sh</code> one. Allow local scripts to run, once:</p>
+          <div class="term"><pre><span class="p">&gt;</span> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</pre></div>
+
+          <p><b>Or a WSL shell.</b> Enable your distro under Docker Desktop → Settings → Resources
+          → WSL Integration, then follow the Linux commands exactly as written.</p>
 
           <div class="call warn">
-            <span class="tag">Do this in WSL</span>
-            <p>Clone and run the project from <b>inside the Linux filesystem</b>
-            (<code>~/projects/...</code> in your WSL home), not from <code>/mnt/c/...</code>.
-            Bind-mounted Windows paths are dramatically slower and break file-watching in the
-            Angular dev server. Every command in this guide then runs in the WSL shell exactly as
-            written.</p>
+            <span class="tag">In WSL, stay in WSL</span>
+            <p>If you use WSL, clone <b>inside the Linux filesystem</b> (<code>~/projects/...</code>),
+            not <code>/mnt/c/...</code>. Windows paths seen from WSL are dramatically slower and
+            break file-watching in the Angular dev server. Native PowerShell on a
+            <code>C:\</code> path does not have this problem.</p>
           </div>
         </div>
 
@@ -500,8 +519,8 @@
 <span class="p">$</span> nvm install 20
 <span class="p">$</span> nvm use 20
 <span class="p">$</span> node -v && npm -v   <span class="c"># v20.x</span></pre></div>
-    <p style="font-size:.93rem;color:var(--muted)">On Windows without WSL:
-    <code>winget install OpenJS.NodeJS.LTS</code>.</p>
+    <p style="font-size:.93rem;color:var(--muted)">On Windows in PowerShell, skip nvm:
+    <code>winget install OpenJS.NodeJS.LTS</code>, then open a new terminal.</p>
   </section>
 
   <!-- ================================================================= -->
@@ -515,7 +534,15 @@
     <div class="term"><pre><span class="p">$</span> git clone git@github.com:dahalutsab/openmichub_ml.git openmichub
 <span class="p">$</span> cd openmichub</pre></div>
 
-    <p>Every remaining command in this guide runs from that directory.</p>
+    <p>The same two commands work in PowerShell. Every remaining command in this guide runs from
+    that directory.</p>
+
+    <div class="call">
+      <span class="tag">Windows line endings</span>
+      <p>Git for Windows converts text files to CRLF on checkout. The repository's
+      <code>.gitattributes</code> keeps shell scripts LF so they still run inside the Linux
+      containers, so you do not need to change any Git settings.</p>
+    </div>
 
     <div class="tablewrap">
     <table>
@@ -524,7 +551,7 @@
         <tr><td><code>open_mic_hub_service/</code></td><td>Spring Boot API, Java 21</td></tr>
         <tr><td><code>open_mic_hub_ui/</code></td><td>Angular 19 client</td></tr>
         <tr><td><code>ml_service/</code></td><td>FastAPI: embeddings, LightGBM ranker, segmentation</td></tr>
-        <tr><td><code>scripts/</code></td><td>Key generation, demo export and import</td></tr>
+        <tr><td><code>scripts/</code></td><td>Key generation, demo seeding, export and import — <code>.sh</code> and <code>.ps1</code></td></tr>
         <tr><td><code>docker-compose.yml</code></td><td>Postgres + API + ML in one command</td></tr>
       </tbody>
     </table>
@@ -533,8 +560,8 @@
     <div class="call">
       <span class="tag">Note the name</span>
       <p>Cloning into a directory called <code>openmichub</code> is not cosmetic. Compose names its
-      volumes after the directory, and <code>scripts/export-demo.sh</code> and
-      <code>import-demo.sh</code> look for volumes prefixed <code>openmichub_</code>. Clone
+      volumes after the directory, and the export and import scripts look for volumes prefixed
+      <code>openmichub_</code>. Clone
       somewhere else and set <code>COMPOSE_PROJECT_NAME=openmichub</code> in <code>.env</code>
       instead — the next step does that anyway.</p>
     </div>
@@ -546,7 +573,16 @@
     <p class="sec-note">The stack boots with an empty configuration. Exactly one value matters on a
     first run.</p>
 
-    <div class="term"><pre><span class="p">$</span> cp .env.example .env</pre></div>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-1" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-1" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-1" role="tabpanel"><div class="term"><pre><span class="p">$</span> cp .env.example .env</pre></div></div>
+        <div class="panel" id="ps-1" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> Copy-Item .env.example .env</pre></div></div>
+      </div>
+    </div>
 
     <p>Open it and set these two lines:</p>
 
@@ -626,9 +662,23 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
   <section id="verify">
     <h2><span class="num">STEP 07</span>Check it came up</h2>
 
-    <div class="term"><pre><span class="p">$</span> docker compose ps
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-2" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-2" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-2" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose ps
 <span class="p">$</span> curl localhost:8181/actuator/health
-<span class="p">$</span> curl localhost:8000/health</pre></div>
+<span class="p">$</span> curl localhost:8000/health</pre></div></div>
+        <div class="panel" id="ps-2" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose ps
+<span class="p">&gt;</span> curl.exe localhost:8181/actuator/health
+<span class="p">&gt;</span> curl.exe localhost:8000/health</pre></div></div>
+      </div>
+    </div>
+    <p style="font-size:.93rem;color:var(--muted)">In Windows PowerShell, <code>curl</code> is an
+    alias for <code>Invoke-WebRequest</code>, which takes different arguments.
+    <code>curl.exe</code> is the real curl, and it ships with Windows 10 and 11.</p>
 
     <div class="call good">
       <span class="tag">Expected</span>
@@ -682,6 +732,39 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
     <p class="sec-note">A fresh database has roles and an admin and nothing else. The seeder builds
     a whole platform with a history — artists, bookings, reviews, posts and generated cover art.</p>
 
+    <h3>One command for steps 9 and 10</h3>
+    <p>This seeds the demo world and then trains everything on it, in the right order. It takes
+    about five minutes for the full 300 artists.</p>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-3" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-3" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-3" role="tabpanel"><div class="term"><pre><span class="p">$</span> ./scripts/seed-demo.sh   <span class="c"># 300 artists, cover art, trained models</span>
+<span class="p">$</span> ./scripts/seed-demo.sh --artists 60 --no-art   <span class="c"># smaller, in about a minute</span></pre></div></div>
+        <div class="panel" id="ps-3" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> .\scripts\seed-demo.ps1   <span class="c"># 300 artists, cover art, trained models</span>
+<span class="p">&gt;</span> .\scripts\seed-demo.ps1 -Artists 60 -NoArt   <span class="c"># smaller, in about a minute</span></pre></div></div>
+      </div>
+    </div>
+    <p>Every step runs <b>inside the <code>ml</code> container</b>, including the HTTP calls. The
+    host needs only Docker, and the ports in <code>.env</code> do not matter. The options are
+    <code>--artists</code>, <code>--seed</code>, <code>--no-art</code> and <code>--wipe</code>. In
+    PowerShell they are <code>-Artists</code>, <code>-Seed</code>, <code>-NoArt</code> and
+    <code>-Wipe</code>.</p>
+
+    <div class="call stop">
+      <span class="tag">It replaces everything</span>
+      <p>Seeding empties every table the platform writes to. So if the database already has
+      artists, the script refuses unless you pass <code>--wipe</code> (<code>-Wipe</code>). The
+      wipe also removes your super-admin account. The script restarts the API at the end, which
+      recreates that account from <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code>.</p>
+    </div>
+
+    <p>Once it finishes, go to <a href="#login">step 11</a>. The rest of this step and step 10
+    run the same sequence by hand, with every option exposed.</p>
+
+    <h3>By hand</h3>
     <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe</pre></div>
 
     <div class="call">
@@ -693,8 +776,9 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
 
     <div class="call stop">
       <span class="tag">--wipe replaces everything</span>
-      <p><code>--wipe</code> deletes every row the platform owns before seeding. It has to be passed
-      explicitly for exactly that reason. Leave it off on a database whose contents you care about.</p>
+      <p><code>--wipe</code> deletes every row the platform owns before seeding, and the seeder
+      will not run without it, so that the deletion is never an accident. Your super-admin account
+      goes with it. Run <code>docker compose restart api</code> afterwards to bring it back.</p>
     </div>
 
     <div class="tablewrap">
@@ -706,7 +790,7 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
         <tr><td><code>--visitors</code></td><td><code>900</code></td><td>Signed-out browsers with a browsing history</td></tr>
         <tr><td><code>--seed</code></td><td><code>7</code></td><td>Change it for a different but equally reproducible world</td></tr>
         <tr><td><code>--no-art</code></td><td><i>off</i></td><td>Skip generated cover art — much faster, uglier</td></tr>
-        <tr><td><code>--wipe</code></td><td><i>off</i></td><td>Clear existing platform rows first</td></tr>
+        <tr><td><code>--wipe</code></td><td><i>required</i></td><td>Clear existing platform rows first</td></tr>
       </tbody>
     </table>
     </div>
@@ -715,8 +799,7 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
     <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 60 --no-art --wipe</pre></div>
 
     <p>Check what landed:</p>
-    <div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub \
-    -c "select count(*) from artists;"</pre></div>
+    <div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub -c "select count(*) from artists;"</pre></div>
   </section>
 
   <!-- ================================================================= -->
@@ -725,14 +808,32 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
     <p class="sec-note">Four separate things, run in this order. Order matters: segmentation reads
     the embeddings, so the catalogue has to be embedded first.</p>
 
-    <div class="term">
-      <div class="term-label">The whole sequence</div>
-      <pre><span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
+    <p><code>scripts/seed-demo</code> already did all of this. These are the same calls, for
+    when you want to run one on its own.</p>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-4" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-4" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-4" role="tabpanel"><div class="term">
+      <div class="term-label">The whole sequence</div><pre><span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
 <span class="p">$</span> docker compose exec ml python -m training.segment
 <span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'
 <span class="p">$</span> curl "localhost:8000/signals?refresh=true"
-<span class="p">$</span> docker compose exec ml python -m training.evaluate_recs</pre>
+<span class="p">$</span> docker compose exec ml python -m training.evaluate_recs</pre></div></div>
+        <div class="panel" id="ps-4" role="tabpanel" hidden><div class="term">
+      <div class="term-label">The whole sequence</div><pre><span class="p">&gt;</span> Invoke-RestMethod -Method Post localhost:8000/embeddings/rebuild
+<span class="p">&gt;</span> docker compose exec ml python -m training.segment
+<span class="p">&gt;</span> Invoke-RestMethod -Method Post localhost:8000/train -ContentType application/json -Body '{"queries":5000}'
+<span class="p">&gt;</span> Invoke-RestMethod "localhost:8000/signals?refresh=true"
+<span class="p">&gt;</span> docker compose exec ml python -m training.evaluate_recs</pre></div></div>
+      </div>
     </div>
+    <p style="font-size:.93rem;color:var(--muted)">Use <code>Invoke-RestMethod</code> in
+    PowerShell rather than curl. Windows PowerShell 5.1 strips the inner quotes from
+    <code>'{"queries":5000}'</code> when it passes the string to a native program. The
+    per-step blocks below use bash syntax.</p>
 
     <h3>What each step does</h3>
 
@@ -813,11 +914,18 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
 
     <h3>Rebuilding after a wipe</h3>
     <p>After <code>docker compose down -v</code>, this restores the whole demo world from scratch:</p>
-    <div class="term"><pre><span class="p">$</span> docker compose up -d --build
-<span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe
-<span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
-<span class="p">$</span> docker compose exec ml python -m training.segment
-<span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'</pre></div>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-5" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-5" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-5" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose up -d --build
+<span class="p">$</span> ./scripts/seed-demo.sh</pre></div></div>
+        <div class="panel" id="ps-5" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose up -d --build
+<span class="p">&gt;</span> .\scripts\seed-demo.ps1</pre></div></div>
+      </div>
+    </div>
   </section>
 
   <!-- ================================================================= -->
@@ -849,9 +957,19 @@ COMPOSE_PROJECT_NAME=openmichub</pre>
     <code>/artists/amber-machine</code> signs in as
     <code>amber-machine@seed.openmichub.local</code>. List the rest:</p>
 
-    <div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub \
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-6" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-6" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-6" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose exec postgres psql -U postgres -d open_mic_hub \
     -c "select u.email, a.stage_name, a.rating from users u
-        join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"</pre></div>
+        join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"</pre></div></div>
+        <div class="panel" id="ps-6" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose exec postgres psql -U postgres -d open_mic_hub `
+    -c "select u.email, a.stage_name, a.rating from users u join artists a on a.user_id = u.id order by a.rating desc nulls last limit 20;"</pre></div></div>
+      </div>
+    </div>
 
     <div class="call warn">
       <span class="tag">Rate limited</span>
@@ -927,20 +1045,51 @@ CHATBOT_API_KEY=your-github-models-token</pre>
     <h4>Backend — 98 tests</h4>
     <p>The JDK on a current Linux box is usually newer than Lombok supports, so run the suite in a
     container:</p>
-    <div class="term"><pre><span class="p">$</span> docker compose up -d postgres
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-7" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-7" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-7" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose up -d postgres
+<span class="p">$</span> ./scripts/generate-keys.sh
 <span class="p">$</span> docker run --rm -v "$PWD/open_mic_hub_service":/app -v "$HOME/.m2":/root/.m2 --network host \
-    -w /app maven:3.9-eclipse-temurin-21 mvn test</pre></div>
-    <p>With JDK 21 actually on your path, <code>cd open_mic_hub_service &amp;&amp; ./mvnw test</code>
-    works too. Everything except the context test is a unit test with no external dependency;
-    <code>OpenMicHubServiceApplicationTests</code> boots the whole application and needs a real
-    Postgres — <code>--network host</code> is what lets it reach the one Compose started. Without a
-    database it <b>skips</b> rather than fails.</p>
+    -w /app maven:3.9-eclipse-temurin-21 mvn test</pre></div></div>
+        <div class="panel" id="ps-7" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose up -d postgres
+<span class="p">&gt;</span> .\scripts\generate-keys.ps1
+<span class="p">&gt;</span> docker run --rm -v "${PWD}\open_mic_hub_service:/app" -v "$HOME\.m2:/root/.m2" `
+    --network openmichub_default -e DB_HOST=postgres `
+    -e DB_URL=jdbc:postgresql://postgres:5432/open_mic_hub `
+    -w /app maven:3.9-eclipse-temurin-21 mvn test</pre></div></div>
+      </div>
+    </div>
+    <p>With JDK 21 actually on your path, <code>./mvnw test</code> (<code>.\mvnw.cmd test</code>
+    on Windows) inside <code>open_mic_hub_service</code> works too. Everything except the context
+    test is a unit test with no external dependency. <code>OpenMicHubServiceApplicationTests</code>
+    boots the whole application, so it needs the signing keys, which is what
+    <code>generate-keys</code> is for. It also needs a real Postgres. On Linux,
+    <code>--network host</code> lets it reach the one Compose started. Docker Desktop does not
+    offer host networking by default, so the Windows command joins the Compose network and names
+    the database by its service name. That form works on Linux too. Without a database, the test
+    <b>skips</b> rather than fails.</p>
 
     <h4>Frontend — 80 tests</h4>
-    <div class="term"><pre><span class="p">$</span> cd open_mic_hub_ui
-<span class="p">$</span> CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless</pre></div>
-    <p style="font-size:.93rem;color:var(--muted)">Substitute <code>google-chrome</code> for
-    <code>chromium</code> if that is what you have installed.</p>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-8" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-8" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-8" role="tabpanel"><div class="term"><pre><span class="p">$</span> cd open_mic_hub_ui
+<span class="p">$</span> CHROME_BIN=$(which chromium) npx ng test --watch=false --browsers=ChromeHeadless</pre></div></div>
+        <div class="panel" id="ps-8" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> cd open_mic_hub_ui
+<span class="p">&gt;</span> npx ng test --watch=false --browsers=ChromeHeadless</pre></div></div>
+      </div>
+    </div>
+    <p style="font-size:.93rem;color:var(--muted)">On Linux, substitute <code>google-chrome</code>
+    for <code>chromium</code> if that is what you have installed. On Windows, Karma finds an
+    installed Chrome by itself. With only Edge installed, point it at Edge first:
+    <code>$env:CHROME_BIN = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"</code>.</p>
 
     <h4>ML — 56 tests</h4>
     <div class="term"><pre><span class="p">$</span> docker compose exec ml python -m pytest tests -q</pre></div>
@@ -954,12 +1103,26 @@ CHATBOT_API_KEY=your-github-models-token</pre>
     <p class="sec-note">Only worth it if you are editing Java and want a faster loop. Needs JDK 21
     on the path.</p>
 
-    <div class="term"><pre><span class="p">$</span> docker compose up -d postgres        <span class="c"># database only</span>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-9" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-9" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-9" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose up -d postgres        <span class="c"># database only</span>
 <span class="p">$</span> ./scripts/generate-keys.sh           <span class="c"># RSA signing keypair</span>
-<span class="p">$</span> cd open_mic_hub_service && ./mvnw spring-boot:run</pre></div>
+<span class="p">$</span> cd open_mic_hub_service && ./mvnw spring-boot:run</pre></div></div>
+        <div class="panel" id="ps-9" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose up -d postgres        <span class="c"># database only</span>
+<span class="p">&gt;</span> .\scripts\generate-keys.ps1         <span class="c"># RSA signing keypair</span>
+<span class="p">&gt;</span> cd open_mic_hub_service
+<span class="p">&gt;</span> .\mvnw.cmd spring-boot:run</pre></div></div>
+      </div>
+    </div>
 
     <p>The keys are gitignored and every environment gets its own pair. Regenerate with
-    <code>./scripts/generate-keys.sh --force</code>.</p>
+    <code>--force</code> (<code>-Force</code> in PowerShell). The PowerShell script uses .NET under
+    PowerShell 7. Under Windows PowerShell 5.1 it uses the <code>openssl</code> that Git for
+    Windows installs.</p>
 
     <div class="call warn">
       <span class="tag">Point it at localhost</span>
@@ -983,9 +1146,22 @@ CHATBOT_API_KEY=your-github-models-token</pre>
 
     <h3>Ship a snapshot</h3>
     <p>For a demo machine, or when the ranker's weights matter and you do not want them retrained:</p>
-    <div class="term"><pre><span class="p">$</span> ./scripts/export-demo.sh demo-export     <span class="c"># about 10 MB</span>
+<div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-10" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-10" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-10" role="tabpanel"><div class="term"><pre><span class="p">$</span> ./scripts/export-demo.sh demo-export     <span class="c"># about 10 MB</span>
 <span class="c"># ... send demo-export/ ...</span>
-<span class="p">$</span> ./scripts/import-demo.sh demo-export     <span class="c"># on the other machine, containers up first</span></pre></div>
+<span class="p">$</span> ./scripts/import-demo.sh demo-export     <span class="c"># on the other machine, containers up first</span></pre></div></div>
+        <div class="panel" id="ps-10" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> .\scripts\export-demo.ps1 demo-export    <span class="c"># about 10 MB</span>
+<span class="c"># ... send demo-export\ ...</span>
+<span class="p">&gt;</span> .\scripts\import-demo.ps1 demo-export    <span class="c"># on the other machine, containers up first</span></pre></div></div>
+      </div>
+    </div>
+    <p style="font-size:.93rem;color:var(--muted)">Both versions write the same format, so an
+    export made on Linux imports on Windows and the other way round.</p>
 
     <p>The export carries the database (embeddings and segment assignments included), the generated
     artwork and the trained model files, plus a <code>MANIFEST.txt</code> saying what is in it.</p>
@@ -997,7 +1173,7 @@ CHATBOT_API_KEY=your-github-models-token</pre>
       receiving stack generates its own.</p>
       <p><b><code>.env</code></b> — your Khalti key and mail password.</p>
       <p>Import refuses to overwrite a database that already holds artists unless you pass
-      <code>--force</code>.</p>
+      <code>--force</code> (<code>-Force</code>).</p>
     </div>
   </section>
 
@@ -1012,6 +1188,8 @@ CHATBOT_API_KEY=your-github-models-token</pre>
 <span class="p">$</span> docker compose up -d --build api   <span class="c"># rebuild after a Java change</span>
 <span class="p">$</span> docker compose down                <span class="c"># stop, keep the data</span>
 <span class="p">$</span> docker compose down -v             <span class="c"># stop and wipe data, keys and uploads</span></pre></div>
+
+    <p style="font-size:.93rem;color:var(--muted)">All of these are the same in PowerShell.</p>
 
     <p>A shell inside a container, and a psql session:</p>
     <div class="term"><pre><span class="p">$</span> docker compose exec ml bash
@@ -1088,8 +1266,29 @@ CHATBOT_API_KEY=your-github-models-token</pre>
               half-configured OAuth pair — a client id with no secret.</td>
         </tr>
         <tr>
+          <td><code>running scripts is disabled on this system</code> (Windows)</td>
+          <td>PowerShell's execution policy. Run
+              <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> once. Or run a
+              single script without changing anything:
+              <code>powershell -ExecutionPolicy Bypass -File .\scripts\seed-demo.ps1</code>.</td>
+        </tr>
+        <tr>
+          <td><code>A parameter cannot be found that matches parameter name 'X'</code> from
+              <code>curl</code> (Windows)</td>
+          <td>In Windows PowerShell, <code>curl</code> is <code>Invoke-WebRequest</code>. Type
+              <code>curl.exe</code>, use the <code>Invoke-RestMethod</code> forms in step 10, or
+              let <code>seed-demo.ps1</code> make the calls.</td>
+        </tr>
+        <tr>
+          <td>API keeps restarting with <code>entrypoint.sh: no such file or directory</code></td>
+          <td>A Windows checkout with CRLF line endings, built into an image from before the fix.
+              The Dockerfile now strips them. Rebuild with
+              <code>docker compose up -d --build api</code>.</td>
+        </tr>
+        <tr>
           <td>Angular dev server never picks up changes (Windows)</td>
-          <td>The repo is on <code>/mnt/c/...</code>. Move it into the WSL filesystem.</td>
+          <td>You are in WSL and the repo is on <code>/mnt/c/...</code>. Move it into the WSL
+              filesystem, or run from native PowerShell on the <code>C:\</code> path instead.</td>
         </tr>
         <tr>
           <td>Checkout fails with <code>502</code></td>
@@ -1100,12 +1299,20 @@ CHATBOT_API_KEY=your-github-models-token</pre>
     </div>
 
     <h3>When nothing else works — full reset</h3>
-    <div class="term"><pre><span class="p">$</span> docker compose down -v
+    <div class="tabs shell" data-tabs>
+      <div class="tabbar" role="tablist">
+        <button role="tab" aria-selected="true"  aria-controls="sh-11" data-shell="sh">macOS · Linux · WSL</button>
+        <button role="tab" aria-selected="false" aria-controls="ps-11" data-shell="ps">Windows PowerShell</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="sh-11" role="tabpanel"><div class="term"><pre><span class="p">$</span> docker compose down -v
 <span class="p">$</span> docker compose up -d --build
-<span class="p">$</span> docker compose exec ml python -m training.seed_world --artists 300 --wipe
-<span class="p">$</span> curl -X POST localhost:8000/embeddings/rebuild
-<span class="p">$</span> docker compose exec ml python -m training.segment
-<span class="p">$</span> curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{"queries":5000}'</pre></div>
+<span class="p">$</span> ./scripts/seed-demo.sh</pre></div></div>
+        <div class="panel" id="ps-11" role="tabpanel" hidden><div class="term"><pre><span class="p">&gt;</span> docker compose down -v
+<span class="p">&gt;</span> docker compose up -d --build
+<span class="p">&gt;</span> .\scripts\seed-demo.ps1</pre></div></div>
+      </div>
+    </div>
   </section>
 
   <footer>
@@ -1151,18 +1358,34 @@ CHATBOT_API_KEY=your-github-models-token</pre>
 
   // OS tabs. Panels render unhidden without JS, so the page degrades to
   // "every platform, one after another" rather than to nothing.
-  document.querySelectorAll('[data-tabs]').forEach(function (group) {
-    var tabs = Array.prototype.slice.call(group.querySelectorAll('[role="tab"]'));
-    tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (t) {
-          var panel = document.getElementById(t.getAttribute('aria-controls'));
-          var on = t === tab;
-          t.setAttribute('aria-selected', on ? 'true' : 'false');
-          if (panel) panel.hidden = !on;
-        });
-      });
+  function select(tab) {
+    var tabs = tab.parentNode.querySelectorAll('[role="tab"]');
+    Array.prototype.forEach.call(tabs, function (t) {
+      var panel = document.getElementById(t.getAttribute('aria-controls'));
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (panel) panel.hidden = !on;
+    });
+  }
+
+  // Shell tabs move together: pick PowerShell once and every command on the
+  // page follows, and the choice is remembered for the next visit.
+  function chooseShell(shell) {
+    document.querySelectorAll('[data-shell="' + shell + '"]').forEach(select);
+  }
+
+  document.querySelectorAll('[data-tabs] [role="tab"]').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var shell = tab.getAttribute('data-shell');
+      if (!shell) { select(tab); return; }
+      chooseShell(shell);
+      try { localStorage.setItem('openmichub-shell', shell); } catch (e) {}
     });
   });
+
+  var saved = null;
+  try { saved = localStorage.getItem('openmichub-shell'); } catch (e) {}
+  if (!saved && /Windows/.test(navigator.userAgent)) saved = 'ps';
+  if (saved) chooseShell(saved);
 </script>
 </html>

@@ -47,8 +47,11 @@ COPY --from=build /build/extracted/spring-boot-loader/ ./
 COPY --from=build /build/extracted/snapshot-dependencies/ ./
 COPY --from=build /build/extracted/application/ ./
 
+# The sed strips carriage returns: a checkout made before .gitattributes pinned
+# *.sh to LF can still carry CRLF on Windows, and a "bash\r" shebang does not run.
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh \
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+ && chmod +x /usr/local/bin/entrypoint.sh \
  && mkdir -p /app/uploads /app/certs \
  && chown -R 1001:1001 /app
 

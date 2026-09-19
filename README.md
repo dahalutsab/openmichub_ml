@@ -8,7 +8,7 @@ Python service that does the searching and the ranking.
 open_mic_hub_service/       Spring Boot API (Java 21)
 open_mic_hub_ui/            Angular 19 client
 ml_service/                 FastAPI: semantic search + LightGBM ranker
-scripts/                    key generation, demo export and import
+scripts/                    key generation, demo seeding, export and import (.sh and .ps1)
 docker-compose.yml          Postgres + API + ML, one command
 install-instructions.html   setup guide, from an empty machine to a trained model
 ```
@@ -31,8 +31,21 @@ Docker is the only requirement. No JDK, no Maven, no local Postgres.
 ```bash
 cp .env.example .env            # set ADMIN_PASSWORD at minimum
 docker compose up -d --build    # Postgres + API + ML
+./scripts/seed-demo.sh          # demo catalogue and trained models
 cd open_mic_hub_ui && npm install && npm start
 ```
+
+On Windows, the same thing in PowerShell, with no WSL needed:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build
+.\scripts\seed-demo.ps1
+cd open_mic_hub_ui; npm install; npm start
+```
+
+Every script in `scripts/` has a `.sh` and a `.ps1` version that do the same thing. Where any
+other command differs on Windows, the install guide shows both.
 
 That builds both service images, starts Postgres with pgvector, generates the token-signing
 keypair on first run, migrates the schema and seeds the roles — healthy in about twenty seconds.
@@ -48,8 +61,8 @@ account is created at all. There is no default password.
 | ML service | http://localhost:8000/docs |
 | Client | http://localhost:4200 |
 
-A fresh database has no artists and no trained model, so the app comes up empty. Filling it is
-four more commands in an order that matters, and they live — with the reasons for the order — in
+A fresh database has no artists and no trained model. `seed-demo` fills it and trains everything,
+in an order that matters. The steps it runs, and the reasons for that order, are in
 **[install-instructions.html](install-instructions.html)**. So does everything else procedural:
 installing Docker on each platform, running the API outside a container, the three test suites,
 and what to do when something will not come up.
@@ -115,9 +128,9 @@ Each ranked artist comes back with the reason it was raised — "you have booked
 cards show it. `GET /users/{id}/taste` and `GET /visitors/{id}/taste` on the ML service show what the
 service believes about someone; `GET /signals` shows the platform-wide side.
 
-Getting a demo catalogue and trained models onto a fresh install is four commands in a fixed
-order — seed, embed, segment, then the ranker — set out in
-**[install-instructions.html](install-instructions.html)**. See
+Getting a demo catalogue and trained models onto a fresh install takes one script,
+`scripts/seed-demo.sh` or `.ps1`. It runs seed, embed, segment, then the ranker, in that fixed
+order, and **[install-instructions.html](install-instructions.html)** sets out each step. See
 **[ml_service/README.md](ml_service/README.md)** for the model itself, its features and how it is
 evaluated.
 
@@ -323,9 +336,9 @@ same bookings, the same artwork — on any machine. Nothing large travels, and t
 readable in version control as the code that produces it. This is usually the right answer.
 
 **Ship a snapshot.** For a demo machine, or when the ranker's weights matter and you do not want
-them retrained, `scripts/export-demo.sh` packages the database (embeddings and segment assignments
+them retrained, `scripts/export-demo.sh` (or `.ps1`) packages the database (embeddings and segment assignments
 included), the generated artwork and the trained models into about 10 MB, and
-`scripts/import-demo.sh` restores it on the other side.
+`scripts/import-demo.sh` (or `.ps1`) restores it on the other side, on either platform.
 
 Two things are deliberately left out. **`certs/`**, the JWT signing keypair — sharing a private
 signing key lets anyone holding it mint tokens for any account on any deployment that trusts it,

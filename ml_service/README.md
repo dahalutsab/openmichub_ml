@@ -746,6 +746,11 @@ docker compose exec ml python -m training.evaluate_recs
 Order matters: segmentation reads embeddings, so re-embed first. Signals rebuild
 on their own within five minutes; the refresh only saves the wait.
 
+`scripts/seed-demo.sh` (`scripts\seed-demo.ps1` on Windows) runs this sequence,
+all of it inside the container. It refuses to overwrite a catalogue unless you
+pass `--wipe`, and it restarts the API afterwards so the super-admin account the
+wipe removed is recreated.
+
 ---
 
 ## 8. Retraining the ranker on real data

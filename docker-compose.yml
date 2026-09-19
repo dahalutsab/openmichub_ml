@@ -6,11 +6,9 @@
 #   api       Spring Boot, waits for the database, generates its signing keypair
 #   ml        FastAPI: semantic search and the LightGBM ranker
 #
-# First run, to get a demo catalogue and a trained model:
+# First run, to get the demo catalogue and trained models:
 #
-#     docker compose exec ml python -m training.seed_db --artists 200
-#     curl -X POST localhost:8000/embeddings/rebuild
-#     curl -X POST localhost:8000/train -H 'content-type: application/json' -d '{}'
+#     ./scripts/seed-demo.sh           # Windows: .\scripts\seed-demo.ps1
 
 services:
   postgres:

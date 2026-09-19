@@ -1,0 +1,6 @@
+# Shell scripts run under bash and inside Linux containers, where a CRLF
+# checkout (Git for Windows' default) breaks the shebang line: the API image
+# would fail to start with "no such file or directory". PowerShell scripts are
+# the Windows side and are kept CRLF so Windows PowerShell 5.1 reads them cleanly.
+*.sh   text eol=lf
+*.ps1  text eol=crlf
