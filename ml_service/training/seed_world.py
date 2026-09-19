@@ -167,8 +167,8 @@ def genre_category_ids(conn) -> dict:
                 genre_id = row[0]
             else:
                 cur.execute(
-                    "INSERT INTO genre (name, created_by, created_date) "
-                    "VALUES (%s, 'seed', now()) RETURNING id", (parent,))
+                    "INSERT INTO genre (name, active, created_by, created_date) "
+                    "VALUES (%s, true, 'seed', now()) RETURNING id", (parent,))
                 genre_id = cur.fetchone()[0]
 
             for sub in subs:
@@ -178,8 +178,9 @@ def genre_category_ids(conn) -> dict:
                     category_id = row[0]
                 else:
                     cur.execute(
-                        "INSERT INTO category (name, created_by, created_date) "
-                        "VALUES (%s, 'seed', now()) RETURNING id", (sub,))
+                        # category is not Auditable: it has no created_* columns.
+                        "INSERT INTO category (name, active) "
+                        "VALUES (%s, true) RETURNING id", (sub,))
                     category_id = cur.fetchone()[0]
                 cur.execute(
                     "INSERT INTO genre_categories (genre_id, categories_id) VALUES (%s, %s) "
